@@ -5,7 +5,7 @@ A hobbyist x86 operating system, forked and evolved from [duckOS](https://github
 > **Warning:** This is highly experimental. Expect crashes, missing features, and general instability. Not for production use.
 
 ---
-
+![image](docs/Screenshot.png)
 ## What's inside
 
 | Directory | Description |
