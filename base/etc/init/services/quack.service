@@ -1,0 +1,4 @@
+[service]
+name=Quack
+exec=quack
+after=boot

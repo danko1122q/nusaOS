@@ -1,0 +1,125 @@
+/*
+   This file is part of nusaOS.
+
+   Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#include <unistd.h>
+#include "Mouse.h"
+#include "Display.h"
+#include <libgraphics/Image.h>
+#include <libgraphics/PNG.h>
+
+using namespace Gfx;
+
+Mouse::Mouse(Window* parent): Window(parent, {0, 0, 1, 1}, false) {
+   display()->set_mouse_window(this);
+
+   mouse_fd = open("/dev/input/mouse", O_RDONLY | O_CLOEXEC);
+   if(mouse_fd < 0) {
+      perror("Failed to open mouse");
+      return;
+   }
+
+   load_cursor(cursor_normal, "cursor.png");
+   load_cursor(cursor_resize_v, "resize_v.png");
+   load_cursor(cursor_resize_h, "resize_h.png");
+   load_cursor(cursor_resize_dr, "resize_dr.png");
+   load_cursor(cursor_resize_dl, "resize_dl.png");
+   set_cursor(Pond::NORMAL);
+}
+
+int Mouse::fd() {
+   return mouse_fd;
+}
+
+bool Mouse::update() {
+   // FIX: guard jika mouse_fd tidak valid (gagal buka /dev/input/mouse)
+   // sebelumnya kalau open() gagal, fd = -1 dan read() akan crash
+   if(mouse_fd < 0)
+      return false;
+
+   MouseEvent events[32];
+   ssize_t nread = read(mouse_fd, &events, sizeof(MouseEvent) * 32);
+   if(nread <= 0) return false;
+
+   // FIX: pastikan pembagian tidak menghasilkan 0 atau negatif
+   if((size_t)nread < sizeof(MouseEvent)) return false;
+   int num_events = (int) nread / sizeof(MouseEvent);
+
+   Point total_delta {0, 0};
+   int total_z = 0;
+
+   for(int i = 0; i < num_events; i++) {
+      Gfx::Point new_pos = rect().position();
+      if(events[i].absolute) {
+         auto disp_dimensions = Display::inst().dimensions();
+         FloatPoint float_pos = {events[i].x / (float) 0xFFFF, events[i].y / (float) 0xFFFF};
+         new_pos.x = float_pos.x * disp_dimensions.width;
+         new_pos.y = float_pos.y * disp_dimensions.height;
+      } else {
+         new_pos.x += events[i].x;
+         new_pos.y -= events[i].y;
+      }
+
+      // FIX: guard parent() — kalau null maka constrain akan crash
+      if(parent())
+         new_pos = new_pos.constrain(parent()->rect());
+
+      Gfx::Point delta_pos = new_pos - rect().position();
+      set_position(new_pos);
+      total_delta += delta_pos;
+      total_z += events[i].z;
+
+      if (_mouse_buttons != events[i].buttons) {
+         _mouse_buttons = events[i].buttons;
+         Display::inst().create_mouse_events(total_delta.x, total_delta.y, total_z, _mouse_buttons);
+         total_delta = {0, 0};
+         total_z = 0;
+      }
+   }
+
+   if (total_delta.x != 0 || total_delta.y != 0 || total_z != 0)
+      Display::inst().create_mouse_events(total_delta.x, total_delta.y, total_z, _mouse_buttons);
+
+   return true;
+}
+
+void Mouse::set_cursor(Pond::CursorType cursor) {
+   current_type = cursor;
+   Duck::Ptr<Gfx::Image> cursor_image;
+   switch(cursor) {
+      case Pond::NORMAL:
+         cursor_image = cursor_normal;
+         break;
+      case Pond::RESIZE_H:
+         cursor_image = cursor_resize_h;
+         break;
+      case Pond::RESIZE_V:
+         cursor_image = cursor_resize_v;
+         break;
+      case Pond::RESIZE_DR:
+         cursor_image = cursor_resize_dr;
+         break;
+      case Pond::RESIZE_DL:
+         cursor_image = cursor_resize_dl;
+         break;
+      default:
+         cursor_image = cursor_normal;
+   }
+   if(!cursor_image)
+      return;
+
+   set_dimensions(cursor_image->size());
+   cursor_image->draw(_framebuffer, {0, 0});
+}
+
+Duck::Result Mouse::load_cursor(Duck::Ptr<Gfx::Image>& storage, const std::string& filename) {
+   auto cursor_res = Image::load("/usr/share/cursors/" + filename);
+   if(cursor_res.is_error()) {
+      Duck::Log::errf("Couldn't load cursor {}: {}", filename, cursor_res.result());
+      return cursor_res.result();
+   }
+   storage = cursor_res.value();
+   return Duck::Result::SUCCESS;
+}

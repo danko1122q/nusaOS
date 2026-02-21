@@ -1,0 +1,38 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#pragma once
+
+#include <kernel/kstd/types.h>
+
+#ifdef NUSAOS_KERNEL
+
+char *strcat(char *dest, const char *src);
+bool strcmp(const char *str1, const char *str2);
+extern "C" void *memset(void *dest, int val, size_t count);
+extern "C" void *memcpy(void *dest, const void *src, size_t count);
+void* memcpy_uint32(uint32_t* d, uint32_t* s, size_t n);
+int strlen(const char *str);
+void substr(int i, char *src, char *dest);
+void substri(int i, char *src, char *dest);
+void substrr(int s, int e, char *src, char *dest);
+void strcpy(char *dest, const char *src);
+
+#endif
+

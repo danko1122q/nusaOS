@@ -1,0 +1,277 @@
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index bdee5395..0c2578b6 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -288,6 +288,11 @@ case "${targ}" in
+     targ_selvecs="aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec aarch64_pei_le_vec aarch64_pe_le_vec"
+     want64=true
+     ;;
++  aarch64-*-nusaos*)
++    targ_defvec=aarch64_elf64_le_vec
++    targ_selfvecs=
++    want64=true
++    ;;
+   aarch64_be-*-linux* | aarch64_be-*-netbsd*)
+     targ_defvec=aarch64_elf64_be_vec
+     targ_selvecs="aarch64_elf64_le_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_be_vec arm_elf32_le_vec"
+@@ -346,8 +351,19 @@ case "${targ}" in
+     targ_selvecs=alpha_vms_lib_txt_vec
+     want64=true
+     ;;
++  x86_64-*-nusaos*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=i386_elf32_vec
++    want64=true
++    ;;
+ #endif /* BFD64 */
+ 
++  i[3-7]86-*-nusaos*)
++    targ_defvec=i386_elf32_vec
++    targ_selvecs=
++    targ64_selvecs=x86_64_elf64_vec
++    ;;
++
+   am33_2.0-*-linux*)
+     targ_defvec=am33_elf32_linux_vec
+     ;;
+diff --git a/config.sub b/config.sub
+index f6ede1d0..683660c5 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1728,6 +1728,7 @@ case $os in
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
++	     | nusaos* \
+ 	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+diff --git a/gas/config/te-nusaos.h b/gas/config/te-nusaos.h
+new file mode 100644
+index 00000000..f6f8bc29
+--- /dev/null
++++ b/gas/config/te-nusaos.h
+@@ -0,0 +1,2 @@
++#include "te-generic.h"
++#define TE_DuckOS 1
+\ No newline at end of file
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 3429f850..74328132 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -136,6 +136,7 @@ case ${generic_target} in
+   aarch64*-*-netbsd*)			fmt=elf em=nbsd;;
+   aarch64*-*-nto*)			fmt=elf;;
+   aarch64*-*-openbsd*)			fmt=elf;;
++  aarch64*-*-nusaos*) fmt=elf em=nusaos ;;
+   aarch64*-*-pe* | aarch64*-*-mingw*)	fmt=coff em=pepaarch64 ;;
+   alpha-*-*vms*)			fmt=evax ;;
+   alpha-*-osf*)				fmt=ecoff ;;
+@@ -223,6 +224,7 @@ case ${generic_target} in
+   h8300-*-elf)				fmt=elf ;;
+   h8300-*-linux*)			fmt=elf em=linux ;;
+ 
++  i386-*-nusaos*)           fmt=elf em=nusaos ;;
+   i386-*-beospe*)			fmt=coff em=pe ;;
+   i386-*-beos*)				fmt=elf ;;
+   i386-*-elfiamcu)			fmt=elf arch=iamcu ;;
+diff --git a/ld/Makefile.am b/ld/Makefile.am
+index c3adbb0c..2fe444a8 100644
+--- a/ld/Makefile.am
++++ b/ld/Makefile.am
+@@ -274,6 +274,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf32xstormy16.c \
+ 	eelf32xtensa.c \
+ 	eelf32z80.c \
++	eelf_i386_nusaos.c \
+ 	eelf_i386.c \
+ 	eelf_i386_be.c \
+ 	eelf_i386_fbsd.c \
+@@ -384,6 +385,7 @@ ALL_64_EMULATION_SOURCES = \
+ 	eaarch64fbsd.c \
+ 	eaarch64fbsdb.c \
+ 	eaarch64haiku.c \
++	eaarch64nusaos.c \
+ 	eaarch64linux.c \
+ 	eaarch64linux32.c \
+ 	eaarch64linux32b.c \
+@@ -455,6 +457,7 @@ ALL_64_EMULATION_SOURCES = \
+ 	eelf64tilegx.c \
+ 	eelf64tilegx_be.c \
+ 	eelf_mipsel_haiku.c \
++	eelf_x86_64_nusaos.c \
+ 	eelf_x86_64.c \
+ 	eelf_x86_64_cloudabi.c \
+ 	eelf_x86_64_fbsd.c \
+@@ -773,6 +776,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32xtensa.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32z80.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_be.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_haiku.Pc@am__quote@
+@@ -879,6 +883,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsdb.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64haiku.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32b.Pc@am__quote@
+@@ -951,6 +956,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf64tilegx_be.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_mipsel_haiku.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_cloudabi.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_haiku.Pc@am__quote@
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index d1a56026..a0d2197a 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -775,6 +775,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf32xstormy16.c \
+ 	eelf32xtensa.c \
+ 	eelf32z80.c \
++	eelf_i386_nusaos.c \
+ 	eelf_i386.c \
+ 	eelf_i386_be.c \
+ 	eelf_i386_fbsd.c \
+@@ -884,6 +885,7 @@ ALL_64_EMULATION_SOURCES = \
+ 	eaarch64fbsd.c \
+ 	eaarch64fbsdb.c \
+ 	eaarch64haiku.c \
++	eaarch64nusaos.c \
+ 	eaarch64linux.c \
+ 	eaarch64linux32.c \
+ 	eaarch64linux32b.c \
+@@ -955,6 +957,7 @@ ALL_64_EMULATION_SOURCES = \
+ 	eelf64tilegx.c \
+ 	eelf64tilegx_be.c \
+ 	eelf_mipsel_haiku.c \
++	eelf_x86_64_nusaos.c \
+ 	eelf_x86_64.c \
+ 	eelf_x86_64_cloudabi.c \
+ 	eelf_x86_64_fbsd.c \
+@@ -1265,6 +1268,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsd.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsdb.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64haiku.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64nusaos.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32b.Po@am__quote@
+@@ -1458,6 +1462,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf64tilegx.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf64tilegx_be.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_nusaos.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_be.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_fbsd.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_haiku.Po@am__quote@
+@@ -1468,6 +1473,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_mipsel_haiku.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_s390.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_nusaos.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_cloudabi.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_fbsd.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_haiku.Po@am__quote@
+@@ -2490,6 +2496,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32xtensa.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32z80.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_be.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_haiku.Pc@am__quote@
+@@ -2596,6 +2603,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64fbsdb.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64haiku.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linux32b.Pc@am__quote@
+@@ -2668,6 +2676,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf64tilegx_be.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_mipsel_haiku.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_nusaos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_cloudabi.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_fbsd.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_x86_64_haiku.Pc@am__quote@
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index c62b9581..dedecae4 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -97,6 +97,9 @@ aarch64-*-freebsd*)	targ_emul=aarch64fbsd
+ aarch64-*-fuchsia*)	targ_emul=aarch64elf
+ 			targ_extra_emuls="aarch64elfb armelf armelfb"
+ 			;;
++aarch64-*-nusaos*) targ_emul=aarch64nusaos
++			targ_extra_emuls=aarch64elf
++			;;
+ aarch64_be-*-linux-gnu_ilp32)
+ 			targ_emul=aarch64linux32b
+ 			targ_extra_libpath="aarch64linuxb aarch64linux aarch64linux32 armelfb_linux_eabi armelf_linux_eabi"
+@@ -375,6 +378,9 @@ i[3-7]86-*-linux-*)	targ_emul=elf_i386
+ 			targ64_extra_emuls="elf_x86_64 elf32_x86_64"
+ 			targ64_extra_libpath="elf_x86_64 elf32_x86_64"
+ 			;;
++i[3-7]86-*-nusaos*)	targ_emul=elf_i386_nusaos
++			targ_extra_emuls=elf_i386
++			;;
+ i[3-7]86-*-redox*)	targ_emul=elf_i386
+ 			targ_extra_emuls=elf_x86_64
+ 			;;
+@@ -1008,6 +1014,10 @@ x86_64-*-linux-*)	targ_emul=elf_x86_64
+ 			targ_extra_libpath="elf_i386 elf32_x86_64"
+ 			tdir_elf_i386=`echo ${targ_alias} | sed -e 's/x86_64/i386/'`
+ 			;;
++x86_64-*-nusaos*)
++			targ_emul=elf_x86_64_nusaos
++			targ_extra_emuls="elf_i386_nusaos elf_x86_64 elf_i386"
++			;;
+ x86_64-*-redox*)	targ_emul=elf_x86_64
+ 			targ_extra_emuls=elf_i386
+ 			;;
+diff --git a/ld/emulparams/aarch64nusaos.sh b/ld/emulparams/aarch64nusaos.sh
+new file mode 100755
+index 00000000..283514f5
+--- /dev/null
++++ b/ld/emulparams/aarch64nusaos.sh
+@@ -0,0 +1,4 @@
++source_sh ${srcdir}/emulparams/aarch64elf.sh
++source_sh ${srcdir}/emulparams/elf_nusaos.sh
++unset EMBEDDED
++COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
+\ No newline at end of file
+diff --git a/ld/emulparams/elf_nusaos.sh b/ld/emulparams/elf_nusaos.sh
+new file mode 100644
+index 00000000..cf8255bd
+--- /dev/null
++++ b/ld/emulparams/elf_nusaos.sh
+@@ -0,0 +1 @@
++ELF_INTERPRETER_NAME=\"/lib/ld-nusaos.so\"
+\ No newline at end of file
+diff --git a/ld/emulparams/elf_i386_nusaos.sh b/ld/emulparams/elf_i386_nusaos.sh
+new file mode 100644
+index 00000000..41cfd2c4
+--- /dev/null
++++ b/ld/emulparams/elf_i386_nusaos.sh
+@@ -0,0 +1,2 @@
++source_sh ${srcdir}/emulparams/elf_i386.sh
++source_sh ${srcdir}/emulparams/elf_nusaos.sh
+\ No newline at end of file
+diff --git a/ld/emulparams/elf_x86_64_nusaos.sh b/ld/emulparams/elf_x86_64_nusaos.sh
+new file mode 100644
+index 00000000..8060bf86
+--- /dev/null
++++ b/ld/emulparams/elf_x86_64_nusaos.sh
+@@ -0,0 +1,2 @@
++source_sh ${srcdir}/emulparams/elf_x86_64.sh
++source_sh ${srcdir}/emulparams/elf_nusaos.sh
+\ No newline at end of file

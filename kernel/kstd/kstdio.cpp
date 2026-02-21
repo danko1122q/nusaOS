@@ -1,0 +1,239 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#include "kstdio.h"
+#include <kernel/kstd/kstddef.h>
+#include <kernel/kstd/kstdlib.h>
+#include <kernel/tasking/TaskManager.h>
+#include <kernel/terminal/VirtualTTY.h>
+#include <kernel/kstd/defines.h>
+#include "kernel/IO.h"
+#include <kernel/KernelMapper.h>
+#include <kernel/interrupt/interrupt.h>
+#include "cstring.h"
+#include <kernel/device/VGADevice.h>
+#include <kernel/filesystem/FileDescriptor.h>
+#include <kernel/bootlogo.h>
+#include <kernel/arch/Processor.h>
+
+kstd::Arc<FileDescriptor> tty_desc(nullptr);
+kstd::Arc<VirtualTTY> tty(nullptr);
+bool use_tty = true;
+bool g_panicking = false;
+bool did_setup_tty = false;
+
+void putch(char c){
+	if(did_setup_tty) {
+		if(g_panicking || TaskManager::in_critical())
+			tty->get_terminal()->write_char(c);
+		else if(tty && use_tty)
+			tty_desc->write(KernelPointer<uint8_t>((uint8_t*) &c), 1);
+	}
+	serial_putch(c);
+}
+
+void print(const char* str){
+	if(did_setup_tty) {
+		if(g_panicking || TaskManager::in_critical())
+			tty->get_terminal()->write_chars(str, strlen(str));
+		else if(tty && use_tty)
+			tty_desc->write(KernelPointer<uint8_t>((uint8_t*) str), strlen(str));
+	}
+	while(*str)
+		serial_putch(*(str++));
+}
+
+Mutex printf_lock {"printf"};
+void printf(const char* fmt, ...) {
+	va_list list;
+	va_start(list, fmt);
+	vprintf(fmt, list);
+	va_end(list);
+}
+
+void vprintf(const char* fmt, va_list argp){
+	if(!g_panicking && !TaskManager::in_critical())
+		printf_lock.acquire();
+
+	const char *p;
+	int i;
+	long l;
+	char *s;
+	char fmtbuf[256];
+	bool is_long = false;
+
+	for(p = fmt; *p != '\0'; p++){
+		if(*p != '%'){
+			putch(*p);
+			continue;
+		}
+		fmt_eval:
+		switch(*++p){
+			case 'l':
+				is_long = true;
+				goto fmt_eval;
+			case 'c':
+				i = va_arg(argp, int);
+				putch(i);
+				break;
+
+			case 'd':
+				if (is_long) {
+					l = va_arg(argp, long);
+					s = ltoa(l, fmtbuf, 10);
+				} else {
+					i = va_arg(argp, int);
+					s = itoa(i, fmtbuf, 10);
+				}
+				print(s);
+				break;
+
+			case 's':
+				s = va_arg(argp, char *);
+				print(s);
+				break;
+
+			case 'x':
+				if (is_long) {
+					l = va_arg(argp, long);
+					s = ltoa(l, fmtbuf, 16);
+				} else {
+					i = va_arg(argp, int);
+					s = itoa(i, fmtbuf, 16);
+				}
+				print(s);
+				break;
+
+			case 'X':
+				if (is_long) {
+					l = va_arg(argp, long);
+					s = ltoa(l, fmtbuf, 16);
+				} else {
+					i = va_arg(argp, int);
+					s = itoa(i, fmtbuf, 16);
+				}
+				to_upper(s);
+				print(s);
+				break;
+
+			case 'b':
+				if (is_long) {
+					l = va_arg(argp, long);
+					s = ltoa(l, fmtbuf, 2);
+				} else {
+					i = va_arg(argp, int);
+					s = itoa(i, fmtbuf, 2);
+				}
+				print(s);
+				break;
+
+			case '%':
+				putch('%');
+				break;
+		}
+		is_long = false;
+	}
+
+	if(!g_panicking && !TaskManager::in_critical())
+		printf_lock.release();
+}
+
+bool panicked = false;
+
+void panic_inner(const char* error, const char* msg, va_list list) {
+	TaskManager::enter_critical();
+	Interrupt::NMIDisabler disabler;
+
+	g_panicking = true;
+	if(did_setup_tty) {
+		tty->set_graphical(false);
+		tty->get_terminal()->set_prevent_scroll(true);
+	}
+
+	printf("\033[44;97m\033[2J"); 
+
+	printf("\n\n\n\n\n\n\n\n");
+	
+	printf("        :( NusaOS ran into a problem and needs to restart.\n");
+	printf("        We're just collecting some error info, and then we'll restart for you.\n\n\n");
+
+	printf("        Error: %s\n", error);
+	
+	auto cur_thread = TaskManager::current_thread();
+	if(cur_thread && cur_thread->process())
+		printf("        In pid: %d (%s) tid: %d\n", cur_thread->process()->pid(), cur_thread->process()->name().c_str(), cur_thread->tid());
+	else
+		printf("        [No thread info]\n");
+
+	printf("\n        ");
+	vprintf(msg, list);
+	printf("\n");
+
+	printf("\n\n        ");
+	for (int i = 0; i <= 100; i++) {
+		printf("\r        %d%% complete", i);
+		volatile int d = 0;
+		while(d < 40000000) {
+			__asm__ volatile ("nop");
+			d = d + 1;
+		}
+	}
+
+	printf("\n\n        Restarting now...");
+	volatile int r = 0;
+	while(r < 80000000) {
+		__asm__ volatile ("nop");
+		r = r + 1;
+	}
+
+	struct {
+		uint16_t limit;
+		uint32_t base;
+	} __attribute__((packed)) idt_zero = {0, 0};
+
+	__asm__ volatile("lidt %0; int3" : : "m"(idt_zero)); 
+}
+
+void PANIC_NOHLT(const char *error, const char *msg, ...) {
+	va_list list;
+	va_start(list, msg);
+	panic_inner(error, msg, list);
+	va_end(list);
+}
+
+[[noreturn]] void PANIC(const char* error, const char* msg, ...) {
+	va_list list;
+	va_start(list, msg);
+	panic_inner(error, msg, list);
+	va_end(list);
+	Processor::halt();
+	while(1);
+}
+
+void clearScreen(){
+	if(!tty) return;
+	tty->clear();
+}
+
+void setup_tty() {
+	tty = VirtualTTY::current_tty();
+	tty_desc = kstd::make_shared<FileDescriptor>(tty);
+	tty_desc->set_options(O_WRONLY);
+	did_setup_tty = true;
+}

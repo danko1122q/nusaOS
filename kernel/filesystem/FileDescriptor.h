@@ -1,0 +1,87 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#pragma once
+
+#include <kernel/kstd/Arc.h>
+#include <kernel/kstd/string.h>
+#include <kernel/tasking/Mutex.h>
+#include <kernel/kstd/unix_types.h>
+#include "File.h"
+#include <kernel/memory/SafePointer.h>
+
+class DirectoryEntry;
+class Device;
+class InodeMetadata;
+class Inode;
+class FileDescriptor {
+public:
+	explicit FileDescriptor(const kstd::Arc<File>& file, Process* owner = nullptr);
+	FileDescriptor(FileDescriptor& other, Process* new_owner = nullptr);
+	~FileDescriptor();
+
+	void set_options(int options);
+	void unset_options(int options);
+	bool readable() const;
+	bool writable() const;
+	bool append_mode() const;
+	bool nonblock() const;
+	bool cloexec() const;
+	InodeMetadata metadata();
+	kstd::Arc<File> file();
+	void open();
+	pid_t owner() const;
+	void set_owner(Process* owner);
+	void set_owner(pid_t owner);
+	void set_path(const kstd::string& path);
+	kstd::string path();
+	void set_id(int id);
+	int id();
+
+	int seek(off_t offset, int whence);
+	ssize_t read(SafePointer<uint8_t> buffer, size_t count);
+	ssize_t read_dir_entries(SafePointer<char> buffer, size_t len);
+	ssize_t write(SafePointer<uint8_t> buffer, size_t count);
+	size_t offset() const;
+	int ioctl(unsigned request, SafePointer<void*> argp);
+
+	void set_fifo_reader();
+	void set_fifo_writer();
+	bool is_fifo_writer() const;
+
+private:
+	kstd::Arc<File> _file;
+	kstd::Arc<Inode> _inode;
+	pid_t _owner = -1;
+	kstd::string _path = "";
+	int _id = -1;
+
+	bool _readable {false};
+	bool _writable {false};
+	bool _can_seek {true};
+	bool _append {false};
+	int _options = 0;
+
+	off_t _seek {0};
+	bool _is_fifo_writer = false;
+
+	Mutex lock {"FileDescriptor"};
+};
+
+

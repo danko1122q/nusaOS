@@ -1,0 +1,43 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#pragma once
+
+#define ROWS 6
+#define COLUMNS 7
+#define INAROW 4
+#define MAX_DEPTH 5
+
+struct MoveScore {
+	int num_moves = 0;
+	int num_win = 0;
+	int num_lose = 0;
+} __attribute__((aligned(16)));
+
+typedef int Board[ROWS][COLUMNS];
+
+void reset_board(Board board);
+void print_board(Board board);
+bool is_valid_move(Board board, int move);
+int player_pick_move(Board board, int player);
+MoveScore score_move(Board board, int move, int player, int cur_player, int depth);
+int computer_pick_move(Board board, int player);
+bool add_piece(Board board, int move, int player);
+bool check_win(Board board);
+

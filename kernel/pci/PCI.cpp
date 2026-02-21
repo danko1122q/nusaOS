@@ -1,0 +1,179 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#include "PCI.h"
+#if defined(__i386__)
+#include "kernel/IO.h"
+#endif
+
+namespace PCI {
+	uint8_t read_byte(Address address, uint8_t field) {
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		return IO::inb(PCI_DATA_PORT + (field & 3));
+#endif
+		// TODO: aarch64
+		return 0;
+	}
+
+	uint16_t read_word(Address address, uint8_t field){
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		return IO::inw(PCI_DATA_PORT + (field & 2));
+#endif
+		// TODO: aarch64
+		return 0;
+	}
+
+	uint32_t read_dword(Address address, uint8_t field) {
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		return IO::inl(PCI_DATA_PORT);
+#endif
+		// TODO: aarch64
+		return 0;
+	}
+
+	void write_byte(Address address, uint8_t field, uint8_t value) {
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		IO::outb(PCI_DATA_PORT + (field & 3), value);
+#endif
+		// TODO: aarch64
+	}
+
+	void write_word(Address address, uint8_t field, uint16_t value) {
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		IO::outw(PCI_DATA_PORT + (field & 2), value);
+#endif
+		// TODO: aarch64
+	}
+
+	void write_dword(Address address, uint8_t field, uint32_t value) {
+#if defined(__i386__)
+		IO::outl(PCI_ADDRESS_PORT, address.get_io_address(field).value);
+		IO::outl(PCI_DATA_PORT, value);
+#endif
+		// TODO: aarch64
+	}
+
+	void enable_interrupt(Address address) {
+		Command comm = {.value = read_word(address, PCI_COMMAND)};
+		comm.attrs.interrupt_disable = false;
+		write_word(address, PCI_COMMAND, comm.value);
+	}
+
+	void disable_interrupt(Address address) {
+		Command comm = {.value = read_word(address, PCI_COMMAND)};
+		comm.attrs.interrupt_disable = true;
+		write_word(address, PCI_COMMAND, comm.value);
+	}
+
+	void enable_bus_mastering(Address address) {
+		Command comm = {.value = read_word(address, PCI_COMMAND)};
+		comm.attrs.bus_master = true;
+		write_word(address, PCI_COMMAND, comm.value);
+	}
+
+	void disable_bus_mastering(Address address) {
+		Command comm = {.value = read_word(address, PCI_COMMAND)};
+		comm.attrs.bus_master = false;
+		write_word(address, PCI_COMMAND, comm.value);
+	}
+
+	void enumerate_devices(PCIEnumerationCallback callback, void* dataPtr) {
+		if((read_byte({0,0,0}, PCI_HEADER_TYPE) & PCI_MULTIFUNCTION) == 0) {
+			//Single controller
+			enumerate_bus(0, callback, dataPtr);
+		} else {
+			// Multi controller
+			for(uint8_t func = 0; func < 8; func++) {
+				if(read_word({0,0, func}, PCI_VENDOR_ID) != PCI_NONE)
+					enumerate_bus(func, callback, dataPtr);
+			}
+		}
+	}
+
+	void enumerate_bus(uint8_t bus, PCIEnumerationCallback callback, void* dataPtr) {
+		for(uint8_t slot = 0; slot < 32; slot++) {
+			enumerate_slot(bus, slot, callback, dataPtr);
+		}
+	}
+
+	void enumerate_slot(uint8_t bus, uint8_t slot, PCIEnumerationCallback callback, void* dataPtr) {
+		Address addr = {bus, slot, 0};
+		if(read_word(addr, PCI_VENDOR_ID) == PCI_NONE) return;
+		enumerate_functions(bus, slot, 0, callback, dataPtr);
+		// BUG FIX: sebelumnya `!read_byte(...)` yang return jika header_type == 0,
+		// padahal 0 adalah tipe header valid (General Device). Yang harus dicek adalah
+		// bit PCI_MULTIFUNCTION (0x80) untuk menentukan apakah device punya multi-function.
+		if(!(read_byte(addr, PCI_HEADER_TYPE) & PCI_MULTIFUNCTION)) return;
+		for(uint8_t func = 1; func < 8; func++) {
+			if(read_word({bus, slot, func}, PCI_VENDOR_ID) != PCI_NONE) {
+				enumerate_functions(bus, slot, func, callback, dataPtr);
+			}
+		}
+	}
+
+	void enumerate_functions(uint8_t bus, uint8_t slot, uint8_t function, PCIEnumerationCallback callback, void* dataPtr) {
+		Address addr = {bus, slot, function};
+		if(get_type(addr) == PCI_TYPE_BRIDGE) {
+			uint8_t second_bus = read_byte(addr, PCI_SECONDARY_BUS);
+			enumerate_bus(second_bus, callback, dataPtr);
+		}
+		callback(addr, {read_word(addr, PCI_VENDOR_ID), read_word(addr, PCI_DEVICE_ID)}, get_type(addr), dataPtr);
+	}
+
+	uint8_t get_class(Address address) {
+		return PCI::read_byte(address, PCI_CLASS);
+	}
+
+	uint8_t get_subclass(Address address) {
+		return PCI::read_byte(address, PCI_SUBCLASS);
+	}
+
+	uint16_t get_type(Address address) {
+		return (read_byte(address, PCI_CLASS) << 8u) + read_byte(address, PCI_SUBCLASS);
+	}
+
+	IOAddress Address::get_io_address(uint8_t field) {
+		// BUG FIX 1: aggregate initializer pada union dengan bitfield tidak dijamin
+		// urutannya oleh standar C++ → implementation-defined behavior.
+		// Gunakan assignment eksplisit per field.
+		// BUG FIX 2: field di-mask 0xFC agar DWORD-aligned (bit 0-1 harus 0).
+		// PCI config space hanya bisa diakses per 32-bit, jika tidak di-align
+		// maka outl ke PCI_ADDRESS_PORT akan membaca dword dari alamat yang salah.
+		IOAddress addr;
+		addr.attrs.field = field & 0xFC;
+		addr.attrs.function = function;
+		addr.attrs.slot = slot;
+		addr.attrs.bus = bus;
+		addr.attrs.enable = true;
+		return addr;
+	}
+
+	bool Address::is_zero() {
+		return slot == 0 && function == 0 && bus == 0;
+	}
+
+	bool ID::operator==(const ID &other) const {
+		return other.device == device && other.vendor == vendor;
+	}
+}

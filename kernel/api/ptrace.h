@@ -1,0 +1,25 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright © 2016-2023 Byteduck */
+
+#pragma once
+
+#include "types.h"
+
+__DECL_BEGIN
+
+enum __ptrace_request {
+	PTRACE_PEEK,
+	PTRACE_POKE,
+	PTRACE_GETREGS,
+	PTRACE_GETFPREGS,
+	PTRACE_SETREGS,
+	PTRACE_SETFPREGS,
+	PTRACE_CONT,
+	PTRACE_SYSCALL,
+	PTRACE_SINGLESTEP,
+	PTRACE_KILL,
+	PTRACE_ATTACH,
+	PTRACE_DETACH
+};
+
+__DECL_END

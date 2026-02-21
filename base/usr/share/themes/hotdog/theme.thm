@@ -1,0 +1,23 @@
+# Colors
+Color bg = #ff0000
+Color fg = #000000
+Color accent = #ffff00
+Color window = #ff0000
+Color window-title = #ffffff
+Color button = #ffff00
+Color button-text = #000000
+Color scrollbar-bg = #dd0000
+Color scrollbar-handle = #ffff00
+Color scrollbar-handle-disabled = #ffffaa
+
+# Values
+Value button-padding = 5
+Value progress-bar-height = 21
+
+# Strings
+String font = gohu-11
+String font-mono = gohu-11
+
+# Images
+FgImage win-close = res/close.png
+FgImage check = res/check.png

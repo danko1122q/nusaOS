@@ -1,0 +1,22 @@
+SET(SOURCES
+        Args.cpp
+        ByteBuffer.cpp
+        Config.cpp
+        DataSize.cpp
+        DirectoryEntry.cpp
+        File.cpp
+        FileStream.cpp
+        FormatStream.cpp
+        Log.cpp
+        MappedBuffer.cpp
+        Object.cpp
+        Path.cpp
+        Result.cpp
+        Serializable.cpp
+        SharedBuffer.cpp
+        Socket.cpp
+        SpinLock.cpp
+        Stream.cpp
+        StringStream.cpp
+        Time.cpp)
+MAKE_LIBRARY(libnusa)

@@ -1,0 +1,4 @@
+[service]
+name=Pond
+exec=pond
+after=boot

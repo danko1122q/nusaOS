@@ -1,0 +1,288 @@
+diff --git a/config.sub b/config.sub
+index 38f3d037a..b69483137 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1719,6 +1719,7 @@ case $os in
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
++             | nusaos* \
+ 	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+diff --git a/fixincludes/mkfixinc.sh b/fixincludes/mkfixinc.sh
+index df90720b7..2b5a287a1 100755
+--- a/fixincludes/mkfixinc.sh
++++ b/fixincludes/mkfixinc.sh
+@@ -20,6 +20,7 @@ case $machine in
+     powerpcle-*-eabisim* | \
+     powerpcle-*-eabi* | \
+     *-*-vxworks7* | \
++    *-nusaos* | \
+     *-musl* )
+ 	#  IF there is no include fixing,
+ 	#  THEN create a no-op fixer and exit
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 648b3dc21..fbb4363c9 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -690,6 +690,19 @@ x86_cpus="generic intel"
+ 
+ # Common parts for widely ported systems.
+ case ${target} in
++*-*-nusaos*)
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_ataexit=yes
++  extra_options="${extra_options} nusaos.opt"
++  tmake_file="t-slibgcc"
++  case ${target} in
++    x86_64-* | aarch64*-*)
++      default_gnu_indirect_function=yes
++      ;;
++  esac
++  ;;
++  
+ *-*-darwin*)
+   tmake_file="t-darwin "
+   tm_file="${tm_file} darwin.h"
+@@ -1126,6 +1139,16 @@ case ${target} in
+ esac
+ 
+ case ${target} in
++i[34567]86-*-nusaos*)
++	tm_file="${tm_file} i386/unix.h i386/att.h elfos.h glibc-stdint.h i386/i386elf.h nusaos.h i386/nusaos.h"
++	;;
++aarch64*-*-nusaos*)
++	tm_file="${tm_file} elfos.h glibc-stdint.h aarch64/aarch64-elf.h nusaos.h"
++	tmake_file="${tmake_file} aarch64/t-aarch64"
++	;;
++x86_64-*-nusaos*)
++	tm_file="${tm_file} i386/unix.h i386/att.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h nusaos.h i386/nusaos.h"
++	;;
+ aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems*)
+ 	tm_file="${tm_file} elfos.h newlib-stdint.h"
+ 	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
+diff --git a/gcc/config/nusaos.h b/gcc/config/nusaos.h
+new file mode 100644
+index 000000000..d2a2eabf7
+--- /dev/null
++++ b/gcc/config/nusaos.h
+@@ -0,0 +1,35 @@
++/* Useful if you wish to make target-specific GCC changes. */
++#undef TARGET_NUSAOS
++#define TARGET_NUSAOS 1
++
++/* Default arguments you want when running your
++   i686-nusaos-gcc/x86_64-nusaos-gcc toolchain */
++#undef LIB_SPEC
++#define LIB_SPEC "-lc" /* link against C standard library */
++
++/* Files that are linked before user code.
++   The %s tells GCC to look for these files in the library directory. */
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "%{!shared: %{!pg:crt0.o%s}} crti.o%s %{!shared:crtbegin.o%s}"
++
++/* Files that are linked after user code. */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "%{!shared:crtend.o%s} crtn.o%s"
++
++/* How to link. */
++#undef LINK_SPEC
++#define LINK_SPEC "%{shared:-shared} %{static:-static} %{!shared: %{!static: %{rdynamic:-export-dynamic} %{!dynamic-linker:-dynamic-linker /lib/ld-nusaos.so}}}"
++
++#define USE_LD_AS_NEEDED 1
++
++/* Additional predefined macros. */
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()      \
++  do {                                \
++    builtin_define ("__nusaos__");      \
++    builtin_define ("__unix__");      \
++    builtin_assert ("system=nusaos");   \
++    builtin_assert ("system=unix");   \
++    builtin_assert ("system=posix");   \
++  } while(0);
++
+diff --git a/gcc/config/nusaos.opt b/gcc/config/nusaos.opt
+new file mode 100644
+index 000000000..f04d5509d
+--- /dev/null
++++ b/gcc/config/nusaos.opt
+@@ -0,0 +1,12 @@
++; nusaOS options.
++
++posix
++Driver
++
++; pthread
++; Driver
++
++rdynamic
++Driver
++
++; This comment is to ensure we retain the blank line above.
+diff --git a/gcc/config/i386/nusaos.h b/gcc/config/i386/nusaos.h
+new file mode 100644
+index 000000000..06cb0325e
+--- /dev/null
++++ b/gcc/config/i386/nusaos.h
+@@ -0,0 +1,5 @@
++#undef SIZE_TYPE
++#define SIZE_TYPE (TARGET_64BIT ? "long unsigned int" : "unsigned int")
++
++#undef PTRDIFF_TYPE
++#define PTRDIFF_TYPE (TARGET_64BIT ? "long int" : "int")
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 9d7212028..e3df1fac5 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -1525,6 +1525,22 @@ nvptx-*)
+ 	tmake_file="$tmake_file nvptx/t-nvptx"
+ 	extra_parts="crt0.o"
+ 	;;
++i[34567]86-*-nusaos*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc"
++	;;
++x86_64-*-nusaos*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc" 
++	;;
++aarch64-*-nusaos*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	extra_parts="$extra_parts crtfastmath.o"
++	tmake_file="$tmake_file ${cpu_type}/t-aarch64"
++	tmake_file="$tmake_file ${cpu_type}/t-lse t-slibgcc t-slibgcc-libgcc t-slibgcc-gld-nover"
++	tmake_file="$tmake_file ${cpu_type}/t-softfp t-softfp t-crtfm"
++	md_unwind_header=aarch64/aarch64-unwind.h
++	;;
+ *)
+ 	echo "*** Configuration ${host} not supported" 1>&2
+ 	exit 1
+diff --git a/libgcc/config/t-slibgcc b/libgcc/config/t-slibgcc
+index 29765bce8..3f18082dd 100644
+--- a/libgcc/config/t-slibgcc
++++ b/libgcc/config/t-slibgcc
+@@ -26,7 +26,6 @@ SHLIB_MAP = @shlib_map_file@
+ SHLIB_OBJS = @shlib_objs@
+ SHLIB_DIR = @multilib_dir@
+ SHLIB_SLIBDIR_QUAL = @shlib_slibdir_qual@
+-SHLIB_LC = -lc
+ SHLIB_MAKE_SOLINK = $(LN_S) $(SHLIB_SONAME) $(SHLIB_DIR)/$(SHLIB_SOLINK)
+ SHLIB_INSTALL_SOLINK = $(LN_S) $(SHLIB_SONAME) \
+ 	$(DESTDIR)$(slibdir)$(SHLIB_SLIBDIR_QUAL)/$(SHLIB_SOLINK)
+diff --git a/libgcc/unwind-dw2-fde-dip.c b/libgcc/unwind-dw2-fde-dip.c
+index 28ea0e64e..1018e32f7 100644
+--- a/libgcc/unwind-dw2-fde-dip.c
++++ b/libgcc/unwind-dw2-fde-dip.c
+@@ -57,6 +57,13 @@
+ # define USE_PT_GNU_EH_FRAME
+ #endif
+ 
++// We don't have dl_iterate_phdr yet, so this won't do anything
++#if !defined(inhibit_libc) && defined(HAVE_LD_EH_FRAME_HDR) \
++    && defined(TARGET_DL_ITERATE_PHDR) \
++    && defined(__nusaos__)
++# define USE_PT_GNU_EH_FRAME
++#endif
++
+ #if !defined(inhibit_libc) && defined(HAVE_LD_EH_FRAME_HDR) \
+     && defined(TARGET_DL_ITERATE_PHDR) \
+     && defined(__linux__)
+diff --git a/libstdc++-v3/acinclude.m4 b/libstdc++-v3/acinclude.m4
+index 49cb0623e..0af5d2f6c 100644
+--- a/libstdc++-v3/acinclude.m4
++++ b/libstdc++-v3/acinclude.m4
+@@ -1403,6 +1403,12 @@ AC_DEFUN([GLIBCXX_ENABLE_LIBSTDCXX_TIME], [
+         ac_has_nanosleep=yes
+         ac_has_sched_yield=yes
+         ;;
++      nusaos*)
++        ac_has_clock_monotonic=yes
++        ac_has_clock_realtime=yes
++        ac_has_nanosleep=yes
++        ac_has_sched_yield=yes
++	;;
+       openbsd*)
+         ac_has_clock_monotonic=yes
+         ac_has_clock_realtime=yes
+@@ -2434,7 +2440,7 @@ AC_DEFUN([GLIBCXX_ENABLE_CLOCALE], [
+       dragonfly* | freebsd*)
+ 	enable_clocale_flag=dragonfly
+ 	;;
+-      openbsd*)
++      openbsd* | nusaos*)
+ 	enable_clocale_flag=newlib
+ 	;;
+       *)
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+index 9b6027775..2f13ff08f 100755
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -11900,6 +11900,11 @@ else
+     lt_cv_dlopen_self=yes
+     ;;
+ 
++  nusaos*)
++    lt_cv_dlopen="dlopen"
++    lt_cv_dlopen_libs=""
++    ;;
++
+   mingw* | pw32* | cegcc*)
+     lt_cv_dlopen="LoadLibrary"
+     lt_cv_dlopen_libs=
+@@ -16514,7 +16519,7 @@ fi
+       dragonfly* | freebsd*)
+ 	enable_clocale_flag=dragonfly
+ 	;;
+-      openbsd*)
++      openbsd* | nusaos*)
+ 	enable_clocale_flag=newlib
+ 	;;
+       *)
+@@ -20675,7 +20680,7 @@ fi
+         ac_has_nanosleep=yes
+         ac_has_sched_yield=yes
+         ;;
+-      freebsd*|netbsd*|dragonfly*|rtems*)
++      freebsd*|netbsd*|dragonfly*|rtems*|nusaos*)
+         ac_has_clock_monotonic=yes
+         ac_has_clock_realtime=yes
+         ac_has_nanosleep=yes
+@@ -29361,7 +29366,7 @@ case "${host}" in
+     # This is a freestanding configuration; there is nothing to do here.
+     ;;
+ 
+-  avr*-*-*)
++  avr*-*-* | *nusaos*)
+     $as_echo "#define HAVE_ACOSF 1" >>confdefs.h
+ 
+     $as_echo "#define HAVE_ASINF 1" >>confdefs.h
+diff --git a/libstdc++-v3/configure.host b/libstdc++-v3/configure.host
+index 9e7c7f02d..c69485084 100644
+--- a/libstdc++-v3/configure.host
++++ b/libstdc++-v3/configure.host
+@@ -306,6 +306,9 @@ case "${host_os}" in
+   vxworks*)
+     os_include_dir="os/vxworks"
+     ;;
++  nusaos*)
++    os_include_dir="os/newlib"
++    ;;
+   *)
+     os_include_dir="os/generic"
+     ;;
+diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
+index b3269cb88..4519a38ac 100644
+--- a/libstdc++-v3/crossconfig.m4
++++ b/libstdc++-v3/crossconfig.m4
+@@ -9,7 +9,7 @@ case "${host}" in
+     # This is a freestanding configuration; there is nothing to do here.
+     ;;
+ 
+-  avr*-*-*)
++  avr*-*-* | *nusaos*)
+     AC_DEFINE(HAVE_ACOSF)
+     AC_DEFINE(HAVE_ASINF)
+     AC_DEFINE(HAVE_ATAN2F)

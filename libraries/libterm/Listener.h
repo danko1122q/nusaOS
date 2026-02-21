@@ -1,0 +1,37 @@
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
+
+#pragma once
+
+#include "types.h"
+
+namespace Term {
+	class Listener {
+	public:
+		virtual void on_character_change(const Position& position, const Character& character) = 0;
+		virtual void on_cursor_change(const Position& old_position) = 0;
+		virtual void on_backspace(const Position& position) = 0;
+		virtual void on_clear() = 0;
+		virtual void on_clear_line(int line) = 0;
+		virtual void on_scroll(int lines) = 0;
+		virtual void on_resize(const Size& old_size, const Size& new_size) = 0;
+		virtual void emit(const uint8_t* data, size_t length) = 0;
+	};
+}
+
