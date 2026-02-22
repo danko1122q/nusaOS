@@ -1,19 +1,5 @@
 /*
     This file is part of nusaOS.
-    
-    nusaOS is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    nusaOS is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    
-    You should have received a copy of the GNU General Public License
-    along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-    
     Copyright (c) Byteduck 2016-2022. All rights reserved.
 */
 #include "Service.h"
@@ -21,6 +7,9 @@
 #include <libnusa/Config.h>
 #include <libnusa/StringStream.h>
 #include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <cstdlib>
 
 Duck::ResultRet<Service> Service::load_service(Duck::Path path) {
 	auto config_res = Duck::Config::read_from(path);
@@ -32,7 +21,6 @@ Duck::ResultRet<Service> Service::load_service(Duck::Path path) {
 		return Duck::Result(-EINVAL);
 
 	auto& service = config["service"];
-
 	return Service(service["name"], service["exec"], service["after"]);
 }
 
@@ -58,47 +46,44 @@ std::vector<Service> Service::get_all_services() {
 	return std::move(ret);
 }
 
-const std::string& Service::name() const {
-	return m_name;
-}
+const std::string& Service::name() const { return m_name; }
+const std::string& Service::exec() const { return m_exec; }
+const std::string& Service::after() const { return m_after; }
 
-const std::string& Service::exec() const {
-	return m_exec;
-}
-
-const std::string& Service::after() const {
-	return m_after;
-}
-
-void Service::execute() const {
+pid_t Service::execute(char** envp) const {
 	Duck::Log::info("Starting service ", m_name, "...");
 	pid_t pid = fork();
 
 	if(pid == 0) {
+		// FIX Bug 2: Gunakan environment dari parent (envp dari main)
+		// bukan array kosong {NULL} — service butuh PATH, HOME, dll.
 		Duck::StringInputStream exec_stream(m_exec);
 		exec_stream.set_delimeter(' ');
 
-		//Split arguments from exec command
 		std::vector<std::string> args;
 		std::string arg;
 		while(!exec_stream.eof()) {
 			exec_stream >> arg;
-			args.push_back(arg);
+			if(!arg.empty())
+				args.push_back(arg);
 		}
 
-		//Convert c++ string vector into cstring array
+		if(args.empty()) {
+			Duck::Log::err("Service ", m_name, " has empty exec command");
+			exit(-1);
+		}
+
 		const char* c_args[args.size() + 1];
-		for(auto i = 0; i < args.size(); i++)
+		for(size_t i = 0; i < args.size(); i++)
 			c_args[i] = args[i].c_str();
-		c_args[args.size()] = NULL;
+		c_args[args.size()] = nullptr;
 
-		char* env[] = {NULL};
-
-		//Execute the command
-		execvpe(c_args[0], (char* const*) c_args, env);
+		execvpe(c_args[0], (char* const*) c_args, envp);
 		Duck::Log::err("Failed to execute ", m_exec, ": ", strerror(errno));
 		exit(-1);
 	}
+
+	return pid;
 }
 
 Service::Service(std::string name, std::string exec, std::string after):

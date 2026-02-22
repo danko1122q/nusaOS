@@ -39,9 +39,6 @@ Duck::Ptr<MemoryUsageWidget> mem_widget;
 Duck::Ptr<UI::Label> mem_label;
 Duck::Ptr<ProcessListWidget> proc_list;
 
-Duck::FileInputStream cpu_stream;
-Duck::FileInputStream mem_stream;
-
 CPU::Info cpu_info;
 Mem::Info mem_info;
 
@@ -58,15 +55,29 @@ Duck::Result update() {
 	if(!mem_widget || !mem_label || !cpu_bar || !proc_list)
 		return Duck::Result::SUCCESS;
 
-	auto cpu_res = CPU::get_info(cpu_stream);
-	if(cpu_res.is_error())
-		return Duck::Result::SUCCESS;
-	cpu_info = cpu_res.value();
+	// FIX: Buka stream baru setiap update — /proc files harus dibaca ulang
+	// dari awal setiap kali karena file pointer tidak otomatis rewind.
+	// Stream global yang lama stuck di EOF setelah pembacaan pertama
+	// sehingga data CPU/memory tidak pernah terupdate.
+	{
+		Duck::FileInputStream cpu_stream;
+		if(cpu_stream.open("/proc/cpuinfo").is_error())
+			return Duck::Result::SUCCESS;
+		auto cpu_res = CPU::get_info(cpu_stream);
+		if(cpu_res.is_error())
+			return Duck::Result::SUCCESS;
+		cpu_info = cpu_res.value();
+	}
 
-	auto mem_res = Mem::get_info(mem_stream);
-	if(mem_res.is_error())
-		return Duck::Result::SUCCESS;
-	mem_info = mem_res.value();
+	{
+		Duck::FileInputStream mem_stream;
+		if(mem_stream.open("/proc/meminfo").is_error())
+			return Duck::Result::SUCCESS;
+		auto mem_res = Mem::get_info(mem_stream);
+		if(mem_res.is_error())
+			return Duck::Result::SUCCESS;
+		mem_info = mem_res.value();
+	}
 
 	mem_widget->update(mem_info);
 
@@ -89,18 +100,6 @@ Duck::Result update() {
 }
 
 int main(int argc, char** argv, char** envp) {
-	auto res = cpu_stream.open("/proc/cpuinfo");
-	if(res.is_error()) {
-		perror("Failed to open cpuinfo");
-		return res.code();
-	}
-
-	res = mem_stream.open("/proc/meminfo");
-	if(res.is_error()) {
-		Duck::Log::err("Failed to open meminfo");
-		exit(res.code());
-	}
-
 	UI::init(argv, envp);
 
 	auto window = UI::Window::make();

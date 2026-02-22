@@ -58,6 +58,14 @@ constexpr const char* ENTRY_TYPE_COLORS[] = {
 		"\033[34m", // DT_LNK
 };
 
+// Mengembalikan type yang aman untuk dipakai sebagai index array
+// Jika type di luar range (misal symlink atau device aneh), kembalikan 0 (DT_UNKNOWN)
+inline unsigned int safe_type(const Duck::DirectoryEntry& entry) {
+	constexpr unsigned int max_type = sizeof(ENTRY_TYPE_CHARS) / sizeof(ENTRY_TYPE_CHARS[0]) - 1;
+	unsigned int t = static_cast<unsigned int>(entry.type());
+	return (t <= max_type) ? t : 0;
+}
+
 std::string entry_permissions_string(const Duck::DirectoryEntry& entry) {
 	constexpr char bit_names[] = {'r', 'w', 'x'};
 	constexpr const char* bit_colors[] {"\033[36m", "\033[31m", "\033[32m"};
@@ -78,7 +86,7 @@ std::string entry_permissions_string(const Duck::DirectoryEntry& entry) {
 std::string entry_name(const Duck::DirectoryEntry& entry) {
 	Duck::StringOutputStream out;
 	if(!g_no_color)
-		out << ENTRY_TYPE_COLORS[entry.type()] << entry.name() << RESET_FORMAT;
+		out << ENTRY_TYPE_COLORS[safe_type(entry)] << entry.name() << RESET_FORMAT;
 	else
 		out << entry.name();
 	return out.string();
@@ -122,8 +130,11 @@ int main(int argc, char** argv) {
 	auto entries = dirs_res.value();
 	std::sort(entries.begin(), entries.end(), [](auto const& lhs, auto const& rhs) {
 		// FIX: sort stabil: utamakan tipe (dir dulu), lalu nama
-		if(lhs.type() != rhs.type())
-			return lhs.type() > rhs.type();
+		// Gunakan safe cast agar tidak UB jika type bernilai aneh
+		unsigned int lt = static_cast<unsigned int>(lhs.type());
+		unsigned int rt = static_cast<unsigned int>(rhs.type());
+		if(lt != rt)
+			return lt > rt;
 		return lhs.name() < rhs.name();
 	});
 
@@ -144,7 +155,7 @@ int main(int argc, char** argv) {
 		for(auto& entry : entries) {
 			if(!should_show(entry)) continue;
 			Duck::Stream::std_out
-					<< ENTRY_TYPE_CHARS[entry.type()] << entry_permissions_string(entry) << ' '
+					<< ENTRY_TYPE_CHARS[safe_type(entry)] << entry_permissions_string(entry) << ' '
 					<< entry_size_str(entry, widest_size) << ' '
 					<< entry_name(entry) << '\n';
 		}

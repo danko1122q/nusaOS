@@ -33,11 +33,8 @@ public:
 	}
 
 	void fv_did_double_click(Duck::DirectoryEntry entry) override {
-		if (entry.path().string().empty())
-			return;
-
-		// Null check sebelum akses
-		if (!file_grid)
+		// Guard: pastikan semua pointer valid dan path tidak kosong
+		if (!file_grid || entry.path().string().empty())
 			return;
 
 		if (entry.is_directory()) {
@@ -48,47 +45,62 @@ public:
 	}
 
 	void fv_did_navigate(Duck::Path path) override {
-		// Guard terhadap null pointer
-		if (!header || path.string().empty())
+		// FIX: Guard ganda - header DAN file_grid harus valid dulu
+		// fv_did_navigate bisa dipanggil sangat awal (saat set_directory di initialize)
+		// sebelum header selesai dibuat. Dengan flag m_initialized kita skip dulu.
+		if (!m_initialized || !header || path.string().empty())
 			return;
 		header->fv_did_navigate(path);
 	}
 
 protected:
 	void initialize() override {
-		// Inisialisasi file_grid dulu
+		// FIX: Urutan kritis - delegate JANGAN di-set dulu sebelum semua siap.
+		// 1. Buat file_grid tanpa delegate dulu, supaya callback tidak terpanggil
+		//    ke object yang belum fully initialized.
 		file_grid = UI::FileGridView::make("/");
 		if (!file_grid)
 			return;
-		
-		// Baru buat header SETELAH file_grid valid
+
+		// 2. Buat header setelah file_grid valid
 		header = UI::FileNavigationBar::make(file_grid);
 		if (!header)
 			return;
 
+		// 3. Buat layout
 		auto main_flex = UI::FlexLayout::make(UI::FlexLayout::VERTICAL);
 		if (!main_flex)
 			return;
-
-		file_grid->delegate = self();
 		main_flex->add_child(file_grid);
 
+		// 4. Buat window
 		auto window = UI::Window::make();
 		if (!window)
 			return;
-
 		window->set_titlebar_accessory(header);
 		window->set_contents(main_flex);
 		window->set_resizable(true);
 		window->set_title("Files");
 		window->resize({306, 300});
+
+		// 5. FIX: Set flag SEBELUM show() supaya kalau show() trigger navigate,
+		//    callback sudah bisa jalan dengan aman.
+		m_initialized = true;
+
+		// 6. FIX: Baru set delegate SETELAH semua widget siap dan flag aktif.
+		//    Ini mencegah Arc::m_ptr assertion karena self() dipanggil
+		//    sebelum make() selesai meng-assign pointer.
+		file_grid->delegate = self();
+
 		window->show();
 	}
 
 private:
-	// Jangan initialize di sini - pindah ke initialize()
 	Ptr<UI::FileGridView>      file_grid;
 	Ptr<UI::FileNavigationBar> header;
+
+	// FIX: Flag untuk melindungi callback yang masuk sebelum inisialisasi selesai
+	bool m_initialized = false;
 };
 
 int main(int argc, char** argv, char** envp) {
@@ -96,6 +108,7 @@ int main(int argc, char** argv, char** envp) {
 		return 1;
 
 	UI::init(argv, envp);
+
 	auto fm = FileManager::make();
 	if (!fm)
 		return 1;

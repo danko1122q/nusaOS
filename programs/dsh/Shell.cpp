@@ -111,11 +111,13 @@ int Shell::evaluate(const std::string& input) {
 
 	for(int i = 0; i < tokens.size(); i++) {
 		auto& token = tokens[i];
-		auto& cmd = commands.back();
+		// FIX: Tidak lagi mengambil commands.back() di sini karena commands
+		// masih kosong saat i==0, menghasilkan UB (dangling ref) -> signal 11.
+		// Setiap branch kini memanggil commands.back() hanya saat sudah aman.
 
 		if(token == "|") {
 			//Use a pipe
-			if(last_was_operation || i == tokens.size() - 1) {
+			if(commands.empty() || last_was_operation || i == tokens.size() - 1) {
 				fprintf(stderr, "Mismatched pipe\n");
 				cleanup();
 				return EXIT_FAILURE;
@@ -132,10 +134,10 @@ int Shell::evaluate(const std::string& input) {
 			opened_fds.push_back(last_pipe[1]);
 
 			//Set the stdout in the current command to the pipe
-			cmd.set_fd(STDOUT_FILENO, last_pipe[1]);
+			commands.back().set_fd(STDOUT_FILENO, last_pipe[1]);
 		} else if(token == ">" || token == ">>") {
 			//Use a redirection
-			if(last_was_operation || i == tokens.size() - 1) {
+			if(commands.empty() || last_was_operation || i == tokens.size() - 1) {
 				fprintf(stderr, "Mismatched redirection\n");
 				cleanup();
 				return EXIT_FAILURE;
@@ -152,7 +154,7 @@ int Shell::evaluate(const std::string& input) {
 			opened_fds.push_back(fd);
 
 			//Set the stdout in the current command to the file
-			cmd.set_fd(STDOUT_FILENO, fd);
+			commands.back().set_fd(STDOUT_FILENO, fd);
 			last_pipe[0] = fd;
 		} else if(last_was_operation || i == 0) {
 			last_was_operation = false;
@@ -168,7 +170,7 @@ int Shell::evaluate(const std::string& input) {
 			last_pipe[1] = -1;
 		} else {
 			//Otherwise, add this token as an argument to the current command
-			cmd.add_argument(token);
+			commands.back().add_argument(token);
 		}
 	}
 

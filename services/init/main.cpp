@@ -1,3 +1,8 @@
+/*
+    This file is part of nusaOS.
+    Copyright (c) Byteduck 2016-2020. All rights reserved.
+*/
+
 #include <csignal>
 #include <cstdio>
 #include <unistd.h>
@@ -5,35 +10,17 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
-#include <libnusa/Config.h>
-#include <sstream>
-#include <vector>
-
-/*
-    This file is part of nusaOS.
-    
-    nusaOS is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    nusaOS is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    
-    You should have received a copy of the GNU General Public License
-    along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-    
-    Copyright (c) Byteduck 2016-2020. All rights reserved.
-*/
-
-// The init system for nusaOS.
-
 #include <libnusa/Log.h>
 #include "Service.h"
 
-using Duck::Log, Duck::Config;
+using Duck::Log;
+
+// FIX Bug 1: SIGCHLD handler — reap zombie processes dengan WNOHANG
+// agar tidak blocking dan tidak accumulate zombie
+static void sigchld_handler(int) {
+	int status;
+	while(waitpid(-1, &status, WNOHANG) > 0);
+}
 
 int main(int argc, char** argv, char** envp) {
 	if(getpid() != 1) {
@@ -42,24 +29,37 @@ int main(int argc, char** argv, char** envp) {
 	}
 
 	setsid();
+	signal(SIGCHLD, sigchld_handler);
+
 	Log::success("Welcome to nusaOS!");
 
-	//Load services
 	auto services = Service::get_all_services();
 
-	//Start boot services
+	// Jalankan semua service "boot"
+	// FIX Bug 2 & 4: Pass envp dari main, jalankan berurutan dengan jeda kecil
+	// Note: Sandbar dilauncher oleh Pond sendiri, bukan dari sini —
+	// jadi tidak perlu logic after=pond di init
 	for(auto& service : services) {
-		if(service.after() == "boot")
-			service.execute();
+		if(service.after() != "boot")
+			continue;
+		service.execute(envp);
+		// Jeda kecil antar service agar tidak semua start bersamaan
+		// dan menyebabkan resource contention saat boot
+		usleep(50 * 1000); // 50ms
 	}
 
-	//Wait for all child processes
-	while(1) {
-		pid_t pid = waitpid(-1, NULL, 0);
-		if(pid < 0 && errno == ECHILD) break; //All child processes exited
+	// Tunggu semua child process
+	while(true) {
+		int status;
+		pid_t pid = waitpid(-1, &status, 0);
+		if(pid < 0) {
+			if(errno == ECHILD) break;
+			if(errno == EINTR) continue;
+			break;
+		}
+		Log::info("Service pid ", pid, " exited with status ", WEXITSTATUS(status));
 	}
 
-	Log::info("All child processes exited. Goodbye!");
-
+	Log::info("All services exited. Goodbye!");
 	return 0;
 }
