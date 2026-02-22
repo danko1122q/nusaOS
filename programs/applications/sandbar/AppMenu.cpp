@@ -32,8 +32,10 @@ AppMenu::AppMenu():
 			
 		auto btn_layout = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 4);
 		
-		// Safely get icon - gunakan std::move karena icon() non-const
-		auto icon = std::move(app).icon();
+		// FIX: Jangan pakai std::move(app) — app masih dipakai setelahnya
+		// untuk btn_label dan lambda capture, std::move merusak object app
+		// sehingga app.run() di lambda crash → Arc assertion → BSOD
+		auto icon = app.icon();
 		if(icon) {
 			btn_layout->add_child(UI::Image::make(icon, UI::Image::FIT, Gfx::Dimensions {16, 16}));
 		} else {

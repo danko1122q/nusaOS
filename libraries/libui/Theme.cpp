@@ -51,13 +51,41 @@ Theme* Theme::current() {
 		_current = get_theme(_current_theme_name);
 		if(!_current)
 			_current = get_theme(LIBUI_THEME_DEFAULT);
+		// FIX: Kalau default theme juga gagal load (misal tema tidak ada di filesystem),
+		// buat fallback theme kosong daripada return nullptr yang menyebabkan
+		// null dereference → BSOD di semua caller Theme::bg(), fg(), dll.
+		if(!_current) {
+			_current = new Theme(LIBUI_THEME_DEFAULT);
+			// Set warna fallback yang aman agar UI tetap bisa render
+			_current->m_bg                       = Gfx::Color(200, 200, 200, 255);
+			_current->m_fg                       = Gfx::Color(0, 0, 0, 255);
+			_current->m_accent                   = Gfx::Color(0, 100, 200, 255);
+			_current->m_window                   = Gfx::Color(180, 180, 180, 255);
+			_current->m_window_title             = Gfx::Color(100, 100, 160, 255);
+			_current->m_window_title_unfocused   = Gfx::Color(130, 130, 130, 255);
+			_current->m_shadow_1                 = Gfx::Color(140, 140, 140, 255);
+			_current->m_shadow_2                 = Gfx::Color(120, 120, 120, 255);
+			_current->m_highlight                = Gfx::Color(230, 230, 230, 255);
+			_current->m_button                   = Gfx::Color(190, 190, 190, 255);
+			_current->m_button_text              = Gfx::Color(0, 0, 0, 255);
+			_current->m_scrollbar_bg             = Gfx::Color(160, 160, 160, 255);
+			_current->m_scrollbar_handle         = Gfx::Color(100, 100, 100, 255);
+			_current->m_scrollbar_handle_disabled= Gfx::Color(130, 130, 130, 255);
+			_current->m_button_padding           = 2;
+			_current->m_progress_bar_height      = 16;
+		}
 	}
 	return _current;
 }
 
 void Theme::load_config(std::map<std::string, std::string>& config) {
-	if(!config["name"].empty())
+	if(!config["name"].empty() && config["name"] != _current_theme_name) {
 		_current_theme_name = config["name"];
+		// FIX: Reset _current agar tema baru di-load saat current() dipanggil berikutnya.
+		// Sebelumnya _current tidak di-reset, sehingga tema lama tetap dipakai
+		// meski nama tema sudah berubah di config.
+		_current = nullptr;
+	}
 }
 
 Duck::Ptr<Image> Theme::image(const std::string& key) {
