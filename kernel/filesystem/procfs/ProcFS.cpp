@@ -72,11 +72,16 @@ void ProcFS::proc_add(Process* proc) {
 
 void ProcFS::proc_remove(Process* proc) {
 	pid_t pid = proc->pid();
-	for(size_t i = 0; i < entries.size(); i++) {
-		if(entries[i].pid == pid) {
+	// FIX: Hapus SEMUA entries untuk pid ini, bukan hanya 1.
+	// proc_add() menambahkan 6 entries (RootProcEntry, ProcExe, ProcCwd,
+	// ProcStatus, ProcStacks, ProcVMSpace) tapi versi lama hanya hapus 1
+	// dan break — 5 entries sisanya bocor selamanya di memory dan /proc
+	// masih bisa return data dari proses yang sudah mati.
+	for(size_t i = 0; i < entries.size(); ) {
+		if(entries[i].pid == pid)
 			entries.erase(i);
-			break;
-		}
+		else
+			i++;
 	}
 }
 

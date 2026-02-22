@@ -54,7 +54,7 @@ ResultRet<kstd::string> ProcFSContent::uptime() {
 }
 
 ResultRet<kstd::string> ProcFSContent::cpu_info() {
-	char numbuf[4];
+	char numbuf[16];
 	double percent_used = (1.00 - TimeManager::percent_idle()) * 100.0;
 
 	kstd::string str = "[cpu]\nutil = ";
@@ -161,11 +161,13 @@ ResultRet<kstd::string> ProcFSContent::stacks(pid_t pid) {
 				str += numbuf;
 				if (stk_buf[i] >= HIGHER_HALF) {
 					auto symbol = KernelMapper::get_symbol(stk_buf[i]);
-					str += "\t";
-					str += symbol->name;
-					str += " + ";
-					itoa(stk_buf[i] - symbol->location, numbuf, 10);
-					str += numbuf;
+					if (symbol) {
+						str += "\t";
+						str += symbol->name;
+						str += " + ";
+						itoa(stk_buf[i] - symbol->location, numbuf, 10);
+						str += numbuf;
+					}
 				}
 				str += "\n";
 				i++;
