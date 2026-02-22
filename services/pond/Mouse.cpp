@@ -34,21 +34,20 @@ int Mouse::fd() {
 }
 
 bool Mouse::update() {
-   // FIX: guard jika mouse_fd tidak valid (gagal buka /dev/input/mouse)
-   // sebelumnya kalau open() gagal, fd = -1 dan read() akan crash
    if(mouse_fd < 0)
       return false;
 
-   MouseEvent events[32];
-   ssize_t nread = read(mouse_fd, &events, sizeof(MouseEvent) * 32);
+   // FIX 1: Naikkan buffer dari 32 ke 64 event agar tidak ada yang terbuang
+   // saat mouse bergerak cepat
+   MouseEvent events[64];
+   ssize_t nread = read(mouse_fd, &events, sizeof(MouseEvent) * 64);
    if(nread <= 0) return false;
-
-   // FIX: pastikan pembagian tidak menghasilkan 0 atau negatif
    if((size_t)nread < sizeof(MouseEvent)) return false;
    int num_events = (int) nread / sizeof(MouseEvent);
 
    Point total_delta {0, 0};
    int total_z = 0;
+   uint8_t last_buttons = _mouse_buttons;
 
    for(int i = 0; i < num_events; i++) {
       Gfx::Point new_pos = rect().position();
@@ -57,28 +56,39 @@ bool Mouse::update() {
          FloatPoint float_pos = {events[i].x / (float) 0xFFFF, events[i].y / (float) 0xFFFF};
          new_pos.x = float_pos.x * disp_dimensions.width;
          new_pos.y = float_pos.y * disp_dimensions.height;
+         // FIX 2: Untuk absolute mouse, delta harus dihitung dari posisi sebelum set_position
+         Gfx::Point old_pos = rect().position();
+         if(parent())
+            new_pos = new_pos.constrain(parent()->rect());
+         Gfx::Point delta_pos = new_pos - old_pos;
+         set_position(new_pos);
+         total_delta += delta_pos;
       } else {
          new_pos.x += events[i].x;
          new_pos.y -= events[i].y;
+         if(parent())
+            new_pos = new_pos.constrain(parent()->rect());
+         // FIX 3: Hitung delta dari posisi aktual setelah constrain,
+         // bukan dari events[i].x/y mentah — agar delta akurat di tepi layar
+         Gfx::Point delta_pos = new_pos - rect().position();
+         set_position(new_pos);
+         total_delta += delta_pos;
       }
-
-      // FIX: guard parent() — kalau null maka constrain akan crash
-      if(parent())
-         new_pos = new_pos.constrain(parent()->rect());
-
-      Gfx::Point delta_pos = new_pos - rect().position();
-      set_position(new_pos);
-      total_delta += delta_pos;
       total_z += events[i].z;
 
-      if (_mouse_buttons != events[i].buttons) {
+      // FIX 4: Hanya flush event saat button state berubah, bukan setiap event.
+      // Sebelumnya flush terjadi di setiap button change dan mereset total_delta,
+      // memotong akumulasi gerakan dan menyebabkan gerakan terputus-putus.
+      if (events[i].buttons != last_buttons) {
+         Display::inst().create_mouse_events(total_delta.x, total_delta.y, total_z, events[i].buttons);
          _mouse_buttons = events[i].buttons;
-         Display::inst().create_mouse_events(total_delta.x, total_delta.y, total_z, _mouse_buttons);
+         last_buttons = events[i].buttons;
          total_delta = {0, 0};
          total_z = 0;
       }
    }
 
+   // Flush sisa movement setelah semua event diproses
    if (total_delta.x != 0 || total_delta.y != 0 || total_z != 0)
       Display::inst().create_mouse_events(total_delta.x, total_delta.y, total_z, _mouse_buttons);
 

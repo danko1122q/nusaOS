@@ -25,6 +25,9 @@
 #include <utility>
 #include <libnusa/Config.h>
 #include <climits>
+#include <csignal>
+#include <cstdio>
+#include <unistd.h>
 
 using namespace UI;
 
@@ -41,7 +44,35 @@ App::Info _app_info;
 
 void handle_pond_events();
 
+// Crash handler global — dipasang di UI::init() agar semua app libui
+// otomatis mendapat proteksi. Kalau app crash (SIGSEGV, SIGILL, dll),
+// handler ini disconnect dari Pond secara bersih sebelum exit sehingga
+// Pond tidak kebingungan dan desktop tetap stabil tanpa BSOD.
+static void ui_crash_handler(int sig) {
+	// Disconnect dari Pond dulu secara eksplisit
+	// agar server tahu client sudah mati dengan bersih
+	if(UI::pond_context) {
+		// Tutup semua window
+		for(auto& w : windows) {
+			if(w.second && w.second->pond_window())
+				w.second->pond_window()->destroy();
+		}
+	}
+	// Gunakan _exit() bukan exit() — tidak memanggil destruktor
+	// yang bisa crash lagi karena state sudah rusak
+	_exit(128 + sig);
+}
+
 void UI::init(char** argv, char** envp) {
+	// Pasang crash handler untuk semua sinyal fatal dari userspace.
+	// Dengan ini kalau app crash, Pond mendapat disconnect yang bersih
+	// dan tidak menyebabkan BSOD di kernel.
+	signal(SIGSEGV, ui_crash_handler);
+	signal(SIGILL,  ui_crash_handler);
+	signal(SIGABRT, ui_crash_handler);
+	signal(SIGBUS,  ui_crash_handler);
+	signal(SIGFPE,  ui_crash_handler);
+
 	pond_context = Pond::Context::init();
 	pollfds.clear();
 

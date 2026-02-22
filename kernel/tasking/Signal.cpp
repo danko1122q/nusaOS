@@ -59,14 +59,19 @@ Signal::SignalSeverity Signal::signal_severities[] = {
 		KILL, //SIGHUP
 		KILL, //SIGINT
 		FATAL, //SIGQUIT
-		FATAL, //SIGILL
+		// FIX: Ubah SIGILL dari FATAL ke KILL — illegal instruction dari userspace
+		// seharusnya hanya mematikan proses, bukan seluruh sistem.
+		KILL, //SIGILL
 		FATAL, //SIGTRAP
 		FATAL, //SIGABRT
 		FATAL, //SIGEMT
 		FATAL, //SIGFPE
 		KILL, //SIGKILL
 		FATAL, //SIGBUS
-		FATAL, //SIGSEGV
+		// FIX: Ubah SIGSEGV dari FATAL ke KILL — app crash karena null pointer atau
+		// bad memory access seharusnya hanya mematikan proses, bukan trigger BSOD.
+		// FATAL sebelumnya menyebabkan sistem crash meski fault berasal dari userspace.
+		KILL, //SIGSEGV
 		FATAL, //SIGSYS
 		NOKILL, //SIGPIPE
 		NOKILL, //SIGALRM

@@ -18,7 +18,7 @@ MouseDevice *MouseDevice::inst() {
 	return instance;
 }
 
-MouseDevice::MouseDevice(): CharacterDevice(13, 1), event_buffer(128), IRQHandler(12)  {
+MouseDevice::MouseDevice(): CharacterDevice(13, 1), event_buffer(256), IRQHandler(12)  {
 	instance = this;
 	KLog::dbg("I8042/Mouse", "Initializing mouse...");
 	I8042::read(I8042::MOUSE); // Drain buffer (satu kali saja)

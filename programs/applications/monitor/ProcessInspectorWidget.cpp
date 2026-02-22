@@ -73,7 +73,15 @@ void ProcessInspectorWidget::initialize() {
 }
 
 void ProcessInspectorWidget::update() {
-	m_process = ProcessManager::inst().processes().at(m_process.pid());
+	// FIX: Gunakan find() bukan at() — at() throw exception kalau pid tidak ada
+	// (proses sudah mati), yang di nusaOS langsung jadi segfault → BSOD.
+	auto& procs = ProcessManager::inst().processes();
+	auto it = procs.find(m_process.pid());
+	if(it == procs.end()) {
+		// Proses sudah tidak ada, tidak perlu update
+		return;
+	}
+	m_process = it->second;
 
 	m_group->set_label("GID: " + std::to_string(m_process.gid()));
 	m_user->set_label("User: " + std::to_string(m_process.uid()));

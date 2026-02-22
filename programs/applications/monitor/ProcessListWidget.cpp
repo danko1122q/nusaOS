@@ -48,6 +48,11 @@ ProcessListWidget::ProcessListWidget() {
 }
 
 Duck::Ptr<UI::Widget> ProcessListWidget::tv_create_entry(int row, int col) {
+	// FIX: Bounds check agar tidak crash kalau row out of range
+	// (bisa terjadi kalau proses list berubah saat tabel sedang di-render)
+	if(row < 0 || row >= (int)_processes.size())
+		return UI::Label::make("");
+
 	auto& proc = _processes[row];
 	auto app_info = proc.app_info();
 	switch(col) {
@@ -131,10 +136,14 @@ int ProcessListWidget::tv_column_width(int col) {
 }
 
 void ProcessListWidget::tv_selection_changed(const std::set<int>& selected_items) {
-
+	// Intentionally empty — selection handled via context menu
 }
 
 Duck::Ptr<UI::Menu> ProcessListWidget::tv_entry_menu(int row) {
+	// FIX: Bounds check — proses list bisa berubah saat menu dibuka
+	if(row < 0 || row >= (int)_processes.size())
+		return nullptr;
+
 	auto process = _processes[row];
 	return UI::Menu::make({
 		UI::MenuItem::make("Kill", [process] {

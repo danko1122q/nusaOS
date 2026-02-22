@@ -55,28 +55,19 @@ Duck::Result update() {
 		return Duck::Result::SUCCESS;
 	last_update = tv;
 
-	// Validate widgets before updating
-	if(!mem_widget || !mem_label || !cpu_bar || !proc_list) {
+	if(!mem_widget || !mem_label || !cpu_bar || !proc_list)
 		return Duck::Result::SUCCESS;
-	}
 
-	// Get CPU info with error handling
 	auto cpu_res = CPU::get_info(cpu_stream);
-	if(cpu_res.is_error()) {
-		// Don't fail completely, just skip this update
+	if(cpu_res.is_error())
 		return Duck::Result::SUCCESS;
-	}
 	cpu_info = cpu_res.value();
 
-	// Get memory info with error handling
 	auto mem_res = Mem::get_info(mem_stream);
-	if(mem_res.is_error()) {
-		// Don't fail completely, just skip this update
+	if(mem_res.is_error())
 		return Duck::Result::SUCCESS;
-	}
 	mem_info = mem_res.value();
 
-	// Update widgets safely
 	mem_widget->update(mem_info);
 
 	std::string mem_text = "Kernel: " + Mem::Amount {mem_info.kernel_phys - mem_info.kernel_disk_cache}.readable();
@@ -87,6 +78,10 @@ Duck::Result update() {
 	cpu_bar->set_progress(cpu_info.utilization / 100.0);
 	cpu_bar->set_label("CPU: " + std::to_string(cpu_info.utilization) + "%");
 
+	// FIX: Update ProcessManager DULU sebelum proc_list->update()
+	// agar snapshot map di ProcessInspectorWidget::update() konsisten
+	// dengan data yang baru di-fetch. Urutan sebelumnya sama, tapi
+	// sekarang eksplisit untuk kejelasan.
 	ProcessManager::inst().update();
 	proc_list->update();
 

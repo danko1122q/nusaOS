@@ -252,6 +252,10 @@ void Process::kill(int signal) {
 	if (_state != ALIVE && _state != STOPPED) {
 		const char* PROC_STATE_NAMES[] = {"Running", "Zombie", "Dead", "Sleeping", "Stopped"};
 		KLog::warn("Process", "Tried to kill process {} in state {}", _name, PROC_STATE_NAMES[_state]);
+		// FIX: return setelah warning — sebelumnya eksekusi lanjut terus meski proses
+		// sudah ZOMBIE/DEAD, sehingga signal dikirim ke thread yang sudah di-destroy
+		// dan menyebabkan Arc assertion (m_ptr null) → BSOD.
+		return;
 	}
 	if (signal <= 0 || signal >= NSIG) {
 		KLog::err("Process", "Invalid signal {} sent to {}!", signal, _pid);
