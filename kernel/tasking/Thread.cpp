@@ -670,13 +670,12 @@ void Thread::dispatch_signal(int signal) {
 }
 
 void Thread::die_from_signal(int signal) {
-	// BUG FIX: Kode debug ini dihapus. Signal 10 adalah SIGUSR1 — mengirim SIGUSR1
-	// ke proses mana pun (termasuk dari userspace) akan memicu PANIC dan BSOD seluruh OS.
-	// Ini jelas bukan perilaku yang diinginkan di luar keperluan testing.
-	// Jika butuh panic test, gunakan mekanisme yang lebih eksplisit dan terkontrol.
-	if (signal == 10 || _process->name() == "panic_test") {
-	     PANIC("MANUAL_KERNEL_PANIC", "BSOD triggered via signal or panic_test tool.");
-	}
+	// FIX: Hapus debug panic untuk signal 10 (SIGUSR1) dan panic_test name check.
+	// Sebelumnya setiap proses yang menerima SIGUSR1 akan trigger PANIC seluruh OS —
+	// termasuk saat proses mati normal dan signal dikirim ke proses lain secara tidak sengaja.
+	// Panic test yang valid seharusnya menggunakan syscall atau mekanisme eksplisit,
+	// bukan mengandalkan signal number atau nama proses.
+	// Untuk panic_test binary, biarkan dia exit normal saja.
 
     if(Signal::signal_severities[signal] == Signal::FATAL)
         KLog::warn("Process", "PID {} exiting with fatal signal {}", _process->_pid, Signal::signal_names[signal]);

@@ -5,8 +5,8 @@ int main(int argc, char** argv) {
     printf("cat      chmod    chown    cp       date     echo\n");
     printf("free     kill     ln       ls       mkdir    mv\n");
     printf("open     play     profile  ps       pwd      rm\n");
-    printf("rmdir    touch    truncate uname    oshelp   panic_test\n");
-    printf("fetch    benchmark ping\n");
+    printf("rmdir    touch    truncate uname    oshelp   fetch \n");
+    printf("benchmark ping\n");
     printf("-----------------------\n");
     return 0;
 }
