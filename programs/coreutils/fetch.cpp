@@ -72,7 +72,7 @@ int main() {
     InfoRow info[INFO_ROWS] = {
         { "",         user_host   },
         { "OS:",      os.sysname  },
-        { "Kernel:",  os.release  },
+        { "Version:",  os.release  },
         { "Arch:",    os.machine  },
         { "Uptime:",  uptime_str  },
         { "Memory:",  mem_str     },

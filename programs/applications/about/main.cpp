@@ -124,7 +124,6 @@ int main(int argc, char** argv, char** envp) {
 
     // === Info rows ===
     add_info_row(layout, "Architecture:", uname_buf.machine);
-    add_info_row(layout, "Kernel:      ", uname_buf.release);
     add_info_row(layout, "Hostname:    ", uname_buf.nodename);
     add_info_row(layout, "Uptime:      ", uptime_str);
     add_info_row(layout, "Memory:      ", mem_str);
