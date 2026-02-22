@@ -25,14 +25,12 @@
 
 #define abs(a) ((a) < 0 ? -(a) : (a))
 
-// FIX BUG #1: Endianness - PNG menggunakan Big Endian (Network Byte Order)
-// Kode lama: return a | (b << 8) | (c << 16) | (d << 24); // SALAH!
+// PNG menggunakan Big Endian (Network Byte Order)
 uint32_t fget32(FILE* file) {
 	uint32_t a = fgetc(file);  // byte pertama (most significant)
 	uint32_t b = fgetc(file);
 	uint32_t c = fgetc(file);
 	uint32_t d = fgetc(file);  // byte terakhir (least significant)
-	// Big Endian: byte pertama adalah MSB
 	return (a << 24) | (b << 16) | (c << 8) | d;
 }
 
@@ -95,8 +93,8 @@ void put_pixel(PNG* png, uint32_t color) {
 	IMGPTRPIXEL(png->image, png->pixel_x, png->pixel_y) = color;
 	png->pixel_buffer_pos = 0;
 	png->pixel_x++;
-	if(png->pixel_x == png->ihdr.width) {
-		if(png->pixel_y == png->ihdr.height - 1) {
+	if(png->pixel_x == (int)png->ihdr.width) {
+		if(png->pixel_y == (int)png->ihdr.height - 1) {
 			png->state = STATE_DONE;
 		} else {
 			png->state = STATE_SCANLINE_BEGIN;
@@ -106,13 +104,12 @@ void put_pixel(PNG* png, uint32_t color) {
 	}
 }
 
-// FIX BUG #2: Filter PNG - Pastikan wrap around dengan uint8_t casting
+// Filter PNG dengan uint8_t casting untuk modulo 256 otomatis
 void grayscale_pixel(PNG* png) {
 	uint8_t c = png->pixel_buffer[0];
 
 	if(png->scanline_filtertype == PNG_FILTERTYPE_SUB && png->pixel_x > 0) {
 		Color left_color = IMGPTRPIXEL(png->image, png->pixel_x - 1, png->pixel_y);
-		// Cast ke uint8_t untuk memastikan modulo 256 otomatis
 		c = (uint8_t)(c + COLOR_R(left_color));
 	} else if(png->scanline_filtertype == PNG_FILTERTYPE_UP && png->pixel_y > 0) {
 		Color up_color = IMGPTRPIXEL(png->image, png->pixel_x, png->pixel_y - 1);
@@ -248,21 +245,29 @@ void png_write(uint8_t byte, void* png_void) {
 			alpha_truecolor_pixel(png);
 		}
 	}
+	// STATE_DONE: abaikan sisa byte dari decompressor
 }
 
-// FIX BUG #4: Multiple IDAT chunks - png_read akan otomatis lanjut ke chunk berikutnya
+// FIX UTAMA: png_read menangani multiple IDAT chunks dengan benar.
+// Ketika chunk_size habis, ia skip CRC (4 byte) lalu baca header chunk berikutnya.
+// Jika chunk berikutnya bukan IDAT, kembalikan 0 sebagai sinyal EOF ke decompressor.
+// PENTING: Setelah decompress() selesai, file pointer ada di tengah IDAT terakhir
+// (chunk_size berapa pun yang tersisa). Loop utama TIDAK boleh skip CRC lagi
+// untuk chunk IDAT karena png_read sudah mengelola posisi file pointer sendiri.
 uint8_t png_read(void* png_void) {
 	PNG* png = (PNG*) png_void;
 	if(png->chunk_size == 0) {
-		// Reached end of current IDAT chunk, read next chunk
-		fget32(png->file); // Skip CRC
+		// Habis baca chunk ini, skip CRC (4 byte)
+		fget32(png->file);
+
+		// Baca header chunk berikutnya
 		png->chunk_size = fget32(png->file);
 		png->chunk_type = fget32(png->file);
-		
-		if(png->chunk_type != CHUNK_IDAT) {
-			// Jika bukan IDAT, berarti data IDAT sudah habis
-			// Return 0 untuk menandakan EOF pada decompressor
-			fprintf(stderr, "PNG: End of IDAT chunks\n");
+
+		if(feof(png->file) || png->chunk_type != CHUNK_IDAT) {
+			// Bukan IDAT lagi, atau sudah EOF — sinyal selesai ke decompressor
+			// Reset chunk_size ke 0 agar tidak ada yang dibaca lebih lanjut
+			png->chunk_size = 0;
 			return 0;
 		}
 	}
@@ -271,7 +276,7 @@ uint8_t png_read(void* png_void) {
 }
 
 Framebuffer* Gfx::load_png_from_file(FILE* file) {
-	// Read and verify PNG header
+	// Baca dan verifikasi PNG header
 	fseek(file, 0, SEEK_SET);
 	uint8_t header[8];
 	fread(header, 8, 1, file);
@@ -288,27 +293,46 @@ Framebuffer* Gfx::load_png_from_file(FILE* file) {
 	png.state = STATE_SCANLINE_BEGIN;
 	png.image = nullptr;
 
-	// Read chunks
 	size_t chunk = 0;
-	bool idat_started = false;
-	
-	// FIX BUG #3: Memory leak - gunakan unique_ptr untuk auto cleanup
-	DEFLATE* def = nullptr;
-	
+	bool idat_done = false; // sudah selesai proses semua IDAT?
+
 	while(1) {
+		// Jika IDAT sudah selesai diproses (oleh decompress + png_read),
+		// file pointer sudah ada setelah chunk IDAT terakhir yang dikonsumsi png_read.
+		// Kita perlu tahu di mana posisi file sekarang.
+		// Setelah decompress(), png_read() sudah membaca melewati chunk IDAT
+		// berikutnya yang bukan IDAT (atau EOF), sehingga chunk_type dan chunk_size
+		// di struct PNG sudah berisi chunk non-IDAT berikutnya.
+		// Kita bisa langsung pakai nilai itu daripada baca ulang dari file.
+		if(idat_done) {
+			// png_read() sudah memposisikan file pointer pada chunk setelah IDAT.
+			// png.chunk_type dan png.chunk_size sudah berisi data chunk berikutnya.
+			// Proses chunk tersebut tanpa baca ulang dari file.
+			if(png.chunk_type == CHUNK_IEND || feof(file)) {
+				break;
+			}
+			// Skip chunk tidak dikenal setelah IDAT
+			for(uint32_t i = 0; i < png.chunk_size; i++)
+				fgetc(file);
+			fget32(file); // Skip CRC
+			// Baca chunk berikutnya
+			png.chunk_size = fget32(file);
+			png.chunk_type = fget32(file);
+			continue;
+		}
+
 		png.chunk_size = fget32(file);
 		png.chunk_type = fget32(file);
 
-		if(feof(file) || png.state == STATE_DONE) {
+		if(feof(file)) {
 			break;
 		}
 
 		if(chunk == 0 && png.chunk_type != CHUNK_IHDR) {
 			fprintf(stderr, "PNG: No IHDR chunk 0x%08x\n", png.chunk_type);
-			if(def) delete def;
 			return NULL;
 		} else if(chunk == 0) {
-			// Read IHDR
+			// Baca IHDR
 			png.ihdr.width = fget32(file);
 			png.ihdr.height = fget32(file);
 			png.ihdr.bit_depth = fgetc(file);
@@ -317,14 +341,13 @@ Framebuffer* Gfx::load_png_from_file(FILE* file) {
 			png.ihdr.filter_method = fgetc(file);
 			png.ihdr.interlace_method = fgetc(file);
 
-			// Validate IHDR parameters
-			if(png.ihdr.bit_depth != 1 && png.ihdr.bit_depth != 2 && 
-			   png.ihdr.bit_depth != 4 && png.ihdr.bit_depth != 8 && 
+			if(png.ihdr.bit_depth != 1 && png.ihdr.bit_depth != 2 &&
+			   png.ihdr.bit_depth != 4 && png.ihdr.bit_depth != 8 &&
 			   png.ihdr.bit_depth != 16) {
 				fprintf(stderr, "PNG: Invalid bit depth %d\n", png.ihdr.bit_depth);
 				return NULL;
 			}
-			if(png.ihdr.color_type != 0 && png.ihdr.color_type != 2 && 
+			if(png.ihdr.color_type != 0 && png.ihdr.color_type != 2 &&
 			   png.ihdr.color_type != 4 && png.ihdr.color_type != 6) {
 				if(png.ihdr.color_type == 3)
 					fprintf(stderr, "PNG: Indexed color is not supported!\n");
@@ -349,67 +372,88 @@ Framebuffer* Gfx::load_png_from_file(FILE* file) {
 				return NULL;
 			}
 
-			// Allocate framebuffer
+			// Alokasi framebuffer
 			png.image = new Framebuffer(png.ihdr.width, png.ihdr.height);
 			if (!png.image || !png.image->data) {
 				fprintf(stderr, "PNG: Failed to allocate framebuffer memory\n");
 				return NULL;
 			}
 
-			// Skip unused IHDR bytes
+			// Skip sisa byte IHDR yang tidak digunakan
 			for(size_t i = 13; i < png.chunk_size; i++)
 				fgetc(file);
-				
+
 		} else if(png.chunk_type == CHUNK_IDAT) {
-			// FIX BUG #4: Handle multiple IDAT chunks properly
-			if (!idat_started) {
-				idat_started = true;
+			// FIX UTAMA: Proses SEMUA IDAT chunks dalam satu panggilan decompress().
+			// png_read() akan otomatis melanjutkan ke chunk IDAT berikutnya saat chunk_size habis.
+			// Loop utama TIDAK perlu (dan TIDAK boleh) tahu berapa banyak IDAT chunk ada.
 
-				// Read zlib header (only in first IDAT chunk)
-				uint8_t zlib_method = fgetc(file);
-				if((zlib_method & 0xF) != 0x8) {
-					fprintf(stderr, "PNG: Unsupported zlib compression type 0x%x\n", zlib_method & 0xF);
-					delete png.image;
-					return NULL;
-				}
-				uint8_t zlib_flags = fgetc(file);
-				if(zlib_flags & 0x20) {
-					fprintf(stderr, "PNG: zlib presets are not supported\n");
-					delete png.image;
-					return NULL;
-				}
-				png.chunk_size -= 2;
-
-				// FIX BUG #3: Inisialisasi DEFLATE hanya sekali
-				def = new DEFLATE;
-				def->arg = &png;
-				def->write = png_write;
-				def->read = png_read;
-				
-				// Decompress semua IDAT chunks secara berurutan
-				if(decompress(def) < 0) {
-					fprintf(stderr, "PNG: Decompression failed\n");
-					delete def;
-					delete png.image;
-					return NULL;
-				}
+			// Baca zlib header (hanya 2 byte pertama dari IDAT pertama)
+			uint8_t zlib_method = fgetc(file);
+			if((zlib_method & 0xF) != 0x8) {
+				fprintf(stderr, "PNG: Unsupported zlib compression type 0x%x\n", zlib_method & 0xF);
+				delete png.image;
+				return NULL;
 			}
-			// Chunk IDAT berikutnya sudah dikonsumsi oleh png_read()
-			
+			uint8_t zlib_flags = fgetc(file);
+			if(zlib_flags & 0x20) {
+				fprintf(stderr, "PNG: zlib presets are not supported\n");
+				delete png.image;
+				return NULL;
+			}
+			png.chunk_size -= 2; // sudah baca 2 byte zlib header
+
+			// Inisialisasi dan jalankan decompressor.
+			// decompress() akan terus memanggil png_read() sampai deflate stream selesai.
+			// png_read() akan otomatis lompat ke chunk IDAT berikutnya jika chunk_size habis.
+			// Setelah decompress() selesai, png_read() mungkin sudah membaca header
+			// chunk non-IDAT berikutnya (IEND atau lainnya) ke dalam png.chunk_type.
+			DEFLATE def;
+			def.arg = &png;
+			def.write = png_write;
+			def.read = png_read;
+
+			if(decompress(&def) < 0) {
+				fprintf(stderr, "PNG: Decompression failed\n");
+				delete png.image;
+				return NULL;
+			}
+
+			// FIX: Setelah decompress selesai, png_read() mungkin sudah:
+			// 1. Membaca sampai chunk_size == 0 pada chunk IDAT terakhir, lalu
+			// 2. Mencoba baca chunk berikutnya dan menemukan bukan IDAT.
+			// Dalam kasus itu, png.chunk_type sudah berisi chunk setelah IDAT.
+			// JANGAN skip CRC lagi untuk chunk ini — atur flag agar loop tahu.
+			idat_done = true;
+
+			// Jika png_read berhenti di tengah IDAT (chunk_size > 0, misalnya karena
+			// STATE_DONE), kita perlu skip sisa byte IDAT dan CRC-nya sendiri.
+			// Kemudian baca chunk berikutnya untuk diserahkan ke logika idat_done di atas.
+			if(png.chunk_size > 0) {
+				// Masih ada sisa byte di IDAT terakhir yang belum dibaca
+				for(uint32_t i = 0; i < png.chunk_size; i++)
+					fgetc(file);
+				fget32(file); // Skip CRC chunk IDAT terakhir ini
+				// Baca header chunk berikutnya untuk idat_done handler
+				png.chunk_size = fget32(file);
+				png.chunk_type = fget32(file);
+			}
+			// Jika chunk_size == 0, png_read sudah mengkonsumsi CRC dan baca
+			// header chunk berikutnya ke png.chunk_type — langsung lanjut ke idat_done.
+
+			continue; // Lanjut ke iterasi berikutnya (idat_done == true)
+
 		} else if(png.chunk_type == CHUNK_IEND) {
 			break;
 		} else {
-			// Skip unknown chunks
+			// Skip chunk tidak dikenal
 			for(uint32_t i = 0; i < png.chunk_size; i++)
 				fgetc(file);
 		}
 
-		fget32(file); // Skip CRC
+		fget32(file); // Skip CRC (untuk IHDR dan chunk non-IDAT lainnya)
 		chunk++;
 	}
-
-	// FIX BUG #3: Cleanup DEFLATE object
-	if(def) delete def;
 
 	return png.image;
 }

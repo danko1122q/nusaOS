@@ -1,0 +1,6 @@
+convert tanda.png -filter point -resize 16x16 \
+        -type TrueColorAlpha \
+        -depth 8 \
+        -interlace none \
+        -define png:color-type=6 \
+        output_16.png
