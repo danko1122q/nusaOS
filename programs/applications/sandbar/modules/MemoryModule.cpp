@@ -4,11 +4,14 @@
 #include "MemoryModule.h"
 
 MemoryModule::MemoryModule() {
-	m_stream = Duck::FileInputStream("/proc/meminfo");
 }
 
 float MemoryModule::plot_value() {
-	auto val = Sys::Mem::get_info(m_stream);
+	// FIX: Buka stream baru setiap kali baca — /proc files harus dibaca dari awal
+	// setiap update. Stream yang disimpan di member variable stuck di EOF setelah
+	// pembacaan pertama, menyebabkan get_info() return error/garbage selamanya.
+	Duck::FileInputStream stream("/proc/meminfo");
+	auto val = Sys::Mem::get_info(stream);
 	if(val.has_value())
 		return val.value().used_frac();
 	return 0.0;

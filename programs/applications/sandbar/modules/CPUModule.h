@@ -15,6 +15,4 @@ protected:
 
 private:
 	CPUModule();
-
-	Duck::FileInputStream m_stream;
 };

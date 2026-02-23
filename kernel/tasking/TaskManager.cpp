@@ -351,7 +351,10 @@ void TaskManager::preempt(){
 	uint32_t dummy_esp;
 	if(!old_thread) {
 		old_esp = &dummy_esp;
-	} if(old_thread->in_signal_handler()) {
+	// FIX Bug 2: 'else if' bukan 'if' — versi lama kehilangan 'else' sehingga
+	// kalau old_thread null, blok berikutnya tetap dieksekusi dan dereference
+	// old_thread yang null -> crash. Di KVM cepat ini bisa terjadi saat boot.
+	} else if(old_thread->in_signal_handler()) {
 		// TODO: aarch64
 #if defined (__i386__)
 		old_esp = &old_thread->signal_registers.gp.esp;
@@ -409,13 +412,19 @@ void TaskManager::preempt(){
 		next_thread.reset();
 
 		Processor::save_fpu_state((void*&) old_thread->fpu_state);
-		old_thread.reset();
+
+		// FIX: Jangan reset old_thread sebelum preempt_asm selesai.
+		// old_esp adalah pointer ke field di dalam old_thread->registers.gp.esp.
+		// Kalau old_thread di-reset dulu (refcount -> 0 -> delete Thread),
+		// preempt_asm membaca *old_esp dari freed memory -> Arc ASSERT -> BSOD.
+		// Di QEMU lambat jarang terjadi, di KVM cepat terpicu konsisten.
 		// TODO: AARCH64
 #if defined(__i386__)
 		preempt_asm(old_esp, new_esp, cur_thread->page_directory()->entries_physaddr());
 #elif defined(__aarch64__)
 		Processor::switch_threads(old_thread.get(), cur_thread.get());
 #endif
+		old_thread.reset();
 		Processor::load_fpu_state((void*&) cur_thread->fpu_state);
 	}
 

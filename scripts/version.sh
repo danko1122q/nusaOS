@@ -4,7 +4,7 @@ OUTPUT=$1
 
 VERSION_MAJOR="0"
 VERSION_MINOR="1"
-VERSION_PATCH="7"
+VERSION_PATCH="10"
 GIT_REVISION="$(git rev-parse --short HEAD)"
 DATE="$(date)"
 

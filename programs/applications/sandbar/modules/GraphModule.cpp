@@ -16,7 +16,9 @@ void GraphModule::do_repaint(const UI::DrawContext& ctx) {
 	ctx.draw_inset_rect(ctx.rect(), Gfx::Color(0, 0, 0), UI::Theme::shadow_1(), UI::Theme::shadow_2(), UI::Theme::highlight());
 	auto max_height = ctx.height() - 3;
 	for(int x = 0; x < ctx.width() - 3; x++) {
-		if(x > m_values.size())
+		// FIX: >= bukan > — saat x == m_values.size() kondisi lama (x > size)
+		// masih false tapi m_values[x] sudah out of bounds → crash/BSOD
+		if(x >= (int)m_values.size())
 			break;
 		auto bar_height = std::min(std::max((int) (m_values[x] * max_height), 1), max_height);
 		ctx.fill({x + 2, ctx.height() - 1 - bar_height, 1, bar_height}, color);
