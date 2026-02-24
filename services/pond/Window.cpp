@@ -334,13 +334,15 @@ void Window::alloc_framebuffer() {
 			perror("Failed to allocate framebuffer for window");
 			return;
 		}
+
+		// FIX: alloc_shadow_buffers() jangan dipanggil dua kali (dobel alokasi).
+		// Cukup sekali di sini setelah shm baru dialokasi.
+		alloc_shadow_buffers();
 	} else {
 		memset(_framebuffer_shm.ptr, 0, _framebuffer_shm.size);
 	}
 
 	_framebuffer = {(Gfx::Color*) _framebuffer_shm.ptr + (_flipped ? _rect.width * _rect.height : 0), _rect.width, _rect.height};
-
-	alloc_shadow_buffers();
 }
 
 void Window::alloc_shadow_buffers() {
@@ -423,7 +425,14 @@ void Window::set_hint(int hint, int value) {
 			set_resizable(value);
 			break;
 		case PWINDOW_HINT_WINDOWTYPE:
-			if(value >= Pond::WindowType::DEFAULT && value <= Pond::WindowType::MENU)
+			// FIX: Kondisi lama "value <= Pond::WindowType::MENU" salah karena
+			// enums.h mendefinisikan DEFAULT=0, MENU=1, DESKTOP=2, PANEL=3.
+			// Jadi MENU adalah nilai TERKECIL kedua, bukan TERBESAR.
+			// Kondisi <= MENU (<=1) membuat DESKTOP(2) dan PANEL(3) tidak pernah
+			// di-set → semua window selalu bertipe DEFAULT → semua logika z-ordering
+			// DESKTOP/PANEL di Display.cpp tidak pernah berjalan → window tenggelam.
+			// Fix: gunakan PANEL sebagai batas atas (nilai terbesar = 3).
+			if(value >= Pond::WindowType::DEFAULT && value <= Pond::WindowType::PANEL)
 				set_type((Pond::WindowType) value);
 			break;
 		case PWINDOW_HINT_SHADOW:

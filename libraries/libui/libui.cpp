@@ -312,10 +312,14 @@ void UI::__register_window(const std::shared_ptr<Window>& window, int id) {
 void UI::__deregister_window(int id) {
 	windows.erase(id);
 
-	//Exit if all windows are closed
-	//TODO Add a way to override this behavior
+	// FIX: Jangan exit kalau masih ada window DESKTOP atau PANEL yang hidup.
+	// Sebelumnya hanya window DEFAULT yang dihitung sebagai "masih ada window",
+	// sehingga kalau semua window bertipe DESKTOP/PANEL (seperti pada proses
+	// desktop atau sandbar), should_exit langsung = true → proses exit sendiri
+	// tanpa ada yang memintanya → Pond mengira crash → restart loop.
 	for (auto& window : windows) {
-		if (window.second->pond_window()->type() == Pond::DEFAULT) {
+		auto type = window.second->pond_window()->type();
+		if (type == Pond::DEFAULT || type == Pond::DESKTOP || type == Pond::PANEL) {
 			should_exit = false;
 			return;
 		}

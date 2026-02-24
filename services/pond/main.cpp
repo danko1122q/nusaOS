@@ -30,65 +30,56 @@
 #include <csignal>
 #include <time.h>
 
-// Path sandbar
 static const char* SANDBAR_PATH = "/apps/sandbar.app/sandbar";
+static const char* DESKTOP_PATH = "/apps/desktop.app/desktop";
 
-// PID sandbar yang sedang berjalan
 static pid_t sandbar_pid = -1;
+static pid_t desktop_pid = -1;
 
-// Timestamp terakhir sandbar di-launch (untuk mencegah restart loop terlalu cepat)
 static time_t sandbar_last_launch = 0;
-#define SANDBAR_RESTART_DELAY_SEC 2
+static time_t desktop_last_launch = 0;
+#define RESTART_DELAY_SEC 2
 
-static void launch_sandbar() {
+static pid_t launch_app(const char* path, time_t& last_launch, const char* name) {
 	time_t now = time(nullptr);
-
-	// FIX: jangan restart kalau baru saja crash (< 2 detik yang lalu)
-	// ini mencegah restart loop yang bisa membekukan pond
-	if(now - sandbar_last_launch < SANDBAR_RESTART_DELAY_SEC) {
-		Duck::Log::warn("Sandbar crashed too quickly, delaying restart...");
-		return;
+	if(now - last_launch < RESTART_DELAY_SEC) {
+		Duck::Log::warnf("{} crashed too quickly, delaying restart...", name);
+		return -1;
 	}
-	sandbar_last_launch = now;
+	last_launch = now;
 
 	pid_t pid = fork();
 	if(pid == 0) {
-		// Child process — jalankan sandbar
-		// FIX: argv asli kosong total (NULL langsung) padahal argv[0] harus ada
-		// beberapa libc mengharapkan argv[0] = nama program
-		char* args[] = { (char*) SANDBAR_PATH, nullptr };
+		char* args[] = { (char*) path, nullptr };
 		char* envp[] = { nullptr };
-		execve(SANDBAR_PATH, args, envp);
-		// Kalau execve gagal
-		Duck::Log::errf("Failed to launch sandbar: {}", strerror(errno));
+		execve(path, args, envp);
+		Duck::Log::errf("Failed to launch {}: {}", name, strerror(errno));
 		exit(-1);
 	} else if(pid > 0) {
-		sandbar_pid = pid;
-		Duck::Log::successf("Sandbar launched with PID {}", pid);
+		Duck::Log::successf("{} launched with PID {}", name, pid);
 	} else {
-		Duck::Log::err("Failed to fork for sandbar");
+		Duck::Log::errf("Failed to fork for {}", name);
 	}
+	return pid;
 }
 
-// FIX: SIGCHLD handler yang proper — cek apakah yang mati adalah sandbar,
-// kalau iya restart dia. Aslinya hanya wait() tanpa restart sama sekali.
 static void sigchld_handler(int) {
 	int status;
 	pid_t pid;
-
-	// Pakai WNOHANG supaya tidak block event loop pond
 	while((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		if(pid == sandbar_pid) {
-			Duck::Log::warn("Sandbar (PID ", pid, ") died, restarting...");
+			Duck::Log::warn("Sandbar died, restarting...");
 			sandbar_pid = -1;
-			launch_sandbar();
+			sandbar_pid = launch_app(SANDBAR_PATH, sandbar_last_launch, "Sandbar");
+		} else if(pid == desktop_pid) {
+			Duck::Log::warn("Desktop died, restarting...");
+			desktop_pid = -1;
+			desktop_pid = launch_app(DESKTOP_PATH, desktop_last_launch, "Desktop");
 		}
 	}
 }
 
 int main(int argc, char** argv, char** envp) {
-	// Setup SIGCHLD handler dulu sebelum fork
-	// FIX: SA_RESTART belum diimplementasikan di nusaOS, pakai signal() biasa
 	signal(SIGCHLD, sigchld_handler);
 
 	auto* display = new Display;
@@ -106,8 +97,9 @@ int main(int argc, char** argv, char** envp) {
 	polls[2].fd = display->keyboard_fd();
 	polls[2].events = POLLIN;
 
-	// Launch sandbar dengan mekanisme restart yang proper
-	launch_sandbar();
+	// Launch desktop dulu (DESKTOP layer), baru sandbar (PANEL layer)
+	desktop_pid = launch_app(DESKTOP_PATH, desktop_last_launch, "Desktop");
+	sandbar_pid = launch_app(SANDBAR_PATH, sandbar_last_launch, "Sandbar");
 
 	Duck::Log::success("Pond started!");
 

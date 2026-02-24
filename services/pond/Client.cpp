@@ -59,22 +59,27 @@ Client::~Client() {
 }
 
 void Client::mouse_moved(Window* window, Gfx::Point delta, Gfx::Point relative_pos, Gfx::Point absolute_pos) {
+	if(disconnected) return;
 	SEND_MESSAGE("mouse_moved", (MouseMovePkt {window->id(), delta, relative_pos, absolute_pos}));
 }
 
 void Client::mouse_buttons_changed(Window* window, uint8_t new_buttons) {
+	if(disconnected) return;
 	SEND_MESSAGE("mouse_button", (MouseButtonPkt {window->id(), new_buttons}));
 }
 
 void Client::mouse_scrolled(Window* window, int scroll) {
+	if(disconnected) return;
 	SEND_MESSAGE("mouse_scrolled", (MouseScrollPkt {window->id(), scroll}));
 }
 
 void Client::mouse_left(Window* window) {
+	if(disconnected) return;
 	SEND_MESSAGE("mouse_left", (MouseLeavePkt {window->id()}));
 }
 
 void Client::keyboard_event(Window* window, const KeyboardEvent& event) {
+	if(disconnected) return;
 	SEND_MESSAGE("key_event", (KeyEventPkt {window->id(), event.scancode, event.key, event.character, event.modifiers}));
 }
 
@@ -90,15 +95,21 @@ void Client::window_destroyed(Window* window) {
 }
 
 void Client::window_moved(Window *window) {
+	if(disconnected) return;
 	SEND_MESSAGE("window_moved", (WindowMovePkt {window->id(), window->rect().position()}));
 }
 
 void Client::window_resized(Window *window) {
+	if(disconnected) return;
 	shmallow(window->framebuffer_shm().id, pid, SHM_WRITE | SHM_READ);
 	SEND_MESSAGE("window_resized", (WindowResizedPkt {window->id(), window->framebuffer_shm().id, window->rect()}));
 }
 
 void Client::window_focused(Window* window, bool focused) {
+	// FIX: Jangan kirim focus event ke client yang sudah disconnect.
+	// Ini terjadi saat desktop crash dan pond masih proses cleanup window lama.
+	if(disconnected)
+		return;
 	SEND_MESSAGE("window_focus_changed", (WindowFocusPkt { window->id(), focused }));
 }
 
