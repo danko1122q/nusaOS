@@ -24,6 +24,3 @@ A hobbyist x86 operating system, forked and evolved from [duckOS](https://github
 - Basic GUI via `pond`
 - Early-stage networking
 
-## Contributing
-
-If you're into kernel hacking or just want to poke around, feel free. There's no shortage of bugs to fix.
