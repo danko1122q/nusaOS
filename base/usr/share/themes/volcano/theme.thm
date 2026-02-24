@@ -1,0 +1,20 @@
+# Colors
+Color bg = #1a1a2e
+Color fg = #ffdfba
+Color accent = #ff4500
+Color window = #241631
+Color window-title = #ffae42
+Color window-title-unfocused = #5e5e5e
+Color button = #4a0e0e
+Color button-text = #ffffff
+Color scrollbar-bg = #121212
+Color scrollbar-handle = #8b0000
+Color scrollbar-handle-disabled = #333333
+
+# Values
+Value button-padding = 5
+Value progress-bar-height = 21
+
+# Strings
+String font = gohu-11 
+String font-mono = gohu-11 
