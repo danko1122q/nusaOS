@@ -118,9 +118,7 @@ int Command::status() {
 }
 
 bool Command::evaluate_builtin() {
-	if(cmd == "exit") {
-		exit(EXIT_SUCCESS);
-	} else if(cmd == "cd") {
+	if(cmd == "cd") {
 		if(args.empty()) {
 			fprintf(stderr, "No directory specified.\n");
 			return_status = EXIT_FAILURE;

@@ -25,6 +25,8 @@
 #include <termios.h>
 #include <libui/widget/MenuWidget.h>
 #include <fcntl.h>
+#include <sys/wait.h>  // waitpid
+#include <cerrno>      // errno, EIO
 
 static const uint32_t color_palette[] = {
 		0xFF000000,
@@ -50,6 +52,7 @@ TerminalWidget::TerminalWidget() {
 	term = new Term::Terminal({1, 1}, *this);
 
 	//Setup PTY
+	// grantpt/unlockpt tidak ada di libc nusaOS — tidak diperlukan di sini
 	pty_fd = posix_openpt(O_RDWR | O_CLOEXEC);
 	if(pty_fd < 0)
 		exit(-1);
@@ -57,12 +60,16 @@ TerminalWidget::TerminalWidget() {
 	//Set up pty poll
 	UI::Poll pty_poll = {pty_fd};
 	pty_poll.on_ready_to_read = [&]{
+		// nusaOS PTYControllerDevice::read() return 0 jika buffer kosong (bukan EOF).
+		// Jangan interpret nread==0 sebagai EOF — itu hanya "belum ada data".
+		// poll() hanya fire saat can_read()==true (buffer tidak kosong), jadi
+		// satu kali read 128 byte sudah cukup per event.
 		char buf[128];
-		size_t nread;
-		while((nread = read(pty_fd, buf, 128))) {
-			term->write_chars(buf, nread);
+		ssize_t nread = read(pty_fd, buf, 128);
+		if(nread > 0) {
+			term->write_chars(buf, (size_t)nread);
+			handle_term_events();
 		}
-		handle_term_events();
 	};
 	UI::add_poll(pty_poll);
 
@@ -74,8 +81,21 @@ TerminalWidget::TerminalWidget() {
 }
 
 TerminalWidget::~TerminalWidget() {
-	if(kill(proc_pid, SIGTERM) < 0)
-		perror("kill");
+	// FIX 4: SIGHUP = sinyal "terminal ditutup" yang benar (bukan SIGTERM).
+	// waitpid supaya dsh tidak jadi zombie di kernel process table.
+	if(proc_pid > 0) {
+		kill(proc_pid, SIGHUP);
+		int wstatus;
+		if(waitpid(proc_pid, &wstatus, WNOHANG) == 0) {
+			kill(proc_pid, SIGKILL);
+			waitpid(proc_pid, &wstatus, 0);
+		}
+		proc_pid = -1;
+	}
+	if(pty_fd >= 0) {
+		close(pty_fd);
+		pty_fd = -1;
+	}
 }
 
 Gfx::Dimensions TerminalWidget::preferred_size() {

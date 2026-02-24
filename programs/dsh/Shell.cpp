@@ -28,6 +28,7 @@
 #include <cstring>
 #include <queue>
 #include <fcntl.h>
+#include <sys/wait.h>
 #define MAX_COMMAND_HISTORY 100
 
 Shell::Shell(int argc, char** argv, char** envp) {
@@ -79,13 +80,31 @@ int Shell::run() {
 		//Read the command and trim and evaluate it
 		recall_index = command_history.end();
 		auto command = editor.get_line();
+
+		// Jika stdin EOF (Ctrl+D), keluar bersih tanpa tunggu input lagi
+		if(std::cin.eof())
+			break;
+
 		result = evaluate(command);
+
+		// Coreutil 'exit' mengembalikan exit code 94 (0x5E) sebagai sinyal
+		// ke shell agar set should_exit dan tutup jendela terminal secara normal.
+		if(result == 94) {
+			should_exit = true;
+			result = EXIT_SUCCESS;
+		}
+
 		command_history.push_back(command);
 		if(command_history.size() > MAX_COMMAND_HISTORY)
 			command_history.erase(command_history.begin());
-		if(std::cin.eof())
-			break;
 	}
+
+	// Reap semua child yang tersisa agar tidak ada zombie saat shell mati
+	{
+		int wstatus;
+		while(waitpid(-1, &wstatus, WNOHANG) > 0) {}
+	}
+
 	return result;
 }
 
