@@ -4,6 +4,7 @@ Color fg = #000000
 Color accent = #000080
 Color window = #c0c0c0
 Color window-title = #ffffff
+Color window-title-unfocused = #c0c0c0
 Color button = #c0c0c0
 Color button-text = #000000
 Color scrollbar-bg = #dfdfdf
@@ -11,13 +12,9 @@ Color scrollbar-handle = #c0c0c0
 Color scrollbar-handle-disabled = #808080
 
 # Values
-Value button-padding = 5
-Value progress-bar-height = 20
+Value button-padding = 5 
+Value progress-bar-height = 21 
 
 # Strings
-String font = gohu-11
+String font = gohu-11 
 String font-mono = gohu-11
-
-# Images
-FgImage win-close = res/close.png
-FgImage check = res/check.png
