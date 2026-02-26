@@ -27,11 +27,19 @@
 #include "kernel/kstd/KLog.h"
 
 PCI::ID bochs_qemu_vga = {0x1234, 0x1111};
-PCI::ID vbox_vga = {0x80ee, 0xbeef};
+PCI::ID vbox_vga       = {0x80ee, 0xbeef};
 
-BochsVGADevice *BochsVGADevice::create() {
+// Fixed framebuffer allocation size: enough for 1920x1080 32bpp with a
+// double-height virtual buffer for scrolling. Allocated once in detect() and
+// never replaced, so any Arc<VMRegion> held by userspace (e.g. pond) stays
+// valid across resolution changes.
+#define FB_ALLOC_WIDTH  1920u
+#define FB_ALLOC_HEIGHT 1080u
+#define FB_ALLOC_SIZE   (FB_ALLOC_WIDTH * FB_ALLOC_HEIGHT * sizeof(uint32_t) * 2)
+
+BochsVGADevice* BochsVGADevice::create() {
 	auto* ret = new BochsVGADevice();
-	if(!ret->detect()) {
+	if (!ret->detect()) {
 		delete ret;
 		remove_device(29, 0);
 		return nullptr;
@@ -43,28 +51,36 @@ BochsVGADevice::BochsVGADevice(): VGADevice() {}
 
 bool BochsVGADevice::detect() {
 	PCI::enumerate_devices([](PCI::Address address, PCI::ID id, uint16_t type, void* dataPtr) {
-		if(id == bochs_qemu_vga || id == vbox_vga) {
-			*((PCI::Address*)dataPtr) = address;
-		}
+		if (id == bochs_qemu_vga || id == vbox_vga)
+			*((PCI::Address*) dataPtr) = address;
 	}, &address);
 
-	if(address.bus == 0 && address.function == 0 && address.slot == 0) {
+	if (address.bus == 0 && address.function == 0 && address.slot == 0) {
 		KLog::warn("VGA", "Could not find a bochs-compatible VGA device!");
 		return false;
 	}
 
 	framebuffer_paddr = PCI::read_dword(address, PCI_BAR0) & 0xfffffff0;
-	set_resolution(VBE_DEFAULT_WIDTH, VBE_DEFAULT_HEIGHT);
-	framebuffer_region = MM.map_device_region(framebuffer_paddr, framebuffer_size() * 2);
+
+	// Map the framebuffer once at maximum size. This region is never replaced,
+	// which means userspace mappings obtained via map_framebuffer() remain
+	// valid even after the user picks a different resolution.
+	framebuffer_region = MM.map_device_region(framebuffer_paddr, FB_ALLOC_SIZE);
 	framebuffer = (uint32_t*) framebuffer_region->start();
-	KLog::info("VGA", "Found a bochs-compatible VGA device at {x}:{x}.{x}", address.bus, address.slot, address.function);
-	KLog::dbg("VGA", "virtual framebuffer mapped from {#x} to {#x}", framebuffer_paddr, framebuffer_region->start());
+
+	// Apply the default mode now that the region exists.
+	set_resolution(VBE_DEFAULT_WIDTH, VBE_DEFAULT_HEIGHT);
+
+	KLog::info("VGA", "Found a bochs-compatible VGA device at {x}:{x}.{x}",
+	           address.bus, address.slot, address.function);
+	KLog::dbg("VGA", "virtual framebuffer mapped from {#x} to {#x}",
+	          framebuffer_paddr, framebuffer_region->start());
 	return true;
 }
 
 void BochsVGADevice::write_register(uint16_t index, uint16_t value) {
 	IO::outw(VBE_DISPI_IOPORT_INDEX, index);
-	IO::outw(VBE_DISPI_IOPORT_DATA, value);
+	IO::outw(VBE_DISPI_IOPORT_DATA,  value);
 }
 
 uint16_t BochsVGADevice::read_register(uint16_t index) {
@@ -73,45 +89,73 @@ uint16_t BochsVGADevice::read_register(uint16_t index) {
 }
 
 bool BochsVGADevice::set_resolution(uint16_t width, uint16_t height) {
-	//Write registers
-	write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
-	write_register(VBE_DISPI_INDEX_XRES, width);
-	write_register(VBE_DISPI_INDEX_YRES, height);
-	write_register(VBE_DISPI_INDEX_VIRT_WIDTH, width);
-	write_register(VBE_DISPI_INDEX_VIRT_HEIGHT, height * 2);
-	write_register(VBE_DISPI_INDEX_BPP, VBE_DISPI_BPP_32);
-	write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
-	write_register(VBE_DISPI_INDEX_BANK, 0);
+	if (width  > VBE_MAX_WIDTH)  width  = VBE_MAX_WIDTH;
+	if (height > VBE_MAX_HEIGHT) height = VBE_MAX_HEIGHT;
 
-	//Test if display resolution set was successful and revert if not
-	if(read_register(VBE_DISPI_INDEX_XRES) != width || read_register(VBE_DISPI_INDEX_YRES) != height) {
-		set_resolution(display_width, display_height);
+	write_register(VBE_DISPI_INDEX_ENABLE,      VBE_DISPI_DISABLED);
+	write_register(VBE_DISPI_INDEX_XRES,        width);
+	write_register(VBE_DISPI_INDEX_YRES,        height);
+	write_register(VBE_DISPI_INDEX_VIRT_WIDTH,  width);
+	write_register(VBE_DISPI_INDEX_VIRT_HEIGHT, height * 2);
+	write_register(VBE_DISPI_INDEX_BPP,         VBE_DISPI_BPP_32);
+	write_register(VBE_DISPI_INDEX_ENABLE,      VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
+	write_register(VBE_DISPI_INDEX_BANK,        0);
+
+	// Read back to confirm the hardware accepted the mode.
+	if (read_register(VBE_DISPI_INDEX_XRES) != width ||
+	    read_register(VBE_DISPI_INDEX_YRES) != height) {
+		KLog::warn("VGA", "Failed to set resolution {}x{}, keeping {}x{}",
+		           width, height, display_width, display_height);
+		// Re-apply the last known working mode.
+		write_register(VBE_DISPI_INDEX_ENABLE,      VBE_DISPI_DISABLED);
+		write_register(VBE_DISPI_INDEX_XRES,        display_width);
+		write_register(VBE_DISPI_INDEX_YRES,        display_height);
+		write_register(VBE_DISPI_INDEX_VIRT_WIDTH,  display_width);
+		write_register(VBE_DISPI_INDEX_VIRT_HEIGHT, display_height * 2);
+		write_register(VBE_DISPI_INDEX_BPP,         VBE_DISPI_BPP_32);
+		write_register(VBE_DISPI_INDEX_ENABLE,      VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
 		return false;
 	}
 
-	display_width = width;
+	display_width  = width;
 	display_height = height;
+	KLog::info("VGA", "Resolution set to {}x{}", display_width, display_height);
+
+	write_register(VBE_DISPI_INDEX_Y_OFFSET, 0);
+
+	// framebuffer_region is fixed — just reset the pointer to the base.
+	// No remap needed; the same VMObject covers all supported resolutions.
+	if (framebuffer_region)
+		framebuffer = (uint32_t*) framebuffer_region->start();
+
 	return true;
+}
+
+void BochsVGADevice::remap_framebuffer() {
+	if (framebuffer_region)
+		framebuffer = (uint32_t*) framebuffer_region->start();
 }
 
 size_t BochsVGADevice::framebuffer_size() {
 	return display_height * display_width * sizeof(uint32_t);
 }
 
-ssize_t BochsVGADevice::write(FileDescriptor &fd, size_t offset, SafePointer<uint8_t> buffer, size_t count) {
+ssize_t BochsVGADevice::write(FileDescriptor& fd, size_t offset,
+                              SafePointer<uint8_t> buffer, size_t count)
+{
 	LOCK(_lock);
-	if(!framebuffer) return -ENOSPC;
-	if(offset + count > framebuffer_size()) return -ENOSPC;
-	buffer.read(((uint8_t*)framebuffer + offset), count);
+	if (!framebuffer) return -ENOSPC;
+	if (offset + count > framebuffer_size()) return -ENOSPC;
+	buffer.read(((uint8_t*) framebuffer + offset), count);
 	return count;
 }
 
 void BochsVGADevice::set_pixel(size_t x, size_t y, uint32_t value) {
-	if(x >= display_width || y >= display_height) return;
+	if (x >= display_width || y >= display_height) return;
 	framebuffer[x + y * display_width] = value;
 }
 
-uint32_t *BochsVGADevice::get_framebuffer() {
+uint32_t* BochsVGADevice::get_framebuffer() {
 	return framebuffer;
 }
 
@@ -124,32 +168,35 @@ size_t BochsVGADevice::get_display_height() {
 }
 
 void BochsVGADevice::scroll(size_t pixels) {
-	if(pixels >= display_height) return;
-	memcpy(framebuffer, framebuffer + pixels * display_width, (display_height - pixels) * display_width * sizeof(uint32_t));
-	memset(framebuffer + (display_height - pixels) * display_width, 0, display_width * pixels * sizeof(uint32_t));
+	if (pixels >= display_height) return;
+	memcpy(framebuffer,
+	       framebuffer + pixels * display_width,
+	       (display_height - pixels) * display_width * sizeof(uint32_t));
+	memset(framebuffer + (display_height - pixels) * display_width,
+	       0, display_width * pixels * sizeof(uint32_t));
 }
 
 void BochsVGADevice::clear(uint32_t color) {
 	size_t size = display_height * display_width;
-	for(size_t i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++)
 		framebuffer[i] = color;
-	}
 }
 
 void* BochsVGADevice::map_framebuffer(Process* proc) {
 	auto region_res = proc->map_object(framebuffer_region->object(), VMProt::RW);
-	if(region_res.is_error())
+	if (region_res.is_error())
 		return nullptr;
 	return (void*) region_res.value()->start();
 }
 
 int BochsVGADevice::ioctl(unsigned int request, SafePointer<void*> argp) {
-	switch(request) {
+	switch (request) {
 		case IO_VIDEO_OFFSET:
-			if((int)argp.raw() < 0 || (int)argp.raw() > display_height)
+			if ((int) argp.raw() < 0 || (int) argp.raw() > display_height)
 				return -EINVAL;
-			write_register(VBE_DISPI_INDEX_Y_OFFSET, (int) argp.raw());
-			framebuffer = (uint32_t*) framebuffer_region->start() + ((uint16_t) (int) argp.raw() * display_width);
+			write_register(VBE_DISPI_INDEX_Y_OFFSET, (uint16_t)(int) argp.raw());
+			framebuffer = (uint32_t*) framebuffer_region->start()
+			            + ((uint16_t)(int) argp.raw() * display_width);
 			return SUCCESS;
 		default:
 			return VGADevice::ioctl(request, argp);

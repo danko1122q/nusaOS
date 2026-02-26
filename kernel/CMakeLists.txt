@@ -205,6 +205,7 @@ IF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686")
             arch/i386/device/PATADevice.cpp
             arch/i386/device/BochsVGADevice.cpp
             arch/i386/device/AC97Device.cpp
+            arch/i386/device/ResolutionMenu.cpp
 
             arch/i386/time/CMOS.cpp
             arch/i386/time/PIT.cpp
