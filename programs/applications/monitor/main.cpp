@@ -1,60 +1,55 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Copyright © 2016-2026 nusaOS */
+/* Copyright © 2025-2026 danko1122q */
 
 #include <libui/libui.h>
-#include <libui/widget/layout/FlexLayout.h>
 #include <libui/widget/layout/BoxLayout.h>
-#include <libui/widget/Cell.h>
 #include <libui/widget/NamedCell.h>
+#include <libui/widget/Cell.h>
 #include "CpuGraphWidget.h"
 #include "MemGraphWidget.h"
-#include "ProcessListWidget.h"
-#include "ProcessManager.h"
 
 int main(int argc, char** argv, char** envp) {
-	UI::init(argv, envp);
+    UI::init(argv, envp);
 
-	// --- Grafik CPU dan RAM side-by-side ---
-	auto cpu_graph = CpuGraphWidget::make();
-	auto mem_graph = MemGraphWidget::make();
-	cpu_graph->set_sizing_mode(UI::FILL);
-	mem_graph->set_sizing_mode(UI::FILL);
+    auto cpu = CpuGraphWidget::make();
+    auto mem = MemGraphWidget::make();
 
-	auto graphs_row = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 4);
-	graphs_row->add_child(UI::NamedCell::make("CPU", cpu_graph));
-	graphs_row->add_child(UI::NamedCell::make("Memory", mem_graph));
+    // PREFERRED — grafik tidak stretch, selalu 200x50
+    cpu->set_sizing_mode(UI::PREFERRED);
+    mem->set_sizing_mode(UI::PREFERRED);
 
-	// Bungkus grafik dalam Cell ber-PREFERRED supaya tidak ikut stretch vertikal
-	auto graphs_cell = UI::Cell::make(graphs_row);
-	graphs_cell->set_sizing_mode(UI::PREFERRED);
+    auto cpu_cell = UI::NamedCell::make("CPU", cpu);
+    auto mem_cell = UI::NamedCell::make("Memory", mem);
+    // PREFERRED pada NamedCell juga agar tinggi tidak stretch
+    cpu_cell->set_sizing_mode(UI::PREFERRED);
+    mem_cell->set_sizing_mode(UI::PREFERRED);
 
-	// --- Process list ---
-	auto proc_list = ProcessListWidget::make();
-	// proc_list sudah set_sizing_mode(FILL) di initialize() — tidak perlu set lagi
+    // Baris horizontal: CPU | Memory
+    auto row = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 6);
+    row->set_sizing_mode(UI::PREFERRED);
+    row->add_child(cpu_cell);
+    row->add_child(mem_cell);
 
-	auto proc_cell = UI::NamedCell::make("Processes", proc_list);
-	proc_cell->set_sizing_mode(UI::FILL);
+    // Cell luar: memusatkan baris di tengah window
+    // sizing FILL agar Cell mengisi window, tapi row di dalamnya tetap PREFERRED
+    auto outer = UI::Cell::make(row, 6);
+    outer->set_sizing_mode(UI::FILL);
 
-	// FlexLayout VERTICAL: child PREFERRED dapat tinggi minimal,
-	// child FILL dapat sisa ruang. Ini yang dipakai ProcessInspectorWidget.
-	auto layout = UI::FlexLayout::make(UI::FlexLayout::VERTICAL);
-	layout->add_child(graphs_cell);
-	layout->add_child(proc_cell);
+    auto window = UI::Window::make();
+    window->set_title("System Monitor");
+    window->set_contents(outer);
+    window->set_resizable(true);
+    window->resize({450, 105});
+    window->show();
 
-	auto window = UI::Window::make();
-	window->set_title("System Monitor");
-	window->set_contents(layout);
-	window->set_resizable(true);
-	window->resize({620, 440});
-	window->show();
+    cpu->update();
+    mem->update();
 
-	auto timer = UI::set_interval([&] {
-		cpu_graph->update();
-		mem_graph->update();
-		ProcessManager::inst().update();
-		proc_list->update();
-	}, 1000);
+    auto timer = UI::set_interval([&cpu, &mem] {
+        cpu->update();
+        mem->update();
+    }, 1000);
 
-	UI::run();
-	return 0;
+    UI::run();
+    return 0;
 }

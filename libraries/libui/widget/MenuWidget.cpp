@@ -196,6 +196,11 @@ Duck::Ptr<Window> MenuWidget::acquire_menu_window() {
 	window->pond_window()->set_type(Pond::MENU);
 	window->set_decorated(false);
 	window->pond_window()->set_has_shadow(true);
+	// Tandai sebagai menu/auxiliary window agar tidak mempengaruhi exit condition.
+	// Window MENU di-pool dan tidak pernah di-destroy selama app hidup — tanpa
+	// flag ini, __deregister_window() akan terus melihat window ini dan tidak
+	// pernah set should_exit = true → app tidak bisa exit.
+	window->mark_as_menu_window();
 	s_windows.push_back({window, true});
 	return window;
 }

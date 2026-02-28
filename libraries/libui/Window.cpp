@@ -333,11 +333,16 @@ void Window::repaint_now() {
 }
 
 void Window::close() {
-	if(!_closed)
-		_window->destroy();
+	if(!_closed) {
+		_closed = true;
+		// Hanya destroy ke Pond jika belum di-destroy dari sisi Pond.
+		// _pond_destroyed di-set true oleh handler PEVENT_WINDOW_DESTROY
+		// sebelum memanggil close(), sehingga kita tidak double-destroy.
+		if(!_pond_destroyed)
+			_window->destroy();
+	}
 	if(on_close)
 		on_close();
-	_closed = true;
 }
 
 void Window::show() {

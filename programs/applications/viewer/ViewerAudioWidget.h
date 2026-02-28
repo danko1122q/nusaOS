@@ -14,6 +14,10 @@ public:
 	WIDGET_DEF(ViewerAudioWidget)
 	~ViewerAudioWidget();
 
+protected:
+	// WAJIB: WIDGET_DEF butuh initialize() untuk vtable lengkap.
+	void initialize() override {}
+
 private:
 	ViewerAudioWidget(Duck::Ptr<Sound::WavReader> reader);
 

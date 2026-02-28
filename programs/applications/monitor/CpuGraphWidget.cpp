@@ -1,54 +1,55 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Copyright © 2016-2026 nusaOS */
+/* Copyright © 2025-2026 danko1122q */
 
 #include "CpuGraphWidget.h"
-#include <algorithm>
 
 void CpuGraphWidget::update() {
-    // Buka stream baru tiap kali — /proc tidak bisa rewind
     Duck::FileInputStream stream("/proc/cpuinfo");
     auto res = Sys::CPU::get_info(stream);
-    float val = 0.0f;
-    if (res.has_value()) {
-        m_last_util = res.value().utilization;
-        val = m_last_util / 100.0f;
-    }
+    if (res.has_value())
+        m_util = res.value().utilization;
 
-    // Geser nilai lama ke kanan, masukkan nilai baru di depan
-    if (!m_values.empty())
-        m_values.erase(m_values.end() - 1);
-    m_values.insert(m_values.begin(), val);
+    float val = (float)m_util / 100.0f;
+    if (val < 0.0f) val = 0.0f;
+    if (val > 1.0f) val = 1.0f;
+
+    // Push baru di belakang, buang terlama dari depan
+    // index 0 = terlama (kiri), index n-1 = terbaru (kanan)
+    m_values.push_back(val);
+    while ((int)m_values.size() > 200)
+        m_values.erase(m_values.begin());
+
     repaint();
 }
 
 void CpuGraphWidget::do_repaint(const UI::DrawContext& ctx) {
-    // Background + border inset (sama persis dengan GraphModule sandbar)
-    ctx.draw_inset_rect(ctx.rect(),
-        Gfx::Color(0,0,0),
-        UI::Theme::shadow_1(),
-        UI::Theme::shadow_2(),
-        UI::Theme::highlight());
+    ctx.fill(ctx.rect(), Gfx::Color(0, 0, 0));
+    ctx.draw_inset_outline(ctx.rect());
 
-    int max_h = ctx.height() - 3;
-    Gfx::Color color(220, 50, 50); // merah — sama dengan CPUModule sandbar
+    int w = ctx.width() - 4;   // lebar area grafik
+    int h = ctx.height() - 4;  // tinggi area grafik
+    int n = (int)m_values.size();
+    Gfx::Color bar(220, 60, 60);
 
-    for (int x = 0; x < ctx.width() - 3; x++) {
-        if (x >= (int)m_values.size()) break;
-        int bar_h = std::min(std::max((int)(m_values[x] * max_h), 1), max_h);
-        ctx.fill({x + 2, ctx.height() - 1 - bar_h, 1, bar_h}, color);
+    // Gambar dari x=2 (kiri) ke kanan
+    // Data terlama (index 0) di kiri, terbaru (index n-1) di kanan
+    // Jika data < w, mulai dari kiri (x=2), sisanya kosong di kanan
+    for (int i = 0; i < n && i < w; i++) {
+        int x  = 2 + i;
+        int bh = (int)(m_values[i] * h);
+        if (bh < 1) bh = 1;
+        if (bh > h) bh = h;
+        ctx.fill({x, ctx.height() - 2 - bh, 1, bh}, bar);
     }
 
-    // Label teks % di tengah grafik
-    std::string label = "CPU: " + std::to_string(m_last_util) + "%";
-    ctx.draw_text(label.c_str(), ctx.rect(),
-        UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
-        UI::Theme::font(), UI::Theme::fg());
+    std::string lbl = std::to_string(m_util) + "%";
+    ctx.draw_text(lbl.c_str(), ctx.rect(),
+        UI::CENTER, UI::CENTER,
+        UI::Theme::font(), Gfx::Color(255, 255, 255));
 }
 
 Gfx::Dimensions CpuGraphWidget::preferred_size() {
-    return {120, 40};
+    return {200, 50};
 }
 
-void CpuGraphWidget::on_layout_change(const Gfx::Rect& old_rect) {
-    m_values.resize(std::max(current_rect().width - 2, 1));
-}
+void CpuGraphWidget::on_layout_change(const Gfx::Rect&) {}

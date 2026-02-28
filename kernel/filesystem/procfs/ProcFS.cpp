@@ -1,20 +1,7 @@
 /*
-    This file is part of nusaOS.
-    
-    nusaOS is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    nusaOS is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    
-    You should have received a copy of the GNU General Public License
-    along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-    
-    Copyright (c) Byteduck 2016-2020. All rights reserved.
+	This file is part of nusaOS.
+	SPDX-License-Identifier: GPL-3.0-or-later
+	Copyright © 2016-2026 nusaOS
 */
 
 #include "ProcFS.h"
@@ -59,29 +46,51 @@ pid_t ProcFS::pid_for_id(ino_t id) {
 
 void ProcFS::proc_add(Process* proc) {
 	pid_t pid = proc->pid();
-	//Make sure we don't add a duplicate entry (would happen with exec())
+	// Cegah duplikat entry (terjadi saat exec())
 	for(size_t i = 0; i < entries.size(); i++)
 		if(entries[i].pid == pid) return;
+
 	entries.push_back(ProcFSEntry(RootProcEntry, pid));
-	entries.push_back(ProcFSEntry(ProcExe, pid));
-	entries.push_back(ProcFSEntry(ProcCwd, pid));
-	entries.push_back(ProcFSEntry(ProcStatus, pid));
-	entries.push_back(ProcFSEntry(ProcStacks, pid));
-	entries.push_back(ProcFSEntry(ProcVMSpace, pid));
+	entries.push_back(ProcFSEntry(ProcExe,       pid));
+	entries.push_back(ProcFSEntry(ProcCwd,       pid));
+	entries.push_back(ProcFSEntry(ProcStatus,    pid));
+	entries.push_back(ProcFSEntry(ProcStacks,    pid));
+	entries.push_back(ProcFSEntry(ProcVMSpace,   pid));
 }
 
 void ProcFS::proc_remove(Process* proc) {
 	pid_t pid = proc->pid();
-	// FIX: Hapus SEMUA entries untuk pid ini, bukan hanya 1.
-	// proc_add() menambahkan 6 entries (RootProcEntry, ProcExe, ProcCwd,
-	// ProcStatus, ProcStacks, ProcVMSpace) tapi versi lama hanya hapus 1
-	// dan break — 5 entries sisanya bocor selamanya di memory dan /proc
-	// masih bisa return data dari proses yang sudah mati.
-	for(size_t i = 0; i < entries.size(); ) {
+
+	// FIX: Hapus SEMUA entries untuk pid ini.
+	//
+	// Bug lama: kode hanya menghapus entry PERTAMA yang cocok lalu break.
+	// proc_add() menambahkan 6 entries per proses (RootProcEntry, ProcExe,
+	// ProcCwd, ProcStatus, ProcStacks, ProcVMSpace).
+	// Dengan break setelah erase pertama, 5 entries sisanya bocor selamanya di
+	// vector entries — tidak pernah dihapus sepanjang uptime OS.
+	//
+	// Dampak nyata yang menyebabkan monitor force close:
+	//   1. Setiap proses yang exit meninggalkan 5 entries zombie di ProcFS.
+	//   2. Saat banyak app foto/file dibuka lalu ditutup (skenario persis user),
+	//      ratusan stale entries menumpuk di entries vector.
+	//   3. get_inode() harus linear scan seluruh entries vector setiap akses.
+	//   4. iterate_entries() untuk directory listing juga scan seluruh vector.
+	//   5. Saat monitor dibuka dan membaca /proc untuk semua proses, waktu scan
+	//      menjadi O(n × stale_entries) — dengan ratusan zombie entries ini bisa
+	//      berakibat timeout, blocking main thread, atau OOM di kernel heap.
+	//   6. Lebih parah: stale entries punya pid proses yang sudah mati.
+	//      Ketika ProcFSContent::status(stale_pid) atau vmspace(stale_pid) dipanggil,
+	//      TaskManager::process_for_pid() gagal dan return error — TAPI
+	//      iterate_entries() masih menawarkan entry ini ke userspace, sehingga
+	//      Sys::Process::get_all() di ProcessManager mencoba membaca /proc/[pid]/status
+	//      untuk pid yang sudah tidak ada → read() gagal → data korup/parsial
+	//      → ProcessManager mungkin crash atau return data sampah ke UI.
+	//
+	// FIX: Iterasi mundur (dari belakang) untuk erase semua entries milik pid ini
+	// tanpa invalidasi index yang sedang diproses.
+	for(size_t i = entries.size(); i-- > 0; ) {
 		if(entries[i].pid == pid)
 			entries.erase(i);
-		else
-			i++;
 	}
 }
 

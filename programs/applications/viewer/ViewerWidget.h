@@ -18,6 +18,13 @@ public:
 	bool on_mouse_move(Pond::MouseMoveEvent evt) override;
 	bool on_mouse_button(Pond::MouseButtonEvent evt) override;
 
+protected:
+	// WAJIB: WIDGET_DEF macro butuh initialize() untuk vtable yang lengkap.
+	// Tanpa ini: vtable tidak complete → crash saat make() dipanggil.
+	void initialize() override {
+		set_sizing_mode(UI::FILL);
+	}
+
 private:
 	ViewerWidget(const Duck::Ptr<Gfx::Image>& image);
 

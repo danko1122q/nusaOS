@@ -1,20 +1,7 @@
 /*
 	This file is part of nusaOS.
-
-	nusaOS is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	nusaOS is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-
-	Copyright (c) Byteduck 2016-2021. All rights reserved.
+	SPDX-License-Identifier: GPL-3.0-or-later
+	Copyright © 2016-2026 nusaOS
 */
 
 #include "Timer.h"
@@ -31,25 +18,43 @@ Timer::Timer(int id, int delay, std::function<void()> call, bool is_interval):
 }
 
 Timer::~Timer() {
-	// Hapus dari map timers saat timer di-destroy.
-	// Ini aman karena map sekarang menyimpan shared_ptr —
-	// erase di sini hanya melepas shared_ptr map, bukan langsung delete.
-	UI::remove_timer(m_id);
+	// FIX: Destruktor Timer TIDAK boleh memanggil remove_timer() secara langsung.
+	//
+	// Alur crash lama:
+	//   run_while() iterasi timers map
+	//   → timer->call()() dipanggil
+	//   → callback menghancurkan widget
+	//   → ~ProcessInspectorWidget() → m_timer (Duck::Ptr) di-destroy
+	//   → ~Timer() → UI::remove_timer(m_id) → timers.erase(m_id)
+	//   → erase di dalam iterasi aktif → iterator invalidation → CRASH
+	//
+	// Dengan shared_ptr di map (libui.cpp fix), Timer::~Timer() hanya dipanggil
+	// setelah ref count benar-benar nol, yaitu SETELAH map entry sudah di-erase
+	// (oleh run_while fase reschedule atau oleh callback stop()/remove_timer()).
+	// Jadi remove_timer() di sini tidak diperlukan lagi dan justru berbahaya
+	// jika dipanggil saat iterasi masih aktif.
+	//
+	// Timer yang perlu dibersihkan dari map ditangani oleh:
+	//   - run_while(): erase one-shot timer setelah dipanggil
+	//   - Timer::stop() + run_while(): skip disabled timer, dibersihkan lazily
+	//   - UI::remove_timer(): dipanggil eksplisit jika perlu hapus segera
+	//
+	// Destruktor ini sengaja kosong.
 }
 
 void Timer::calculate_trigger_time() {
 	auto now = Duck::Time::now();
-	if (!m_trigger_time.epoch())
+	if(!m_trigger_time.epoch())
 		m_trigger_time = Duck::Time::now();
-	while (m_trigger_time <= now)
+	while(m_trigger_time <= now)
 		m_trigger_time = m_trigger_time + Duck::Time::millis(m_delay);
 }
 
-[[nodiscard]] bool Timer::ready() const {
+bool Timer::ready() const {
 	return millis_until_ready() <= 0;
 }
 
-[[nodiscard]] long Timer::millis_until_ready() const {
+long Timer::millis_until_ready() const {
 	return (m_trigger_time - Duck::Time::now()).millis();
 }
 

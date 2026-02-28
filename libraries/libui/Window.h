@@ -70,6 +70,20 @@ namespace UI {
 		void maximize();
 		void restore();
 
+		/**
+		 * Dipanggil oleh libui event handler ketika Pond menghancurkan window dari luar
+		 * (bukan via Window::close()). Mencegah close() memanggil _window->destroy() lagi.
+		 */
+		void mark_pond_destroyed() { _pond_destroyed = true; }
+
+		/**
+		 * Tandai window ini sebagai menu/auxiliary window.
+		 * Window yang ditandai demikian tidak dihitung saat menentukan apakah
+		 * app harus exit — hanya window "utama" yang dihitung.
+		 */
+		void mark_as_menu_window() { _is_menu_window = true; }
+		bool is_menu_window() const { return _is_menu_window; }
+
 		///Pond
 		Pond::Window* pond_window();
 
@@ -117,6 +131,8 @@ namespace UI {
 		bool _needs_repaint = false;
 		bool _focused = false;
 		bool _closed = false;
+		bool _pond_destroyed = false;
+		bool _is_menu_window = false; // true = window auxiliary (MENU pool), tidak dihitung untuk exit
 		bool _center_on_show = true;
 		bool _maximized = false;
 		
