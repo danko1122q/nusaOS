@@ -1,5 +1,21 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Copyright © 2016-2026 nusaOS */
+/*
+	This file is part of nusaOS.
+
+	nusaOS is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	nusaOS is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
+
+	Copyright (c) Byteduck 2016-2021. All rights reserved.
+*/
 
 #pragma once
 
@@ -12,6 +28,7 @@ public:
 	void update();
 
 protected:
+	// ListViewDelegate
 	Duck::Ptr<Widget> tv_create_entry(int row, int col) override;
 	std::string tv_column_name(int col) override;
 	int tv_num_entries() override;
@@ -20,13 +37,13 @@ protected:
 	UI::TableViewSelectionMode tv_selection_mode() override { return UI::TableViewSelectionMode::SINGLE; }
 	void tv_selection_changed(const std::set<int>& selected_items) override;
 	Duck::Ptr<UI::Menu> tv_entry_menu(int row) override;
+
+	// Object
 	void initialize() override;
 
 private:
-	// Kolom: PID | Name | Virtual | Physical | Shared | State
-	enum Col { PID=0, Name=1, Virtual=2, Physical=3, Shared=4, State=5, _COUNT=6 };
-
 	ProcessListWidget();
-	std::vector<Sys::Process> m_processes;
-	Duck::Ptr<UI::TableView> m_table_view = UI::TableView::make(Col::_COUNT, true);
+	std::vector<Sys::Process> _processes;
+	Duck::Ptr<UI::TableView> _table_view = UI::TableView::make(7, true);
 };
+

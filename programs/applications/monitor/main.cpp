@@ -2,6 +2,7 @@
 /* Copyright © 2016-2026 nusaOS */
 
 #include <libui/libui.h>
+#include <libui/widget/layout/FlexLayout.h>
 #include <libui/widget/layout/BoxLayout.h>
 #include <libui/widget/Cell.h>
 #include <libui/widget/NamedCell.h>
@@ -13,11 +14,9 @@
 int main(int argc, char** argv, char** envp) {
 	UI::init(argv, envp);
 
-	// --- Grafik CPU dan RAM ---
+	// --- Grafik CPU dan RAM side-by-side ---
 	auto cpu_graph = CpuGraphWidget::make();
 	auto mem_graph = MemGraphWidget::make();
-
-	// Grafik dibuat FILL horizontal supaya memenuhi lebar window saat di-resize
 	cpu_graph->set_sizing_mode(UI::FILL);
 	mem_graph->set_sizing_mode(UI::FILL);
 
@@ -25,17 +24,20 @@ int main(int argc, char** argv, char** envp) {
 	graphs_row->add_child(UI::NamedCell::make("CPU", cpu_graph));
 	graphs_row->add_child(UI::NamedCell::make("Memory", mem_graph));
 
-	// Row grafik: preferred height (tidak ikut stretch ke bawah)
+	// Bungkus grafik dalam Cell ber-PREFERRED supaya tidak ikut stretch vertikal
 	auto graphs_cell = UI::Cell::make(graphs_row);
 	graphs_cell->set_sizing_mode(UI::PREFERRED);
 
-	// --- Process list (fill sisa ruang vertikal) ---
+	// --- Process list ---
 	auto proc_list = ProcessListWidget::make();
+	// proc_list sudah set_sizing_mode(FILL) di initialize() — tidak perlu set lagi
+
 	auto proc_cell = UI::NamedCell::make("Processes", proc_list);
 	proc_cell->set_sizing_mode(UI::FILL);
 
-	// --- Layout utama ---
-	auto layout = UI::BoxLayout::make(UI::BoxLayout::VERTICAL, 4);
+	// FlexLayout VERTICAL: child PREFERRED dapat tinggi minimal,
+	// child FILL dapat sisa ruang. Ini yang dipakai ProcessInspectorWidget.
+	auto layout = UI::FlexLayout::make(UI::FlexLayout::VERTICAL);
 	layout->add_child(graphs_cell);
 	layout->add_child(proc_cell);
 
@@ -46,7 +48,6 @@ int main(int argc, char** argv, char** envp) {
 	window->resize({620, 440});
 	window->show();
 
-	// Satu timer, semua update di satu tempat
 	auto timer = UI::set_interval([&] {
 		cpu_graph->update();
 		mem_graph->update();
