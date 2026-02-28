@@ -48,7 +48,7 @@ Client::~Client() {
 	for(auto& window : windows) {
 		if(window.second->parent()) {
 			if(windows.find(window.second->parent()->id()) != windows.end())
-				continue; //Don't remove a window if its parent is owned by this client; deleting the parent deletes all children.
+				continue; // Jangan hapus window yang parent-nya dimiliki client ini; hapus parent akan hapus semua child
 		}
 		to_delete.push_back(window.second);
 	}
@@ -84,10 +84,10 @@ void Client::keyboard_event(Window* window, const KeyboardEvent& event) {
 }
 
 void Client::window_destroyed(Window* window) {
-	//Remove the window from the windows map
+	// Hapus window dari map
 	windows.erase(window->id());
 
-	//Don't try to send packets to the client; they disconnected
+	// Jangan kirim paket ke client yang sudah disconnect
 	if(disconnected)
 		return;
 
@@ -106,8 +106,8 @@ void Client::window_resized(Window *window) {
 }
 
 void Client::window_focused(Window* window, bool focused) {
-	// FIX: Jangan kirim focus event ke client yang sudah disconnect.
-	// Ini terjadi saat desktop crash dan pond masih proses cleanup window lama.
+	// Jangan kirim focus event ke client yang sudah disconnect
+	// Ini terjadi saat desktop crash dan pond masih proses cleanup window lama
 	if(disconnected)
 		return;
 	SEND_MESSAGE("window_focus_changed", (WindowFocusPkt { window->id(), focused }));
@@ -121,10 +121,10 @@ WindowOpenedPkt Client::open_window(OpenWindowPkt& params) {
 	} else {
 		auto parent_window = windows.find(params.parent);
 		if(parent_window == windows.end()) {
-			//Parent window couldn't be found, return failure
+			// Parent window tidak ditemukan, kembalikan failure
 			return {-1};
 		} else {
-			//Make the window with the requested parent
+			// Buat window dengan parent yang diminta
 			window = new Window(parent_window->second, params.rect, params.hidden);
 		}
 	}
@@ -132,15 +132,13 @@ WindowOpenedPkt Client::open_window(OpenWindowPkt& params) {
 	window->set_client(this);
 	windows.insert(std::make_pair(window->id(), window));
 
-	//Allow the client access to the window shm
+	// Izinkan client akses ke window shm
 	shmallow(window->framebuffer_shm().id, pid, SHM_WRITE | SHM_READ);
 
-	//Return opened window
 	return {window->id(), window->framebuffer_shm().id, window->rect()};
 }
 
 void Client::destroy_window(WindowDestroyPkt& params) {
-	//Find the window in question and remove it and its children
 	auto window_pair = windows.find(params.window_id);
 	if(window_pair != windows.end())
 		delete window_pair->second;
@@ -155,8 +153,6 @@ void Client::move_window(WindowMovePkt& params) {
 }
 
 WindowResizedPkt Client::resize_window(WindowResizePkt& params) {
-	//TODO: Make sure size is reasonable
-
 	auto window = windows.find(params.window_id);
 	if(window == windows.end())
 		return {params.window_id, -1};

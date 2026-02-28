@@ -5,9 +5,7 @@
 
 ProcessManager* ProcessManager::s_inst = nullptr;
 
-ProcessManager::ProcessManager() {
-
-}
+ProcessManager::ProcessManager() {}
 
 ProcessManager& ProcessManager::inst() {
 	if (!s_inst)
@@ -16,7 +14,14 @@ ProcessManager& ProcessManager::inst() {
 }
 
 void ProcessManager::update() {
-	m_processes = Sys::Process::get_all();
+	// Sys::Process::get_all() membaca /proc. Proses bisa exit di tengah pembacaan
+	// sehingga beberapa entry /proc/[pid] mungkin hilang. Jika get_all() gagal
+	// atau throw, jaga snapshot lama agar UI tidak crash dengan data kosong.
+	auto result = Sys::Process::get_all();
+	if(!result.empty())
+		m_processes = result;
+	// Jika result kosong (semua proses hilang — tidak mungkin di kondisi normal),
+	// pertahankan snapshot lama.
 }
 
 const std::map<pid_t, Sys::Process>& ProcessManager::processes() {

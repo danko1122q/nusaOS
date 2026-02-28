@@ -61,10 +61,10 @@ Display::Display(): _dimensions({0, 0, 0, 0}) {
 		return;
 	}
 
-	//If we're running in a tty, set it to graphical mode
+	// Set tty ke graphical mode jika berjalan di tty
 	ioctl(STDOUT_FILENO, TIOSGFX, nullptr);
 
-	//If we can set the offset into video memory, that means we can flip the display buffer and write directly to it
+	// Jika bisa set offset ke video memory, gunakan double-flip buffer
 	if(!ioctl(framebuffer_fd, IO_VIDEO_OFFSET, 0))
 		_buffer_mode = BufferMode::DoubleFlip;
 	else
@@ -176,24 +176,24 @@ void Display::repaint() {
 	else
 		return;
 
-	//If it hasn't been 1/60 of a second since the last repaint, don't bother
+	// Jika belum 1/60 detik sejak repaint terakhir, skip
 	if(millis_until_next_flip())
 		return;
 	gettimeofday(&paint_time, NULL);
 
-	//If we're resizing a window, always invalidate the resize rect so we don't screw up the inverted outline effect
+	// Saat resize, selalu invalidate resize rect agar outline invert tetap benar
 	if(_resize_window)
 		invalidate(_resize_rect);
 
 	auto& fb = _buffer_mode == BufferMode::Single ? _framebuffer : _root_window->framebuffer();
 
-	//Combine areas that overlap
-	// FIX: Gunakan return value erase() untuk mendapat iterator valid berikutnya.
-	// Kode lama: erase(it) lalu it++ → it sudah dangling setelah erase → UB → heap corrupt → crash pond.
+	// Gabungkan area yang overlap
+	// Gunakan return value erase() untuk mendapat iterator valid berikutnya,
+	// bukan erase(it) lalu it++ yang menyebabkan dangling iterator
 	auto it = invalid_areas.begin();
 	while(it != invalid_areas.end()) {
 		bool remove_area = false;
-		for(auto & other_area : invalid_areas) {
+		for(auto& other_area : invalid_areas) {
 			if(&*it != &other_area && it->collides(other_area)) {
 				other_area = it->combine(other_area);
 				remove_area = true;
@@ -206,9 +206,8 @@ void Display::repaint() {
 			++it;
 	}
 
-	//If double buffering, combine the invalid areas together to calculate the portion of the framebuffer to be redrawn
+	// Jika double buffering, gabungkan area untuk menghitung bagian framebuffer yang perlu digambar ulang
 	if(_buffer_mode == BufferMode::Double) {
-		//If the invalid buffer area is empty (has an x of -1), initialize it to the first invalid area
 		if(_invalid_buffer_area.x == -1)
 			_invalid_buffer_area = invalid_areas[0];
 		for(auto& area : invalid_areas)
@@ -216,13 +215,10 @@ void Display::repaint() {
 	}
 
 	for(auto& area : invalid_areas) {
-		// Fill the invalid area with the background.
+		// Isi area invalid dengan background
 		fb.copy(_background_framebuffer, area, area.position());
 
-		// FIX: Render window DESKTOP lebih dulu (sebelum loop utama) supaya
-		// selalu berada di layer paling bawah. Tanpa ini, posisi DESKTOP di
-		// vector menentukan urutan render — kalau DESKTOP ada di tengah atau
-		// akhir vector, DESKTOP menimpa window lain yang harusnya di atasnya.
+		// Render window DESKTOP lebih dulu agar selalu berada di layer paling bawah
 		for(auto window : _windows) {
 			if(window->type() != Pond::DESKTOP || window->hidden())
 				continue;
@@ -237,9 +233,8 @@ void Display::repaint() {
 				fb.copy(window->framebuffer(), transformed_overlap, overlap_abs.position());
 		}
 
-		// See if each window overlaps the invalid area.
+		// Render semua window lainnya (bukan mouse window, bukan hidden, bukan DESKTOP)
 		for(auto window : _windows) {
-			//Don't bother with the mouse window, hidden windows, or DESKTOP (already drawn above)
 			if(window == _mouse_window || window->hidden() || window->type() == Pond::DESKTOP)
 				continue;
 
@@ -247,7 +242,6 @@ void Display::repaint() {
 			auto window_shabs = window->absolute_shadow_rect();
 			auto window_collision_rect = window_old_rect.empty() ? window_shabs : window_old_rect;
 			if(window_collision_rect.collides(area)) {
-				//If it does, redraw the intersection of the window in question and the invalid area
 				Gfx::Rect window_abs = window->absolute_rect();
 				Gfx::Rect overlap_abs = area.overlapping_area(window_abs);
 				if(!overlap_abs.empty()) {
@@ -257,13 +251,13 @@ void Display::repaint() {
 					else
 						fb.copy(window->framebuffer(), transformed_overlap, overlap_abs.position());
 
-					// If the client is unresponsive, dim the window
-					// FIX: window->client() bisa null → NULL dereference crash.
-					if (window->client() && window->client()->is_unresponsive())
+					// Jika client tidak responsif, redupkan window
+					// Guard null check untuk window tanpa client (root window, mouse window)
+					if(window->client() && window->client()->is_unresponsive())
 						fb.fill_blitting(overlap_abs, {0, 0, 0, 180});
 				}
 
-				// Draw the shadow (di luar guard overlap_abs — shadow punya rect sendiri)
+				// Gambar shadow (rect sendiri, di luar guard overlap_abs window)
 				if(window->has_shadow()) {
 					auto draw_shadow = [&](Gfx::Framebuffer& shadow_buffer, Rect rect) {
 						Gfx::Rect shadow_abs = area.overlapping_area(rect);
@@ -283,12 +277,13 @@ void Display::repaint() {
 	}
 	invalid_areas.resize(0);
 
-	//If we're resizing a window, draw the outline
+	// Gambar outline saat resize
 	if(_resize_window)
 		fb.outline_inverting_checkered(_resize_rect);
 
-	//Draw the mouse.
-	fb.draw_image(_mouse_window->framebuffer(), {0, 0, _mouse_window->rect().width, _mouse_window->rect().height},
+	// Gambar mouse cursor — guard null untuk mencegah crash jika mouse window belum siap
+	if(_mouse_window)
+		fb.draw_image(_mouse_window->framebuffer(), {0, 0, _mouse_window->rect().width, _mouse_window->rect().height},
 				  _mouse_window->absolute_rect().position());
 
 #ifdef DEBUG_REPAINT_PERF
@@ -305,13 +300,11 @@ void Display::repaint() {
 	fb.draw_text(buf, {0, 0}, FontManager::inst().get_font("gohu-14"), RGB(255, 255, 255));
 #endif
 
-	//Flip the display buffers.
 	flip_buffers();
 }
 
 bool flipped = false;
 void Display::flip_buffers() {
-	//If the screen buffer isn't dirty, don't bother
 	if(!display_buffer_dirty)
 		return;
 
@@ -336,19 +329,10 @@ int Display::millis_until_next_flip() const {
 }
 
 void Display::move_to_front(Window* window) {
-	// FIX: Implementasi window layering berdasarkan WindowType.
-	// Sebelumnya move_to_front() selalu push ke akhir vector tanpa peduli type,
-	// sehingga DESKTOP bisa naik ke atas window biasa dan PANEL bisa ditimpa.
-	//
-	// Aturan layering (dari bawah ke atas):
-	//   DESKTOP → DEFAULT → PANEL → MENU → mouse cursor
-	//
-	// DESKTOP tidak boleh naik sama sekali.
-	// PANEL tidak boleh ditimpa window DEFAULT/DESKTOP.
-	// DEFAULT tidak boleh naik melebihi PANEL/MENU.
-
+	// Layering dari bawah ke atas: DESKTOP → DEFAULT → PANEL → MENU
+	// DESKTOP tidak boleh naik sama sekali
 	if(window->type() == Pond::DESKTOP)
-		return; // Desktop selalu di bawah, tidak pernah naik
+		return;
 
 	for(auto it = _windows.begin(); it != _windows.end(); it++) {
 		if(*it != window)
@@ -356,7 +340,7 @@ void Display::move_to_front(Window* window) {
 		_windows.erase(it);
 
 		if(window->type() == Pond::MENU) {
-			// MENU selalu paling atas — push ke akhir
+			// MENU selalu paling atas
 			_windows.push_back(window);
 		} else if(window->type() == Pond::PANEL) {
 			// PANEL di atas DEFAULT tapi di bawah MENU
@@ -370,7 +354,6 @@ void Display::move_to_front(Window* window) {
 			_windows.insert(insert_pos, window);
 		} else {
 			// DEFAULT: sisipkan sebelum window PANEL atau MENU pertama
-			// sehingga tidak menimpa sandbar/menu
 			auto insert_pos = _windows.end();
 			for(auto jt = _windows.begin(); jt != _windows.end(); jt++) {
 				if((*jt)->type() == Pond::PANEL || (*jt)->type() == Pond::MENU) {
@@ -397,11 +380,8 @@ void Display::focus(Window* window) {
 	auto old_focused = _focused_window;
 	_focused_window = window;
 
-	// FIX CRASH 0x1c: Guard client sebelum notify_focus.
-	// Dua kondisi berbahaya:
-	// 1. client() == nullptr → window baru dibuat tapi set_client() belum dipanggil
-	// 2. client()->is_unresponsive() → client mungkin sedang disconnect
-	// Keduanya bisa menyebabkan SEND_MESSAGE ke socket yang tidak valid → crash desktop.
+	// Guard client sebelum notify_focus:
+	// window baru mungkin belum set_client(), atau client sedang disconnect
 	if(_focused_window && _focused_window->client() && !_focused_window->client()->is_unresponsive())
 		_focused_window->notify_focus(true);
 
@@ -412,16 +392,18 @@ void Display::focus(Window* window) {
 	}
 }
 
-
 void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t buttons) {
-	// FIX: _prev_mouse_buttons jangan static — static variable tidak pernah reset
-	// saat desktop crash/restart, menyebabkan ghost button events ke window baru.
-	// Sekarang _prev_mouse_buttons adalah member variable Display (lihat Display.h).
+	// _prev_mouse_buttons adalah member variable (bukan static local) agar
+	// di-reset dengan benar saat Display di-reinit setelah desktop crash
+
+	// Guard: jika mouse window belum siap, tidak ada yang bisa diproses
+	if(!_mouse_window)
+		return;
 
 	Gfx::Point mouse = _mouse_window->absolute_rect().position();
 	Gfx::Point delta = {delta_x, delta_y};
 
-	//Drag or stop dragging the current draggable window, if any
+	// Drag window
 	if(_drag_window) {
 		if(!(buttons & 1) || !_drag_window->draggable())
 			_drag_window = nullptr;
@@ -429,9 +411,8 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 			_drag_window->set_position(_drag_window->rect().position() + delta);
 	}
 
-	//If we're resizing the window, check if the user let go of the mouse button or if the window is no longer resizable
+	// Resize window
 	if(_resize_window) {
-		//If the mouse has moved at all, we need to change the resize_rect
 		if(!(delta_x == 0 && delta_y == 0)) {
 			invalidate(_resize_rect);
 			_resize_rect = _resize_window->calculate_absolute_rect(calculate_resize_rect());
@@ -444,7 +425,7 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 		}
 	}
 
-	//Process global mouse events
+	// Global mouse events
 	for(auto& window : _windows) {
 		if(window->gets_global_mouse()) {
 			window->mouse_moved(delta, mouse - window->absolute_rect().position(), mouse);
@@ -455,18 +436,18 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 		}
 	}
 
-	//If we're moving or resizing a window, don't do anything else
+	// Jika sedang drag/resize, tidak perlu proses event lainnya
 	if(_resize_window || _drag_window)
 		return;
 
-	//If we have a mousedown window and released the mouse button, stop sending events to it
+	// Jika mousedown window dan tombol dilepas, berhenti kirim event ke sana
 	if(_mousedown_window && !(buttons & 1)) {
 		if(!mouse.in(_mousedown_window->absolute_rect()))
 			_mousedown_window->set_mouse_buttons(buttons);
 		_mousedown_window = nullptr;
 	}
 
-	//If we are holding the mouse down, keep sending mouse events to the window we initially clicked
+	// Jika mouse masih ditekan, terus kirim event ke window asal klik
 	if(_mousedown_window && !_mousedown_window->gets_global_mouse() && !mouse.in(_mousedown_window->absolute_rect())) {
 		_mousedown_window->mouse_moved(delta, mouse - _mousedown_window->absolute_rect().position(), mouse);
 		if(_prev_mouse_buttons != buttons)
@@ -477,12 +458,12 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 	}
 
 	Window* event_window = nullptr;
-	bool found_border_window = false;  // apakah frame ini ada window yang bordernya dihit
+	bool found_border_window = false;
 
-	// Pre-pass: tentukan window paling atas yang benar-benar contain mouse.
-	// Ini mencegah border window tertutup men-trigger resize cursor.
+	// Pre-pass: tentukan window paling atas yang benar-benar berisi posisi mouse
+	// Ini mencegah border window tertutup men-trigger resize cursor
 	Window* top_mouse_window = nullptr;
-	for (auto it = _windows.rbegin(); it != _windows.rend(); it++) {
+	for(auto it = _windows.rbegin(); it != _windows.rend(); it++) {
 		auto* window = *it;
 		if(window == _mouse_window || window == _root_window || window->hidden())
 			continue;
@@ -497,12 +478,12 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 		}
 	}
 
-	for (auto it = _windows.rbegin(); it != _windows.rend(); it++) {
+	for(auto it = _windows.rbegin(); it != _windows.rend(); it++) {
 		auto* window = *it;
 		if(window == _mouse_window || window == _root_window || window->hidden())
 			continue;
 
-		// Resize border: hanya cek untuk window paling atas yang contain mouse
+		// Cek resize border hanya untuk window paling atas yang berisi mouse
 		if(!_resize_window && window->resizable() && window != _mousedown_window &&
 		   top_mouse_window == window &&
 		   mouse.near_border(window->absolute_rect(), WINDOW_RESIZE_BORDER)) {
@@ -538,16 +519,15 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 			break;
 		}
 
-		//Otherwise, if it's in the window, create the appropriate events
+		// Jika mouse di dalam window, kirim event yang sesuai
 		if(mouse.in(window->absolute_rect())) {
 			auto window_rel_pos = mouse - window->absolute_rect().position();
 
-			// If the window uses alpha hit testing, check if the pixel the mouse is on is transparent
-			if (window->alpha_hit_testing() && (window->framebuffer().at(window_rel_pos)->a == 0))
+			// Alpha hit testing: lewati pixel transparan
+			if(window->alpha_hit_testing() && (window->framebuffer().at(window_rel_pos)->a == 0))
 				continue;
 
-			// FIX KURSOR: Mouse di dalam window tapi bukan di border → reset ke NORMAL
-			// Ini penting karena kursor bisa tersisa sebagai resize dari frame sebelumnya
+			// Mouse di dalam window tapi bukan di border: reset kursor ke NORMAL
 			if(!found_border_window && window->type() != Pond::DESKTOP)
 				_mouse_window->set_cursor(Pond::NORMAL);
 
@@ -579,14 +559,13 @@ void Display::create_mouse_events(int delta_x, int delta_y, int scroll, uint8_t 
 		}
 	}
 
-	// Kalau mouse tidak di atas window manapun dan tidak di border → reset kursor
+	// Jika mouse tidak di atas window manapun dan tidak di border, reset kursor
 	if(!found_border_window && event_window == nullptr && !_resize_window)
 		_mouse_window->set_cursor(Pond::NORMAL);
 
-	// If the mouse was previously in a different window, update the mouse position in that window
+	// Jika mouse pindah dari window sebelumnya, update posisi dan kirim mouse_left
 	if(event_window != _prev_mouse_window && _prev_mouse_window != nullptr && !_prev_mouse_window->gets_global_mouse()) {
 		Gfx::Dimensions window_dims = _prev_mouse_window->rect().dimensions();
-		//Constrain the mouse position in the window to the window's rect
 		Gfx::Point new_mouse_pos = (mouse - _prev_mouse_window->absolute_rect().position()).constrain({0, 0, window_dims.width, window_dims.height});
 		_prev_mouse_window->mouse_moved(delta, new_mouse_pos, new_mouse_pos + _prev_mouse_window->absolute_rect().position());
 		_prev_mouse_window->set_mouse_buttons(_mouse_window->mouse_buttons());
@@ -619,11 +598,13 @@ int Display::keyboard_fd() {
 }
 
 void Display::window_hidden(Window* window) {
-	// FIX: Clear semua pointer yang mungkin menunjuk ke window yang disembunyikan.
-	// Kalau _prev_mouse_window tidak di-clear, saat mouse pindah di frame berikutnya
-	// Display memanggil _prev_mouse_window->mouse_left() pada window hidden → UB.
-	if(_mouse_window && _mouse_window->hidden())
-		_mouse_window = nullptr;
+	// Clear semua pointer yang mungkin menunjuk ke window yang disembunyikan
+	// agar tidak terjadi akses ke window hidden/destroyed di frame berikutnya
+	//
+	// CATATAN: _mouse_window TIDAK boleh di-null-kan di sini.
+	// Mouse window adalah cursor fisik yang selalu ada dan tidak pernah hidden
+	// secara normal. Jika di-null-kan, repaint() dan create_mouse_events()
+	// akan crash (KRNL_READ_NONPAGED_AREA) karena keduanya tidak punya null guard.
 	if(_focused_window && _focused_window->hidden())
 		_focused_window = nullptr;
 	if(_drag_window && _drag_window->hidden())
@@ -641,14 +622,10 @@ Display& Display::inst() {
 }
 
 ResizeMode Display::get_resize_mode(Gfx::Rect window, Gfx::Point mouse) {
-	// FIX: Cek corner dulu dengan threshold yang lebih besar agar mudah di-hit.
-	// Sebelumnya WEST/EAST dicek sebelum NORTH/SOUTH — ini menyebabkan area
-	// border atas/bawah selalu jatuh ke WEST/EAST karena cek linear.
-	// Gunakan threshold corner 2x WINDOW_RESIZE_BORDER agar corner lebih responsif.
 	const int B = WINDOW_RESIZE_BORDER;
-	const int C = WINDOW_RESIZE_BORDER * 2; // corner area size
+	const int C = WINDOW_RESIZE_BORDER * 2; // area corner lebih besar agar mudah dihit
 
-	// Corners (dicek lebih dulu dengan area lebih besar)
+	// Cek corner terlebih dahulu
 	if(mouse.in({window.x, window.y, C, C}))
 		return NORTHWEST;
 	if(mouse.in({window.x + window.width - C, window.y, C, C}))
@@ -658,7 +635,7 @@ ResizeMode Display::get_resize_mode(Gfx::Rect window, Gfx::Point mouse) {
 	if(mouse.in({window.x + window.width - C, window.y + window.height - C, C, C}))
 		return SOUTHEAST;
 
-	// Sisi (dicek setelah corner)
+	// Cek sisi setelah corner
 	if(mouse.x < window.x + B)
 		return WEST;
 	if(mouse.x > window.x + window.width - B)

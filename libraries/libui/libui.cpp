@@ -37,22 +37,26 @@ std::map<int, Poll> polls;
 std::map<int, std::shared_ptr<Window>> windows;
 std::weak_ptr<Window> _last_focused_window;
 int cur_timeout = 0;
-std::map<int, Timer*> timers;
+
+// PERBAIKAN: Gunakan shared_ptr untuk Timer di map agar ownership jelas.
+// Sebelumnya map menyimpan raw Timer* sementara set_interval() juga
+// mengembalikan Duck::Ptr<Timer> ke pemanggil — dua pemilik untuk satu objek.
+// Ketika Duck::Ptr di-destroy, Timer di-delete, tapi map masih punya raw ptr
+// ke memori yang sudah freed → use-after-free saat run_while() mengiterasi map.
+// Dengan shared_ptr, kedua pemilik berbagi kepemilikan dengan aman.
+std::map<int, std::shared_ptr<Timer>> timers;
+
 int num_windows = 0;
 bool should_exit = false;
 App::Info _app_info;
 
 void handle_pond_events();
 
-// Crash handler global — dipasang di UI::init() agar semua app libui
-// otomatis mendapat proteksi. Kalau app crash (SIGSEGV, SIGILL, dll),
-// handler ini disconnect dari Pond secara bersih sebelum exit sehingga
-// Pond tidak kebingungan dan desktop tetap stabil tanpa BSOD.
+// Crash handler — dipasang di UI::init() agar semua app libui mendapat proteksi.
+// Saat app crash (SIGSEGV, SIGILL, dll), handler ini disconnect dari Pond
+// secara bersih sebelum exit sehingga Pond tidak crash dan desktop tetap stabil.
 static void ui_crash_handler(int sig) {
-	// Disconnect dari Pond dulu secara eksplisit
-	// agar server tahu client sudah mati dengan bersih
 	if(UI::pond_context) {
-		// Tutup semua window
 		for(auto& w : windows) {
 			if(w.second && w.second->pond_window())
 				w.second->pond_window()->destroy();
@@ -64,9 +68,7 @@ static void ui_crash_handler(int sig) {
 }
 
 void UI::init(char** argv, char** envp) {
-	// Pasang crash handler untuk semua sinyal fatal dari userspace.
-	// Dengan ini kalau app crash, Pond mendapat disconnect yang bersih
-	// dan tidak menyebabkan BSOD di kernel.
+	// Pasang crash handler untuk semua sinyal fatal dari userspace
 	signal(SIGSEGV, ui_crash_handler);
 	signal(SIGILL,  ui_crash_handler);
 	signal(SIGABRT, ui_crash_handler);
@@ -96,7 +98,6 @@ void UI::init(char** argv, char** envp) {
 	Theme::current();
 }
 
-//We need to use these functions to avoid memory leaks due to adding null entries to the maps
 Duck::Ptr<Window> find_window(int id) {
 	auto it = windows.find(id);
 	if(it == windows.end())
@@ -149,8 +150,16 @@ void handle_pond_events() {
 			}
 
 			case PEVENT_WINDOW_DESTROY: {
-				if(windows.find(event.window_destroy.id) != windows.end())
-					__deregister_window(event.window_destroy.id);
+				auto it = windows.find(event.window_destroy.id);
+				if (it != windows.end()) {
+					// FIX: Cek is_closed() sebelum deregister.
+					// Pond recycle window ID — jika event DESTROY masih ada di queue
+					// untuk ID lama, tapi ID itu sudah dipakai window baru yang baru
+					// saja dibuat, jangan deregister window baru tersebut.
+					auto& win = it->second;
+					if (!win || win->pond_window() == nullptr || win->is_closed())
+						__deregister_window(event.window_destroy.id);
+				}
 				break;
 			}
 
@@ -179,47 +188,74 @@ void handle_pond_events() {
 
 void UI::run_while(std::function<bool()> predicate) {
 	while (!should_exit && predicate()) {
-		//Trigger needed timers
+		// PERBAIKAN: Kumpulkan timer yang siap terpicu ke dalam vector terlebih dahulu,
+		// lalu jalankan callback-nya setelah iterasi selesai.
+		//
+		// Masalah sebelumnya: timer->call()() dipanggil DI DALAM iterasi timers map.
+		// Jika callback menyebabkan widget di-destroy → Timer::~Timer() terpanggil
+		// → remove_timer() → timers.erase() di dalam iterasi aktif
+		// → iterator invalidation → crash/undefined behavior.
+		//
+		// Fix: pisahkan fase "kumpulkan yang siap" dari fase "jalankan callback".
+
 		long shortest_timeout = LONG_MAX;
 		bool have_timeout = false;
-		auto timer_it = timers.begin();
-		while(timer_it != timers.end()) {
-			auto* timer = timer_it->second;
 
-			//If the timer in question isn't enabled, skip it
-			if(!timer->enabled()) {
-				timer_it++;
+		// Fase 1: Tentukan timer mana yang siap, kumpulkan ID-nya
+		std::vector<int> ready_ids;
+		std::vector<int> timeout_ids;
+
+		for(auto& [id, timer] : timers) {
+			if(!timer || !timer->enabled())
 				continue;
-			}
-
 			long millis = timer->millis_until_ready();
-
-			//First, check if the timer is ready to fire
 			if(millis <= 0) {
-				//Call the timer
-				timer->call()();
-				if(!timer->is_interval()) {
-					//Delete the timer if it's just a one-time timer (ie setTimeout)
-					timer_it = timers.erase(timer_it);
-					delete timer;
-					continue;
-				} else {
-					//Reschedule the timer if it's an interval
-					timers[timer_it->first]->calculate_trigger_time();
-					millis = timer_it->second->delay();
+				ready_ids.push_back(id);
+			} else {
+				if(millis < shortest_timeout) {
+					shortest_timeout = millis;
+					have_timeout = true;
 				}
 			}
+		}
 
-			//Then, determine if this timer is the next one that will fire
+		// Fase 2: Jalankan callback semua timer yang siap
+		// Iterasi by ID (bukan iterator map) agar aman walau map berubah
+		for(int id : ready_ids) {
+			auto it = timers.find(id);
+			if(it == timers.end())
+				continue; // timer sudah dihapus oleh callback sebelumnya
+			auto timer = it->second; // shared_ptr — keep alive selama callback
+			if(!timer || !timer->enabled())
+				continue;
+
+			timer->call()(); // panggil callback
+
+			if(!timer->is_interval()) {
+				// One-shot timer: hapus setelah dipanggil
+				timers.erase(id);
+			} else {
+				// Interval timer: reschedule jika masih ada di map
+				// (bisa sudah dihapus jika widget di-destroy di dalam callback)
+				auto it2 = timers.find(id);
+				if(it2 != timers.end() && it2->second && it2->second->enabled())
+					it2->second->calculate_trigger_time();
+			}
+		}
+
+		// Hitung ulang shortest_timeout setelah callback mungkin menambah timer baru
+		shortest_timeout = LONG_MAX;
+		have_timeout = false;
+		for(auto& [id, timer] : timers) {
+			if(!timer || !timer->enabled())
+				continue;
+			long millis = timer->millis_until_ready();
 			if(millis > 0 && millis < shortest_timeout) {
 				shortest_timeout = millis;
 				have_timeout = true;
 			}
-
-			timer_it++;
 		}
 
-		//Update with a timeout of -1 (infinite), or until the next timer is ready to fire
 		update(have_timeout ? shortest_timeout : -1);
 	}
 }
@@ -229,16 +265,13 @@ void UI::run() {
 }
 
 void UI::update(int timeout) {
-	// Handle pending pond events
 	handle_pond_events();
 
-	//Perform needed repaints
 	for(auto window : windows) {
 		if(window.second)
 			window.second->repaint_now();
 	}
 
-	//Read and process events
 	poll(pollfds.data(), pollfds.size(), timeout);
 	for(auto& pollfd : pollfds) {
 		if(pollfd.revents) {
@@ -261,16 +294,29 @@ Duck::WeakPtr<Window> UI::last_focused_window() {
 
 void UI::set_timeout(std::function<void()> func, int interval) {
 	int id = ++cur_timeout;
-	timers[id] = new Timer {id, interval, std::move(func), false};
+	// PERBAIKAN: Gunakan shared_ptr agar ownership jelas dan tidak leak
+	timers[id] = std::make_shared<Timer>(id, interval, std::move(func), false);
 }
 
 Duck::Ptr<Timer> UI::set_interval(std::function<void()> func, int interval) {
-	auto timer = new Timer {++cur_timeout, interval, std::move(func), true};
-	timers[cur_timeout] = timer;
-	return Duck::Ptr<Timer> { timer };
+	int id = ++cur_timeout;
+	// PERBAIKAN: Buat shared_ptr dulu, lalu simpan ke map DAN kembalikan ke pemanggil.
+	// Sebelumnya: new Timer() lalu map simpan raw ptr DAN Duck::Ptr dibuat dari ptr yang sama
+	// → dua pemilik berbeda untuk satu objek → double-free saat keduanya di-destroy.
+	// Sekarang: satu shared_ptr yang di-share antara map dan Duck::Ptr pemanggil.
+	auto shared = std::make_shared<Timer>(id, interval, std::move(func), true);
+	timers[id] = shared;
+	// Duck::Ptr dibungkus dari shared.get() dengan custom deleter yang tidak delete
+	// (karena shared_ptr yang manage lifetime-nya)
+	return Duck::Ptr<Timer>(shared.get(), [shared_copy = shared](Timer*) mutable {
+		// Tidak delete — shared_ptr yang akan handle cleanup saat ref count = 0
+		shared_copy.reset();
+	});
 }
 
 void UI::remove_timer(int id) {
+	// Hapus dari map — shared_ptr di map di-release,
+	// tapi jika Duck::Ptr pemanggil masih pegang, timer tidak benar-benar di-delete
 	timers.erase(id);
 }
 
@@ -307,17 +353,22 @@ Duck::Ptr<const Gfx::Image> UI::icon(Duck::Path path) {
 
 void UI::__register_window(const std::shared_ptr<Window>& window, int id) {
 	windows[id] = window;
+	// FIX: Reset should_exit setiap kali window baru didaftarkan.
+	// Tanpa ini: pond recycle window ID → app lama tutup → should_exit=true
+	// → app baru buka window dengan ID yang sama → register dipanggil tapi
+	// should_exit tidak di-reset → run_while() langsung exit di iterasi pertama.
+	should_exit = false;
 }
 
 void UI::__deregister_window(int id) {
 	windows.erase(id);
 
-	// FIX: Jangan exit kalau masih ada window DESKTOP atau PANEL yang hidup.
-	// Sebelumnya hanya window DEFAULT yang dihitung sebagai "masih ada window",
-	// sehingga kalau semua window bertipe DESKTOP/PANEL (seperti pada proses
-	// desktop atau sandbar), should_exit langsung = true → proses exit sendiri
-	// tanpa ada yang memintanya → Pond mengira crash → restart loop.
+	// Jangan exit jika masih ada window DEFAULT, DESKTOP, atau PANEL yang hidup.
+	// Window bertipe MENU tidak dihitung — menu bisa dibuka/tutup kapan saja
+	// tanpa menyebabkan proses exit.
 	for (auto& window : windows) {
+		if(!window.second)
+			continue;
 		auto type = window.second->pond_window()->type();
 		if (type == Pond::DEFAULT || type == Pond::DESKTOP || type == Pond::PANEL) {
 			should_exit = false;

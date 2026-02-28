@@ -31,6 +31,9 @@ Timer::Timer(int id, int delay, std::function<void()> call, bool is_interval):
 }
 
 Timer::~Timer() {
+	// Hapus dari map timers saat timer di-destroy.
+	// Ini aman karena map sekarang menyimpan shared_ptr —
+	// erase di sini hanya melepas shared_ptr map, bukan langsung delete.
 	UI::remove_timer(m_id);
 }
 

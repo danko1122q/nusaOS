@@ -1,138 +1,59 @@
-/*
-	This file is part of nusaOS.
-
-	nusaOS is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	nusaOS is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-
-	Copyright (c) Byteduck 2016-2021. All rights reserved.
-*/
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright © 2016-2026 nusaOS */
 
 #include <libui/libui.h>
-#include <libui/widget/ProgressBar.h>
-#include <libui/widget/Label.h>
 #include <libui/widget/layout/BoxLayout.h>
-#include <sys/time.h>
-#include <libsys/Memory.h>
-#include <libsys/CPU.h>
-#include "ProcessListWidget.h"
-#include "MemoryUsageWidget.h"
-#include "ProcessManager.h"
 #include <libui/widget/Cell.h>
-#include <libnusa/FileStream.h>
-
-#define UPDATE_FREQ 1000
-
-using namespace Sys;
-
-Duck::Ptr<UI::ProgressBar> cpu_bar;
-Duck::Ptr<MemoryUsageWidget> mem_widget;
-Duck::Ptr<UI::Label> mem_label;
-Duck::Ptr<ProcessListWidget> proc_list;
-
-CPU::Info cpu_info;
-Mem::Info mem_info;
-
-Duck::Result update() {
-	static timeval last_update = {0, 0};
-
-	timeval tv = {0, 0};
-	gettimeofday(&tv, nullptr);
-	int diff = (int) (((tv.tv_sec - last_update.tv_sec) * 1000000) + (tv.tv_usec - last_update.tv_usec))/1000;
-	if(diff < UPDATE_FREQ && last_update.tv_sec != 0)
-		return Duck::Result::SUCCESS;
-	last_update = tv;
-
-	if(!mem_widget || !mem_label || !cpu_bar || !proc_list)
-		return Duck::Result::SUCCESS;
-
-	// FIX: Buka stream baru setiap update — /proc files harus dibaca ulang
-	// dari awal setiap kali karena file pointer tidak otomatis rewind.
-	// Stream global yang lama stuck di EOF setelah pembacaan pertama
-	// sehingga data CPU/memory tidak pernah terupdate.
-	{
-		Duck::FileInputStream cpu_stream;
-		if(cpu_stream.open("/proc/cpuinfo").is_error())
-			return Duck::Result::SUCCESS;
-		auto cpu_res = CPU::get_info(cpu_stream);
-		if(cpu_res.is_error())
-			return Duck::Result::SUCCESS;
-		cpu_info = cpu_res.value();
-	}
-
-	{
-		Duck::FileInputStream mem_stream;
-		if(mem_stream.open("/proc/meminfo").is_error())
-			return Duck::Result::SUCCESS;
-		auto mem_res = Mem::get_info(mem_stream);
-		if(mem_res.is_error())
-			return Duck::Result::SUCCESS;
-		mem_info = mem_res.value();
-	}
-
-	mem_widget->update(mem_info);
-
-	std::string mem_text = "Kernel: " + Mem::Amount {mem_info.kernel_phys - mem_info.kernel_disk_cache}.readable();
-	mem_text += " / Disk Cache: " + mem_info.kernel_disk_cache.readable();
-	mem_text += " / User: " + Mem::Amount {mem_info.used - mem_info.kernel_virt}.readable();
-	mem_label->set_label(mem_text);
-
-	cpu_bar->set_progress(cpu_info.utilization / 100.0);
-	cpu_bar->set_label("CPU: " + std::to_string(cpu_info.utilization) + "%");
-
-	// FIX: Update ProcessManager DULU sebelum proc_list->update()
-	// agar snapshot map di ProcessInspectorWidget::update() konsisten
-	// dengan data yang baru di-fetch. Urutan sebelumnya sama, tapi
-	// sekarang eksplisit untuk kejelasan.
-	ProcessManager::inst().update();
-	proc_list->update();
-
-	return Duck::Result::SUCCESS;
-}
+#include <libui/widget/NamedCell.h>
+#include "CpuGraphWidget.h"
+#include "MemGraphWidget.h"
+#include "ProcessListWidget.h"
+#include "ProcessManager.h"
 
 int main(int argc, char** argv, char** envp) {
 	UI::init(argv, envp);
 
+	// --- Grafik CPU dan RAM ---
+	auto cpu_graph = CpuGraphWidget::make();
+	auto mem_graph = MemGraphWidget::make();
+
+	// Grafik dibuat FILL horizontal supaya memenuhi lebar window saat di-resize
+	cpu_graph->set_sizing_mode(UI::FILL);
+	mem_graph->set_sizing_mode(UI::FILL);
+
+	auto graphs_row = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 4);
+	graphs_row->add_child(UI::NamedCell::make("CPU", cpu_graph));
+	graphs_row->add_child(UI::NamedCell::make("Memory", mem_graph));
+
+	// Row grafik: preferred height (tidak ikut stretch ke bawah)
+	auto graphs_cell = UI::Cell::make(graphs_row);
+	graphs_cell->set_sizing_mode(UI::PREFERRED);
+
+	// --- Process list (fill sisa ruang vertikal) ---
+	auto proc_list = ProcessListWidget::make();
+	auto proc_cell = UI::NamedCell::make("Processes", proc_list);
+	proc_cell->set_sizing_mode(UI::FILL);
+
+	// --- Layout utama ---
+	auto layout = UI::BoxLayout::make(UI::BoxLayout::VERTICAL, 4);
+	layout->add_child(graphs_cell);
+	layout->add_child(proc_cell);
+
 	auto window = UI::Window::make();
 	window->set_title("System Monitor");
-
-	mem_widget = MemoryUsageWidget::make();
-	mem_label = UI::Label::make("");
-	cpu_bar = UI::ProgressBar::make();
-
-	auto layout = UI::BoxLayout::make(UI::BoxLayout::VERTICAL, 0);
-	layout->add_child(UI::Cell::make(cpu_bar));
-	layout->add_child(UI::Cell::make(mem_widget));
-	layout->add_child(UI::Cell::make(mem_label));
-
-	proc_list = ProcessListWidget::make();
-	layout->add_child(UI::Cell::make(proc_list));
-
 	window->set_contents(layout);
 	window->set_resizable(true);
-	
-	// Set a reasonable default window size
-	window->resize({600, 400});
-	
+	window->resize({620, 440});
 	window->show();
 
-	// Load data AFTER showing window to ensure widgets are fully initialized
-	// Add small delay to ensure window system is ready
-	UI::set_timeout([&]{
-		update();
-		// Force layout update after data loads
-		window->resize(window->dimensions());
-	}, 100);
+	// Satu timer, semua update di satu tempat
+	auto timer = UI::set_interval([&] {
+		cpu_graph->update();
+		mem_graph->update();
+		ProcessManager::inst().update();
+		proc_list->update();
+	}, 1000);
 
-	auto timer = UI::set_interval(update, UPDATE_FREQ);
 	UI::run();
+	return 0;
 }

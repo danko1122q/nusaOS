@@ -12,6 +12,7 @@
 class ProcessInspectorWidget: public UI::FlexLayout {
 public:
 	WIDGET_DEF(ProcessInspectorWidget);
+	~ProcessInspectorWidget();
 
 protected:
 

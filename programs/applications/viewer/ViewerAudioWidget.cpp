@@ -38,7 +38,6 @@ ViewerAudioWidget::ViewerAudioWidget(Duck::Ptr<Sound::WavReader> reader): UI::Bo
 	};
 
 	m_progress_bar = UI::ProgressBar::make();
-
 	m_time_label = UI::Label::make("0:00");
 
 	add_child(UI::Cell::make(m_time_label));
@@ -53,11 +52,23 @@ ViewerAudioWidget::ViewerAudioWidget(Duck::Ptr<Sound::WavReader> reader): UI::Bo
 	}, 1000 / 60);
 }
 
+ViewerAudioWidget::~ViewerAudioWidget() {
+	// WAJIB stop timer sebelum objek di-destroy.
+	// Tanpa ini: timer 60fps terus fire setelah widget di-destroy →
+	// callback [this] { update(); } akses m_source/m_progress_bar yang sudah freed
+	// → use-after-free → BSOD saat WAV viewer ditutup.
+	if (m_timer)
+		m_timer->stop();
+}
+
 void ViewerAudioWidget::update() {
 	float cur_time = m_source->cur_time();
 	int seconds = (int) cur_time % 60;
 	int minutes = (int) cur_time / 60;
 	m_time_label->set_label(std::to_string(minutes) + ":" + (seconds < 10 ? "0" : "") + std::to_string(seconds));
-	m_progress_bar->set_progress(cur_time / m_source->total_time());
+	// Division by zero guard: total_time() == 0 jika WAV kosong/rusak.
+	// set_progress(NaN) → undefined behavior di progress bar draw.
+	auto total = m_source->total_time();
+	m_progress_bar->set_progress(total > 0.0f ? cur_time / total : 0.0f);
 	m_play_button->set_label(m_source->playing() ? "||" : "|>");
 }

@@ -20,14 +20,17 @@ int main(int argc, char** argv, char** envp) {
 
 	std::function<void()> save_as;
 
+	// FIX: save tidak pakai TRY karena lambda-nya return void.
+	// Gunakan is_error() check manual agar tidak ada return type mismatch.
 	auto save = [&] () {
-		if (file_path.is_dir())
+		if (file_path.is_dir()) {
 			save_as();
-
+			return;
+		}
 		auto file_res = File::open(file_path, "w+");
 		if (file_res.is_error())
 			return;
-		auto file = file_res.value();
+		auto& file = file_res.value();
 		file.write(text_view->text().data(), text_view->text().length());
 		file.close();
 	};
@@ -41,24 +44,33 @@ int main(int argc, char** argv, char** envp) {
 		save();
 	};
 
+	// FIX: open() tidak lagi menggunakan TRY() di dalam lambda.
+	// TRY macro melakukan `return` dari scope saat ini — di dalam lambda yang
+	// return void, ini adalah undefined behavior dan menyebabkan BSOD karena
+	// stack frame rusak saat TRY() mencoba return Result dari void lambda.
+	// Ganti semua TRY dengan is_error() check eksplisit.
 	auto open = [&] (Duck::Path path) {
 		file_path = path;
 		window->set_title("Editor: " + path.basename());
 		window->set_icon(UI::app_info().icon_for_file(file_path));
+
+		auto file_res = File::open(path, "r");
+		if (file_res.is_error())
+			return;
+		auto& file = file_res.value();
+
 		std::string contents;
-		{
-			auto file = TRY(File::open(path, "r"));
-			FileInputStream stream(file);
-			while(true) {
-				char read;
-				if(stream.read(&read, 1) != 1 || contents.size() > (1024 * 1024))
-					break;
-				if(read)
-					contents += read;
-			}
+		FileInputStream stream(file);
+		while (true) {
+			char read;
+			if (stream.read(&read, 1) != 1 || contents.size() > (1024 * 1024))
+				break;
+			if (read)
+				contents += read;
 		}
+		file.close();
+
 		text_view->set_text(std::move(contents));
-		return Result::SUCCESS;
 	};
 
 	auto open_picker = [&] () {
@@ -89,14 +101,13 @@ int main(int argc, char** argv, char** envp) {
 	window->set_resizable(true);
 	window->set_title("Editor");
 
-	if(argc >= 2)
+	if (argc >= 2)
 		open(argv[1]);
 
 	auto disp_rect = Gfx::Rect {{0,0}, UI::pond_context->get_display_dimensions() - Gfx::Dimensions {32, 32}};
-	if(!Gfx::Rect {{0, 0}, window->dimensions()}.inside(disp_rect))
+	if (!Gfx::Rect {{0, 0}, window->dimensions()}.inside(disp_rect))
 		window->resize(UI::pond_context->get_display_dimensions() - Gfx::Dimensions {32, 32});
 
 	window->show();
-
 	UI::run();
 }

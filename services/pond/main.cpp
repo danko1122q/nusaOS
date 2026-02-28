@@ -97,7 +97,7 @@ int main(int argc, char** argv, char** envp) {
 	polls[2].fd = display->keyboard_fd();
 	polls[2].events = POLLIN;
 
-	// Launch desktop dulu (DESKTOP layer), baru sandbar (PANEL layer)
+	// Launch desktop (DESKTOP layer) dahulu, baru sandbar (PANEL layer)
 	desktop_pid = launch_app(DESKTOP_PATH, desktop_last_launch, "Desktop");
 	sandbar_pid = launch_app(SANDBAR_PATH, sandbar_last_launch, "Sandbar");
 

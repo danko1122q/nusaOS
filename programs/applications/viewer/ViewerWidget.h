@@ -12,11 +12,11 @@ public:
 
 	void do_repaint(const UI::DrawContext& ctx) override;
 	void on_layout_change(const Gfx::Rect& old_rect) override;
-
 	Gfx::Dimensions preferred_size() override;
 
 	bool on_mouse_scroll(Pond::MouseScrollEvent evt) override;
 	bool on_mouse_move(Pond::MouseMoveEvent evt) override;
+	bool on_mouse_button(Pond::MouseButtonEvent evt) override;
 
 private:
 	ViewerWidget(const Duck::Ptr<Gfx::Image>& image);
@@ -24,4 +24,8 @@ private:
 	Duck::Ptr<Gfx::Image> m_image;
 	Gfx::Rect m_image_rect;
 	double m_scale_factor = 1.0;
+
+	// Track sendiri — JANGAN pakai evt.window (bisa null di widget context)
+	Gfx::Point m_mouse_pos = {0, 0};
+	unsigned int m_mouse_buttons = 0;
 };

@@ -1,19 +1,5 @@
 /*
     This file is part of nusaOS.
-    
-    nusaOS is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    
-    nusaOS is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    
-    You should have received a copy of the GNU General Public License
-    along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-    
     Copyright (c) Byteduck 2016-2022. All rights reserved.
 */
 
@@ -37,30 +23,53 @@ void MemoryUsageWidget::do_repaint(const DrawContext& ctx) {
 	ctx.draw_inset_rect({0, 0, ctx.width(), ctx.height()});
 	Gfx::Rect bar_area = {2, 2, ctx.width() - 4, ctx.height() - 3};
 
-	int user = (int)(((double) (m_mem_info.used - m_mem_info.kernel_phys) / m_mem_info.usable) * bar_area.width);
-	int disk = (int)(((double) m_mem_info.kernel_disk_cache / m_mem_info.usable) * bar_area.width);
-	int kernel = (int)(((double) (m_mem_info.kernel_phys - m_mem_info.kernel_disk_cache) / m_mem_info.usable) * bar_area.width);
+	// GUARD: usable == 0 → data belum dimuat (render sebelum timer pertama fire).
+	// Tanpa guard: (double)x / 0.0 = NaN → (int)(NaN × width) = INT_MIN/undefined.
+	if (!m_mem_info.usable) {
+		ctx.draw_text("Memory: loading...", bar_area, CENTER, CENTER, Theme::font(), Theme::fg());
+		return;
+	}
 
-	ctx.draw_outset_rect({
-		bar_area.x,
-		bar_area.y,
-		kernel,
-		bar_area.height
-	}, UI::Theme::accent());
+	// GUARD: Mem::Amount adalah UNSIGNED. Jika terjadi kondisi edge case di mana
+	// used < kernel_phys atau kernel_phys < kernel_disk_cache (bisa terjadi saat
+	// disk cache baru di-flush setelah viewer/file manager ditutup dan /proc/meminfo
+	// dibaca di momen tengah-tengah kernel update counter), maka pengurangan unsigned
+	// akan UNDERFLOW → nilai ~4GB → int overflow → crash di graphics fill.
+	// Solusi: gunakan signed arithmetic dengan clamping ke [0, bar_area.width].
 
-	ctx.draw_outset_rect({
-		bar_area.x + kernel,
-		bar_area.y,
-		disk,
-		bar_area.height
-	}, RGB(219, 112, 147));
+	auto safe_sub = [](auto a, auto b) -> double {
+		return (a > b) ? (double)(a - b) : 0.0;
+	};
 
-	ctx.draw_outset_rect({
-		bar_area.x + kernel + disk,
-		bar_area.y,
-		user,
-		bar_area.height
-	}, RGB(46,139,87));
+	double usable = (double) m_mem_info.usable;
+
+	// Hitung pixel width masing-masing segment, clamp ke [0, bar_area.width]
+	int kernel = (int)((safe_sub(m_mem_info.kernel_phys, m_mem_info.kernel_disk_cache) / usable) * bar_area.width);
+	int disk   = (int)((safe_sub(m_mem_info.kernel_disk_cache, 0)                       / usable) * bar_area.width);
+	int user   = (int)((safe_sub(m_mem_info.used, m_mem_info.kernel_phys)               / usable) * bar_area.width);
+
+	// Clamp individual segments ke non-negatif
+	kernel = std::max(kernel, 0);
+	disk   = std::max(disk,   0);
+	user   = std::max(user,   0);
+
+	// Pastikan total tidak melebihi lebar bar — cegah draw di luar framebuffer
+	int total = kernel + disk + user;
+	if (total > bar_area.width) {
+		double scale = (double) bar_area.width / total;
+		kernel = (int)(kernel * scale);
+		disk   = (int)(disk   * scale);
+		user   = (int)(user   * scale);
+	}
+
+	if (kernel > 0)
+		ctx.draw_outset_rect({bar_area.x, bar_area.y, kernel, bar_area.height}, UI::Theme::accent());
+
+	if (disk > 0)
+		ctx.draw_outset_rect({bar_area.x + kernel, bar_area.y, disk, bar_area.height}, RGB(219, 112, 147));
+
+	if (user > 0)
+		ctx.draw_outset_rect({bar_area.x + kernel + disk, bar_area.y, user, bar_area.height}, RGB(46,139,87));
 
 	auto mem_text = "Memory: " + m_mem_info.used.readable() + " / " + m_mem_info.usable.readable();
 	ctx.draw_text(mem_text.c_str(), bar_area, CENTER, CENTER, Theme::font(), Theme::fg());

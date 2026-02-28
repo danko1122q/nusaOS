@@ -23,6 +23,11 @@ void ProcessMemoryLayoutWidget::initialize() {
 }
 
 Duck::Ptr<UI::Widget> ProcessMemoryLayoutWidget::tv_create_entry(int row, int col) {
+	// Bounds check agar tidak crash jika row di luar range
+	// (bisa terjadi jika memory region list berubah saat tabel sedang di-render)
+	if(row < 0 || row >= (int)m_memory_regions.size())
+		return UI::Label::make("");
+
 	auto reg = m_memory_regions[row];
 	std::string contents;
 
@@ -109,4 +114,3 @@ void ProcessMemoryLayoutWidget::tv_selection_changed(const std::set<int>& select
 Duck::Ptr<UI::Menu> ProcessMemoryLayoutWidget::tv_entry_menu(int row) {
 	return TableViewDelegate::tv_entry_menu(row);
 }
-

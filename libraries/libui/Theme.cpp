@@ -51,28 +51,28 @@ Theme* Theme::current() {
 		_current = get_theme(_current_theme_name);
 		if(!_current)
 			_current = get_theme(LIBUI_THEME_DEFAULT);
-		// FIX: Kalau default theme juga gagal load (misal tema tidak ada di filesystem),
-		// buat fallback theme kosong daripada return nullptr yang menyebabkan
-		// null dereference → BSOD di semua caller Theme::bg(), fg(), dll.
+
+		// Jika tema default juga gagal load (tema tidak ada di filesystem),
+		// buat fallback tema kosong dengan warna safe agar UI tetap bisa render
+		// tanpa null dereference di semua caller Theme::bg(), fg(), dll.
 		if(!_current) {
 			_current = new Theme(LIBUI_THEME_DEFAULT);
-			// Set warna fallback yang aman agar UI tetap bisa render
-			_current->m_bg                       = Gfx::Color(200, 200, 200, 255);
-			_current->m_fg                       = Gfx::Color(0, 0, 0, 255);
-			_current->m_accent                   = Gfx::Color(0, 100, 200, 255);
-			_current->m_window                   = Gfx::Color(180, 180, 180, 255);
-			_current->m_window_title             = Gfx::Color(100, 100, 160, 255);
-			_current->m_window_title_unfocused   = Gfx::Color(130, 130, 130, 255);
-			_current->m_shadow_1                 = Gfx::Color(140, 140, 140, 255);
-			_current->m_shadow_2                 = Gfx::Color(120, 120, 120, 255);
-			_current->m_highlight                = Gfx::Color(230, 230, 230, 255);
-			_current->m_button                   = Gfx::Color(190, 190, 190, 255);
-			_current->m_button_text              = Gfx::Color(0, 0, 0, 255);
-			_current->m_scrollbar_bg             = Gfx::Color(160, 160, 160, 255);
-			_current->m_scrollbar_handle         = Gfx::Color(100, 100, 100, 255);
-			_current->m_scrollbar_handle_disabled= Gfx::Color(130, 130, 130, 255);
-			_current->m_button_padding           = 2;
-			_current->m_progress_bar_height      = 16;
+			_current->m_bg                        = Gfx::Color(200, 200, 200, 255);
+			_current->m_fg                        = Gfx::Color(0,   0,   0,   255);
+			_current->m_accent                    = Gfx::Color(0,   100, 200, 255);
+			_current->m_window                    = Gfx::Color(180, 180, 180, 255);
+			_current->m_window_title              = Gfx::Color(100, 100, 160, 255);
+			_current->m_window_title_unfocused    = Gfx::Color(130, 130, 130, 255);
+			_current->m_shadow_1                  = Gfx::Color(140, 140, 140, 255);
+			_current->m_shadow_2                  = Gfx::Color(120, 120, 120, 255);
+			_current->m_highlight                 = Gfx::Color(230, 230, 230, 255);
+			_current->m_button                    = Gfx::Color(190, 190, 190, 255);
+			_current->m_button_text               = Gfx::Color(0,   0,   0,   255);
+			_current->m_scrollbar_bg              = Gfx::Color(160, 160, 160, 255);
+			_current->m_scrollbar_handle          = Gfx::Color(100, 100, 100, 255);
+			_current->m_scrollbar_handle_disabled = Gfx::Color(130, 130, 130, 255);
+			_current->m_button_padding            = 2;
+			_current->m_progress_bar_height       = 16;
 		}
 	}
 	return _current;
@@ -81,9 +81,8 @@ Theme* Theme::current() {
 void Theme::load_config(std::map<std::string, std::string>& config) {
 	if(!config["name"].empty() && config["name"] != _current_theme_name) {
 		_current_theme_name = config["name"];
-		// FIX: Reset _current agar tema baru di-load saat current() dipanggil berikutnya.
-		// Sebelumnya _current tidak di-reset, sehingga tema lama tetap dipakai
-		// meski nama tema sudah berubah di config.
+		// Reset _current agar tema baru di-load saat current() dipanggil berikutnya.
+		// Tanpa reset ini, tema lama tetap dipakai meski nama tema sudah berubah di config.
 		_current = nullptr;
 	}
 }
@@ -124,21 +123,17 @@ Font* Theme::get_font_mono() {
 Theme::Theme(std::string name): name(std::move(name)) {}
 
 bool Theme::load() {
-	//Find the theme.thm file
 	auto theme_location = std::string(LIBUI_THEME_LOCATION) + name + "/";
 	auto default_theme_location = std::string(LIBUI_THEME_LOCATION) + LIBUI_THEME_DEFAULT + "/";
 	FILE* theme_info = fopen((theme_location + "theme.thm").c_str(), "r");
 	if(!theme_info)
 		return false;
 
-	//Read theme.thm line by line
 	char linebuf[512];
 	while(fgets(linebuf, 512, theme_info)) {
-		//Ignore comments and blank lines
 		if(linebuf[0] == '#' || linebuf[0] == '\0')
 			continue;
 
-		//Split into type, key, and value
 		char* type_cstr = strtok(linebuf, " ");
 		if(!type_cstr)
 			continue;
@@ -153,7 +148,7 @@ bool Theme::load() {
 		std::string key = key_cstr;
 		std::string value = value_cstr;
 
-		if(type == "Image" | type == "FgImage" || type == "BgImage" || type == "AccentImage") {
+		if(type == "Image" || type == "FgImage" || type == "BgImage" || type == "AccentImage") {
 			auto image_res = Image::load(theme_location + value);
 			if(image_res.is_error())
 				continue;
@@ -209,66 +204,19 @@ bool Theme::load() {
 	return true;
 }
 
-Gfx::Color Theme::bg() {
-	return current()->m_bg;
-}
-
-Gfx::Color Theme::fg() {
-	return current()->m_fg;
-}
-
-Gfx::Color Theme::accent() {
-	return current()->m_accent;
-}
-
-Gfx::Color Theme::window() {
-	return current()->m_window;
-}
-
-Gfx::Color Theme::window_title() {
-	return current()->m_window_title;
-}
-
-Gfx::Color Theme::window_title_unfocused() {
-	return current()->m_window_title_unfocused;
-}
-
-Gfx::Color Theme::shadow_1() {
-	return current()->m_shadow_1;
-}
-
-Gfx::Color Theme::shadow_2() {
-	return current()->m_shadow_2;
-}
-
-Gfx::Color Theme::highlight() {
-	return current()->m_highlight;
-}
-
-Gfx::Color Theme::button() {
-	return current()->m_button;
-}
-
-Gfx::Color Theme::button_text() {
-	return current()->m_button_text;
-}
-
-Gfx::Color Theme::scrollbar_bg() {
-	return current()->m_scrollbar_bg;
-}
-
-Gfx::Color Theme::scrollbar_handle() {
-	return current()->m_scrollbar_handle;
-}
-
-Gfx::Color Theme::scrollbar_handle_disabled() {
-	return current()->m_scrollbar_handle_disabled;
-}
-
-int Theme::button_padding() {
-	return current()->m_button_padding;
-}
-
-int Theme::progress_bar_height() {
-	return current()->m_progress_bar_height;
-}
+Gfx::Color Theme::bg()                       { return current()->m_bg; }
+Gfx::Color Theme::fg()                       { return current()->m_fg; }
+Gfx::Color Theme::accent()                   { return current()->m_accent; }
+Gfx::Color Theme::window()                   { return current()->m_window; }
+Gfx::Color Theme::window_title()             { return current()->m_window_title; }
+Gfx::Color Theme::window_title_unfocused()   { return current()->m_window_title_unfocused; }
+Gfx::Color Theme::shadow_1()                 { return current()->m_shadow_1; }
+Gfx::Color Theme::shadow_2()                 { return current()->m_shadow_2; }
+Gfx::Color Theme::highlight()                { return current()->m_highlight; }
+Gfx::Color Theme::button()                   { return current()->m_button; }
+Gfx::Color Theme::button_text()              { return current()->m_button_text; }
+Gfx::Color Theme::scrollbar_bg()             { return current()->m_scrollbar_bg; }
+Gfx::Color Theme::scrollbar_handle()         { return current()->m_scrollbar_handle; }
+Gfx::Color Theme::scrollbar_handle_disabled(){ return current()->m_scrollbar_handle_disabled; }
+int Theme::button_padding()                  { return current()->m_button_padding; }
+int Theme::progress_bar_height()             { return current()->m_progress_bar_height; }

@@ -12,6 +12,7 @@
 class ViewerAudioWidget: public UI::BoxLayout {
 public:
 	WIDGET_DEF(ViewerAudioWidget)
+	~ViewerAudioWidget();
 
 private:
 	ViewerAudioWidget(Duck::Ptr<Sound::WavReader> reader);

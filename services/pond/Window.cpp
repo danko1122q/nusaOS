@@ -32,22 +32,24 @@ int Window::current_id = 0;
 #define SHADOW_SIZE 6
 static int SHADOW_ALPH = 400 / (double) (SHADOW_SIZE * SHADOW_SIZE * 4);
 
-Window::Window(Window* parent, const Gfx::Rect& rect, bool hidden): _parent(parent), _rect(rect), _display(parent->_display), _id(++current_id), _hidden(hidden) {
+Window::Window(Window* parent, const Gfx::Rect& rect, bool hidden)
+	: _parent(parent), _rect(rect), _display(parent->_display), _id(++current_id), _hidden(hidden)
+{
 	if(_rect.width < 1)
 		_rect.width = 1;
 	if(_rect.height < 1)
 		_rect.height = 1;
-	alloc_framebuffer();
-	alloc_shadow_buffers();
+	alloc_framebuffer(); // alloc_shadow_buffers dipanggil di dalam alloc_framebuffer
 	_parent->_children.push_back(this);
 	_display->add_window(this);
 	recalculate_rects();
 	invalidate();
 }
 
-Window::Window(Display* display): _parent(nullptr), _rect(display->dimensions()), _display(display), _id(++current_id) {
-	alloc_framebuffer();
-	alloc_shadow_buffers();
+Window::Window(Display* display)
+	: _parent(nullptr), _rect(display->dimensions()), _display(display), _id(++current_id)
+{
+	alloc_framebuffer(); // alloc_shadow_buffers dipanggil di dalam alloc_framebuffer
 	_display->set_root_window(this);
 	recalculate_rects();
 	invalidate();
@@ -69,7 +71,7 @@ Window::~Window() {
 			return;
 		}
 	}
-	// FIX: free _title yang dialokasi oleh strdup (malloc), bukan delete
+	// _title dialokasi oleh strdup() (malloc), harus dibebaskan dengan free()
 	if(_title) {
 		free(_title);
 		_title = nullptr;
@@ -232,7 +234,6 @@ void Window::set_mouse_buttons(uint8_t buttons) {
 }
 
 void Window::mouse_scrolled(int scroll) {
-	// FIX: tambah null check — semua method lain sudah ada guard ini kecuali yang ini
 	if(_client)
 		_client->mouse_scrolled(this, scroll);
 }
@@ -326,8 +327,7 @@ void Window::alloc_framebuffer() {
 			return;
 		}
 
-		// FIX: buffer dideklarasikan 32 byte tapi snprintf dikasih limit 64
-		// → stack buffer overflow. Perbesar buffer ke 64 dan sesuaikan limit.
+		// Buffer 64 byte untuk mencegah stack overflow saat _id besar
 		char namebuf[64];
 		snprintf(namebuf, sizeof(namebuf), "Pond::Window %d", _id);
 		if(shmcreate_named(NULL, new_buffer_size, &_framebuffer_shm, namebuf) < 0) {
@@ -335,8 +335,8 @@ void Window::alloc_framebuffer() {
 			return;
 		}
 
-		// FIX: alloc_shadow_buffers() jangan dipanggil dua kali (dobel alokasi).
-		// Cukup sekali di sini setelah shm baru dialokasi.
+		// alloc_shadow_buffers hanya dipanggil di sini (satu tempat),
+		// tidak lagi dipanggil ulang di constructor untuk mencegah dobel alokasi
 		alloc_shadow_buffers();
 	} else {
 		memset(_framebuffer_shm.ptr, 0, _framebuffer_shm.size);
@@ -394,8 +394,7 @@ const char* Window::title() {
 }
 
 void Window::set_title(const char* title) {
-	// FIX: _title dialokasi oleh strdup() yang pakai malloc(),
-	// jadi harus di-free() bukan delete[] — ini undefined behavior yang bisa corrupt heap
+	// _title dialokasi oleh strdup() yang pakai malloc(), harus di-free() bukan delete[]
 	if(_title) {
 		free(_title);
 		_title = nullptr;
@@ -425,13 +424,8 @@ void Window::set_hint(int hint, int value) {
 			set_resizable(value);
 			break;
 		case PWINDOW_HINT_WINDOWTYPE:
-			// FIX: Kondisi lama "value <= Pond::WindowType::MENU" salah karena
-			// enums.h mendefinisikan DEFAULT=0, MENU=1, DESKTOP=2, PANEL=3.
-			// Jadi MENU adalah nilai TERKECIL kedua, bukan TERBESAR.
-			// Kondisi <= MENU (<=1) membuat DESKTOP(2) dan PANEL(3) tidak pernah
-			// di-set → semua window selalu bertipe DEFAULT → semua logika z-ordering
-			// DESKTOP/PANEL di Display.cpp tidak pernah berjalan → window tenggelam.
-			// Fix: gunakan PANEL sebagai batas atas (nilai terbesar = 3).
+			// Enum: DEFAULT=0, MENU=1, DESKTOP=2, PANEL=3
+			// Batas atas harus PANEL (3), bukan MENU (1)
 			if(value >= Pond::WindowType::DEFAULT && value <= Pond::WindowType::PANEL)
 				set_type((Pond::WindowType) value);
 			break;

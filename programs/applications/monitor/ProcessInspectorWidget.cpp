@@ -22,6 +22,13 @@ ProcessInspectorWidget::ProcessInspectorWidget(const Sys::Process& process):
 		m_app_info = app_info_res.value();
 }
 
+ProcessInspectorWidget::~ProcessInspectorWidget() {
+	// Hentikan timer saat widget di-destroy agar tidak terjadi use-after-free
+	// jika timer callback terpanggil setelah objek dihancurkan
+	if(m_timer)
+		m_timer->stop();
+}
+
 void ProcessInspectorWidget::initialize() {
 	// Header
 	{
@@ -31,10 +38,12 @@ void ProcessInspectorWidget::initialize() {
 		if (m_app_info.exists()) {
 			image = m_app_info.icon();
 			name = m_app_info.name();
-		} else {
-			image = UI::icon("/filetypes/default");
 		}
-		header->add_child(UI::Image::make(image, UI::Image::FIT, Gfx::Dimensions { 32, 32 }));
+		// Fallback: icon() dan UI::icon() keduanya bisa return nullptr
+		if (!image)
+			image = UI::icon("/filetypes/default");
+		if (image)
+			header->add_child(UI::Image::make(image, UI::Image::FIT, Gfx::Dimensions { 32, 32 }));
 		header->add_child(UI::Label::make(name));
 		auto cell = UI::Cell::make(header);
 		cell->set_sizing_mode(UI::PREFERRED);
@@ -73,8 +82,8 @@ void ProcessInspectorWidget::initialize() {
 }
 
 void ProcessInspectorWidget::update() {
-	// FIX: Gunakan find() bukan at() — at() throw exception kalau pid tidak ada
-	// (proses sudah mati), yang di nusaOS langsung jadi segfault → BSOD.
+	// Gunakan find() bukan at() — at() throw exception jika pid tidak ada
+	// (proses sudah mati), yang di nusaOS menyebabkan segfault
 	auto& procs = ProcessManager::inst().processes();
 	auto it = procs.find(m_process.pid());
 	if(it == procs.end()) {
@@ -89,5 +98,7 @@ void ProcessInspectorWidget::update() {
 	m_memory_phys->set_label("Physical: " + m_process.physical_mem().readable());
 	m_memory_virt->set_label("Virtual: " + m_process.virtual_mem().readable());
 	m_memory_shared->set_label("Shared: " + m_process.shared_mem().readable());
+
+	// m_memory_layout->update() hanya dipanggil jika proses masih valid (setelah guard di atas)
 	m_memory_layout->update();
 }
