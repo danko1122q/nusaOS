@@ -1,5 +1,5 @@
 #!/bin/bash
-source "../scripts/nusaos.tcl"
+source "../scripts/nusaos.sh"
 
 if [ -z "$TARGET" ]; then
   fail "No target specified."
@@ -23,7 +23,7 @@ NUM_JOBS=$(( $(nproc) / 2 ))
 export CFLAGS="-g0 -O2 -mtune=native"
 export CXXFLAGS="-g0 -O2 -mtune=native"
 
-source "$DIR/../scripts/nusaos.tcl"
+source "$DIR/../scripts/nusaos.sh"
 
 GNU_MIRROR="https://mirrors.ocf.berkeley.edu/gnu"
 
