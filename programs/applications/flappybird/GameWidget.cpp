@@ -24,9 +24,24 @@ GameWidget::GameWidget() {
 
 		if (m_game.state == GameState::PLAYING) {
 			m_game.tick(dt);
+			m_dirty = true;
+			m_idle_frames = 0;
+			repaint();
+		} else {
+			// Saat WAITING/DEAD: repaint hanya 1x setelah state berubah,
+			// lalu stop repaint agar tidak buang CPU ~60x/detik tanpa perlu.
+			// m_dirty di-set true saat do_jump() dipanggil (state berubah).
+			if (m_dirty) {
+				m_idle_frames++;
+				// Beri beberapa frame pertama untuk memastikan UI ter-render
+				if (m_idle_frames <= 3) {
+					repaint();
+				} else {
+					m_dirty = false;
+					m_idle_frames = 0;
+				}
+			}
 		}
-
-		repaint();
 	}, TICK_MS);
 	// Timer langsung jalan dari awal — tidak di-stop
 }
@@ -39,8 +54,8 @@ void GameWidget::initialize() {
 
 void GameWidget::reset() {
 	m_game.init();
-	// m_last_tick tidak perlu di-reset — timer sudah jalan terus,
-	// dt akan normal di tick berikutnya
+	m_dirty = true;
+	m_idle_frames = 0;
 	repaint();
 }
 
@@ -50,9 +65,9 @@ void GameWidget::do_jump() {
 	if (m_game.state == GameState::WAITING) {
 		m_game.init();
 		m_game.state = GameState::PLAYING;
-		// Reset m_last_tick agar dt pertama setelah start = ~0,
-		// bukan akumulasi sejak app dibuka
 		m_last_tick = Duck::Time::now();
+		m_dirty = true;
+		m_idle_frames = 0;
 		return;
 	}
 
@@ -60,6 +75,8 @@ void GameWidget::do_jump() {
 		m_game.init();
 		m_game.state = GameState::PLAYING;
 		m_last_tick = Duck::Time::now();
+		m_dirty = true;
+		m_idle_frames = 0;
 		return;
 	}
 

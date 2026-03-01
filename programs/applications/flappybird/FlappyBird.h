@@ -28,8 +28,9 @@ enum class GameState {
 };
 
 struct Pipe {
-	float x;    // float agar sub-pixel movement mulus
+	float x;       // float agar sub-pixel movement mulus
 	int   top_h;
+	bool  scored = false;  // sudah dihitung ke score belum?
 };
 
 struct FloppyGame {

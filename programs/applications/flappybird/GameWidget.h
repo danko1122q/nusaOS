@@ -53,4 +53,6 @@ private:
 	FloppyGame    m_game;
 	Duck::Ptr<UI::Timer> m_timer;
 	Duck::Time    m_last_tick;    // waktu tick terakhir untuk hitung delta-time
+	bool          m_dirty = true; // apakah perlu repaint frame ini?
+	int           m_idle_frames = 0; // counter frame idle (WAITING/DEAD) untuk throttle repaint
 };

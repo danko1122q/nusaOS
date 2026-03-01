@@ -16,7 +16,8 @@ void FloppyGame::init() {
 		int top_h = ((1000 * i) % 31) * 4 + 50;
 		pipes[i] = {
 			(float)(GAME_WIDTH * 0.9f) + i * 200.0f,
-			top_h
+			top_h,
+			false
 		};
 	}
 }
@@ -71,7 +72,13 @@ void FloppyGame::tick(float dt) {
 			if (yend > GAME_HEIGHT - COLUMN_SEPARATION)
 				yend = GAME_HEIGHT - COLUMN_SEPARATION - 20;
 			pipes[i].top_h = yend;
+			pipes[i].scored = false;
+		}
 
+		// Score saat burung berhasil melewati tengah pipe (bukan saat pipe keluar layar)
+		const float bird_cx = GAME_WIDTH / 2.0f;
+		if (!pipes[i].scored && pipes[i].x + COLUMN_WIDTH < bird_cx) {
+			pipes[i].scored = true;
 			score++;
 		}
 
