@@ -243,7 +243,7 @@ ENDIF()
 
 add_custom_command(
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/nusaos_version.h"
-        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/version.sh" "${CMAKE_CURRENT_BINARY_DIR}/nusaos_version.h.tmp"
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/version.tcl" "${CMAKE_CURRENT_BINARY_DIR}/nusaos_version.h.tmp"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/nusaos_version.h.tmp" "${CMAKE_CURRENT_BINARY_DIR}/generated/nusaos_version.h"
         COMMAND "${CMAKE_COMMAND}" -E remove "${CMAKE_CURRENT_BINARY_DIR}/nusaos_version.h.tmp"
 )
@@ -270,5 +270,5 @@ endforeach()
 INSTALL(TARGETS ${KERNEL_EXECUTABLE_NAME} RUNTIME DESTINATION boot)
 
 # Make kernel map
-ADD_CUSTOM_COMMAND(TARGET ${KERNEL_EXECUTABLE_NAME} COMMAND ${CMAKE_SOURCE_DIR}/scripts/kernel-map.sh ${KERNEL_EXECUTABLE_NAME})
+ADD_CUSTOM_COMMAND(TARGET ${KERNEL_EXECUTABLE_NAME} COMMAND ${CMAKE_SOURCE_DIR}/scripts/kernel-map.tcl ${KERNEL_EXECUTABLE_NAME})
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/kernel.map DESTINATION boot)
