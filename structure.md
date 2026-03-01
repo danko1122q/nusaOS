@@ -1,1220 +1,3134 @@
 .
 ├── assets
-│   └── logo.png
+│   └── logo.png
 ├── base
-│   ├── etc
-│   │   ├── init
-│   │   │   └── services
-│   │   │       ├── dhcpclient.service
-│   │   │       ├── pond.service
-│   │   │       └── quack.service
-│   │   ├── libui.conf
-│   │   └── pond.conf
-│   └── usr
-│       └── share
-│           ├── cursors
-│           │   ├── cursor.png
-│           │   ├── resize_dl.png
-│           │   ├── resize_dr.png
-│           │   ├── resize_h.png
-│           │   └── resize_v.png
-│           ├── fonts
-│           │   ├── gohufont-11.bdf
-│           │   └── gohufont-14.bdf
-│           ├── icons
-│           │   ├── filetypes
-│           │   │   ├── default.icon
-│           │   │   │   ├── 16x16.png
-│           │   │   │   └── 32x32.png
-│           │   │   ├── folder.icon
-│           │   │   │   ├── 16x16.png
-│           │   │   │   └── 32x32.png
-│           │   │   └── up.png
-│           │   ├── missing_icon.icon
-│           │   │   └── 16x16.png
-│           │   └── nusa.icon
-│           │       └── logo.png
-│           ├── pictures
-│           │   ├── 16x16.png
-│           │   └── tanda.png
-│           ├── themes
-│           │   ├── default
-│           │   │   ├── res
-│           │   │   │   ├── check.png
-│           │   │   │   └── close.png
-│           │   │   └── theme.thm
-│           │   ├── hotdog
-│           │   │   ├── res
-│           │   │   │   ├── check.png
-│           │   │   │   └── close.png
-│           │   │   └── theme.thm
-│           │   ├── light
-│           │   │   ├── res
-│           │   │   │   ├── check.png
-│           │   │   │   └── close.png
-│           │   │   └── theme.thm
-│           │   ├── vapor
-│           │   │   ├── res
-│           │   │   │   ├── check.png
-│           │   │   │   └── close.png
-│           │   │   └── theme.thm
-│           │   ├── vapor_dark
-│           │   │   ├── res
-│           │   │   │   ├── check.png
-│           │   │   │   └── close.png
-│           │   │   └── theme.thm
-│           │   └── win95
-│           │       ├── res
-│           │       │   ├── check.png
-│           │       │   └── close.png
-│           │       └── theme.thm
-│           └── wallpapers
-│               ├── background.png
-│               ├── close.png
-│               └── logo.png
+│   ├── etc
+│   │   ├── init
+│   │   │   └── services
+│   │   │       ├── dhcpclient.service
+│   │   │       ├── pond.service
+│   │   │       └── quack.service
+│   │   ├── libui.conf
+│   │   └── pond.conf
+│   └── usr
+│       └── share
+│           ├── cursors
+│           │   ├── cursor.png
+│           │   ├── resize_dl.png
+│           │   ├── resize_dr.png
+│           │   ├── resize_h.png
+│           │   └── resize_v.png
+│           ├── cursors2
+│           │   ├── cursor.png
+│           │   ├── resize_dl.png
+│           │   ├── resize_dr.png
+│           │   ├── resize_h.png
+│           │   └── resize_v.png
+│           ├── fonts
+│           │   ├── gohufont-11.bdf
+│           │   └── gohufont-14.bdf
+│           ├── icons
+│           │   ├── filetypes
+│           │   │   ├── default.icon
+│           │   │   │   ├── 16x16.png
+│           │   │   │   └── 32x32.png
+│           │   │   ├── folder.icon
+│           │   │   │   ├── 16x16.png
+│           │   │   │   └── 32x32.png
+│           │   │   └── up.png
+│           │   ├── missing_icon.icon
+│           │   │   └── 16x16.png
+│           │   └── nusa.icon
+│           │       └── logo.png
+│           ├── pictures
+│           │   ├── 16x16.png
+│           │   └── tanda.png
+│           ├── themes
+│           │   ├── default
+│           │   │   └── theme.thm
+│           │   ├── hotdog
+│           │   │   └── theme.thm
+│           │   ├── light
+│           │   │   └── theme.thm
+│           │   ├── vapor
+│           │   │   └── theme.thm
+│           │   ├── vapor_dark
+│           │   │   └── theme.thm
+│           │   ├── volcano
+│           │   │   └── theme.thm
+│           │   └── win95
+│           │       └── theme.thm
+│           └── wallpapers
+│               ├── background.png
+│               ├── kelingking.png
+│               └── volcano.png
 ├── CMakeLists.txt
 ├── docs
-│   ├── common_patterns.md
-│   ├── ping-test
-│   ├── resize-png
-│   ├── Screenshot.png
-│   └── style.md
+│   ├── app_guide
+│   │   └── app.md
+│   ├── common_patterns.md
+│   ├── ping_test
+│   │   └── ping-test
+│   ├── resize_png
+│   │   └── resize-png
+│   └── Screenshot.png
 ├── guide.md
 ├── kernel
-│   ├── api
-│   │   ├── cdefs.h
-│   │   ├── endian.h
-│   │   ├── errno.h
-│   │   ├── fcntl.h
-│   │   ├── futex.h
-│   │   ├── hid.h
-│   │   ├── ifaddrs.h
-│   │   ├── if.h
-│   │   ├── in.h
-│   │   ├── ioctl.h
-│   │   ├── ipv4.h
-│   │   ├── mmap.h
-│   │   ├── net.h
-│   │   ├── page_size.h
-│   │   ├── poll.h
-│   │   ├── ptrace.h
-│   │   ├── ptrace_internal.h
-│   │   ├── registers.h
-│   │   ├── resource.h
-│   │   ├── route.h
-│   │   ├── sched.h
-│   │   ├── shm.h
-│   │   ├── signal.h
-│   │   ├── socket.h
-│   │   ├── stat.h
-│   │   ├── stdarg.h
-│   │   ├── stddef.h
-│   │   ├── stdint.h
-│   │   ├── strerror.c
-│   │   ├── strerror.h
-│   │   ├── tcp.h
-│   │   ├── termios.h
-│   │   ├── time.h
-│   │   ├── types.h
-│   │   ├── udp.h
-│   │   ├── un.h
-│   │   ├── unistd.h
-│   │   ├── utsname.h
-│   │   └── wait.h
-│   ├── arch
-│   │   ├── aarch64
-│   │   │   ├── aarch64util.h
-│   │   │   ├── ARMTimer.cpp
-│   │   │   ├── ARMTimer.h
-│   │   │   ├── asm
-│   │   │   │   ├── exception.h
-│   │   │   │   ├── exception.S
-│   │   │   │   └── startup.S
-│   │   │   ├── Device.cpp
-│   │   │   ├── kernel.ld
-│   │   │   ├── kstdio.cpp
-│   │   │   ├── MemoryManager.cpp
-│   │   │   ├── MMU.cpp
-│   │   │   ├── MMU.h
-│   │   │   ├── PageDirectory.cpp
-│   │   │   ├── PageDirectory.h
-│   │   │   ├── Processor.cpp
-│   │   │   ├── Processor.h
-│   │   │   ├── registers.h
-│   │   │   ├── rpi
-│   │   │   │   ├── DeviceInfo.cpp
-│   │   │   │   ├── DeviceInfo.h
-│   │   │   │   ├── Framebuffer.cpp
-│   │   │   │   ├── Framebuffer.h
-│   │   │   │   ├── GPIO.cpp
-│   │   │   │   ├── GPIO.h
-│   │   │   │   ├── Mailbox.cpp
-│   │   │   │   ├── Mailbox.h
-│   │   │   │   ├── MiniUART.cpp
-│   │   │   │   ├── MiniUART.h
-│   │   │   │   ├── MMIO.cpp
-│   │   │   │   └── MMIO.h
-│   │   │   ├── startup.cpp
-│   │   │   ├── tasking.cpp
-│   │   │   └── tasking.h
-│   │   ├── i386
-│   │   │   ├── asm
-│   │   │   │   ├── gdt.s
-│   │   │   │   ├── int.s
-│   │   │   │   ├── startup.s
-│   │   │   │   ├── syscall.s
-│   │   │   │   ├── tasking.s
-│   │   │   │   └── timing.s
-│   │   │   ├── CPUID.h
-│   │   │   ├── device
-│   │   │   │   ├── AC97Device.cpp
-│   │   │   │   ├── AC97Device.h
-│   │   │   │   ├── BochsVGADevice.cpp
-│   │   │   │   ├── BochsVGADevice.h
-│   │   │   │   ├── Device.cpp
-│   │   │   │   ├── PATADevice.cpp
-│   │   │   │   └── PATADevice.h
-│   │   │   ├── gdt.cpp
-│   │   │   ├── gdt.h
-│   │   │   ├── idt.cpp
-│   │   │   ├── idt.h
-│   │   │   ├── irq.cpp
-│   │   │   ├── irq.h
-│   │   │   ├── isr.cpp
-│   │   │   ├── isr.h
-│   │   │   ├── kernel.ld
-│   │   │   ├── kstdio.cpp
-│   │   │   ├── MemoryManager.cpp
-│   │   │   ├── PageDirectory.cpp
-│   │   │   ├── PageDirectory.h
-│   │   │   ├── PageTable.cpp
-│   │   │   ├── PageTable.h
-│   │   │   ├── Processor.cpp
-│   │   │   ├── Processor.h
-│   │   │   ├── registers.h
-│   │   │   ├── startup.cpp
-│   │   │   ├── tasking.cpp
-│   │   │   ├── tasking.h
-│   │   │   └── time
-│   │   │       ├── CMOS.cpp
-│   │   │       ├── CMOS.h
-│   │   │       ├── PIT.cpp
-│   │   │       ├── PIT.h
-│   │   │       ├── RTC.cpp
-│   │   │       └── RTC.h
-│   │   ├── Processor.h
-│   │   ├── registers.h
-│   │   └── tasking.h
-│   ├── Atomic.h
-│   ├── bootlogo.h
-│   ├── CMakeLists.txt
-│   ├── CommandLine.cpp
-│   ├── CommandLine.h
-│   ├── constructors.cpp
-│   ├── constructors.h
-│   ├── device
-│   │   ├── ATA.h
-│   │   ├── BlockDevice.cpp
-│   │   ├── BlockDevice.h
-│   │   ├── CharacterDevice.cpp
-│   │   ├── CharacterDevice.h
-│   │   ├── Device.cpp
-│   │   ├── Device.h
-│   │   ├── DiskDevice.cpp
-│   │   ├── DiskDevice.h
-│   │   ├── I8042.cpp
-│   │   ├── I8042.h
-│   │   ├── KernelLogDevice.cpp
-│   │   ├── KernelLogDevice.h
-│   │   ├── KeyboardDevice.cpp
-│   │   ├── KeyboardDevice.h
-│   │   ├── MouseDevice.cpp
-│   │   ├── MouseDevice.h
-│   │   ├── MultibootVGADevice.cpp
-│   │   ├── MultibootVGADevice.h
-│   │   ├── NullDevice.cpp
-│   │   ├── NullDevice.h
-│   │   ├── PartitionDevice.cpp
-│   │   ├── PartitionDevice.h
-│   │   ├── RandomDevice.cpp
-│   │   ├── RandomDevice.h
-│   │   ├── VGADevice.cpp
-│   │   ├── VGADevice.h
-│   │   ├── ZeroDevice.cpp
-│   │   └── ZeroDevice.h
-│   ├── filesystem
-│   │   ├── DirectoryEntry.cpp
-│   │   ├── DirectoryEntry.h
-│   │   ├── ext2
-│   │   │   ├── Ext2BlockGroup.cpp
-│   │   │   ├── Ext2BlockGroup.h
-│   │   │   ├── Ext2Filesystem.cpp
-│   │   │   ├── Ext2Filesystem.h
-│   │   │   ├── Ext2.h
-│   │   │   ├── Ext2Inode.cpp
-│   │   │   └── Ext2Inode.h
-│   │   ├── FileBasedFilesystem.cpp
-│   │   ├── FileBasedFilesystem.h
-│   │   ├── File.cpp
-│   │   ├── FileDescriptor.cpp
-│   │   ├── FileDescriptor.h
-│   │   ├── File.h
-│   │   ├── Filesystem.cpp
-│   │   ├── Filesystem.h
-│   │   ├── Inode.cpp
-│   │   ├── InodeFile.cpp
-│   │   ├── InodeFile.h
-│   │   ├── Inode.h
-│   │   ├── InodeMetadata.cpp
-│   │   ├── InodeMetadata.h
-│   │   ├── LinkedInode.cpp
-│   │   ├── LinkedInode.h
-│   │   ├── Pipe.cpp
-│   │   ├── Pipe.h
-│   │   ├── procfs
-│   │   │   ├── ProcFSContent.cpp
-│   │   │   ├── ProcFSContent.h
-│   │   │   ├── ProcFS.cpp
-│   │   │   ├── ProcFSEntry.cpp
-│   │   │   ├── ProcFSEntry.h
-│   │   │   ├── ProcFS.h
-│   │   │   ├── ProcFSInode.cpp
-│   │   │   ├── ProcFSInode.h
-│   │   │   └── ProcFSInodeType.h
-│   │   ├── ptyfs
-│   │   │   ├── PTYFS.cpp
-│   │   │   ├── PTYFS.h
-│   │   │   ├── PTYFSInode.cpp
-│   │   │   └── PTYFSInode.h
-│   │   ├── socketfs
-│   │   │   ├── SocketFSClient.h
-│   │   │   ├── SocketFS.cpp
-│   │   │   ├── socketfs_defines.h
-│   │   │   ├── SocketFS.h
-│   │   │   ├── SocketFSInode.cpp
-│   │   │   └── SocketFSInode.h
-│   │   ├── VFS.cpp
-│   │   └── VFS.h
-│   ├── font8x8
-│   │   ├── font8x8_basic.h
-│   │   ├── font8x8_block.h
-│   │   ├── font8x8_box.h
-│   │   ├── font8x8_control.h
-│   │   ├── font8x8_ext_latin.h
-│   │   ├── font8x8_greek.h
-│   │   ├── font8x8.h
-│   │   ├── font8x8_hiragana.h
-│   │   ├── font8x8_latin.h
-│   │   ├── font8x8_misc.h
-│   │   └── font8x8_sga.h
-│   ├── interrupt
-│   │   ├── interrupt.h
-│   │   ├── IRQHandler.cpp
-│   │   └── IRQHandler.h
-│   ├── IO.cpp
-│   ├── IO.h
-│   ├── kernel_c.cpp
-│   ├── kernel_c.h
-│   ├── KernelMapper.cpp
-│   ├── KernelMapper.h
-│   ├── keyboard.cpp
-│   ├── keyboard.h
-│   ├── kmain.cpp
-│   ├── kmain.h
-│   ├── kstd
-│   │   ├── Arc.h
-│   │   ├── Bitmap.h
-│   │   ├── bits
-│   │   │   ├── RefCount.cpp
-│   │   │   └── RefCount.h
-│   │   ├── circular_queue.hpp
-│   │   ├── cstring.cpp
-│   │   ├── cstring.h
-│   │   ├── defines.h
-│   │   ├── Function.h
-│   │   ├── icxxabi.cpp
-│   │   ├── icxxabi.h
-│   │   ├── Iteration.h
-│   │   ├── Iterator.h
-│   │   ├── KLog.cpp
-│   │   ├── KLog.h
-│   │   ├── kstddef.cpp
-│   │   ├── kstddef.h
-│   │   ├── kstdio.cpp
-│   │   ├── kstdio.h
-│   │   ├── kstdlib.cpp
-│   │   ├── kstdlib.h
-│   │   ├── ListQueue.h
-│   │   ├── LRUCache.h
-│   │   ├── map.hpp
-│   │   ├── Optional.cpp
-│   │   ├── Optional.h
-│   │   ├── pair.hpp
-│   │   ├── queue.hpp
-│   │   ├── string.cpp
-│   │   ├── string.h
-│   │   ├── types.h
-│   │   ├── type_traits.h
-│   │   ├── unix_types.h
-│   │   ├── utility.h
-│   │   └── vector.hpp
-│   ├── memory
-│   │   ├── AnonymousVMObject.cpp
-│   │   ├── AnonymousVMObject.h
-│   │   ├── BuddyZone.cpp
-│   │   ├── BuddyZone.h
-│   │   ├── Bytes.cpp
-│   │   ├── Bytes.h
-│   │   ├── InodeVMObject.cpp
-│   │   ├── InodeVMObject.h
-│   │   ├── KBuffer.cpp
-│   │   ├── KBuffer.h
-│   │   ├── kliballoc.h
-│   │   ├── liballoc.cpp
-│   │   ├── Memory.cpp
-│   │   ├── Memory.h
-│   │   ├── MemoryManager.cpp
-│   │   ├── MemoryManager.h
-│   │   ├── PageDirectory.cpp
-│   │   ├── PageDirectory.h
-│   │   ├── PhysicalPage.cpp
-│   │   ├── PhysicalPage.h
-│   │   ├── PhysicalRegion.cpp
-│   │   ├── PhysicalRegion.h
-│   │   ├── SafePointer.h
-│   │   ├── Stack.h
-│   │   ├── VMObject.cpp
-│   │   ├── VMObject.h
-│   │   ├── VMRegion.cpp
-│   │   ├── VMRegion.h
-│   │   ├── VMSpace.cpp
-│   │   └── VMSpace.h
-│   ├── multiboot.h
-│   ├── net
-│   │   ├── ARP.h
-│   │   ├── E1000Adapter.cpp
-│   │   ├── E1000Adapter.h
-│   │   ├── ICMP.h
-│   │   ├── ICMPSocket.cpp
-│   │   ├── ICMPSocket.h
-│   │   ├── IPSocket.cpp
-│   │   ├── IPSocket.h
-│   │   ├── NetworkAdapter.cpp
-│   │   ├── NetworkAdapter.h
-│   │   ├── NetworkManager.cpp
-│   │   ├── NetworkManager.h
-│   │   ├── Router.cpp
-│   │   ├── Router.h
-│   │   ├── Socket.cpp
-│   │   ├── Socket.h
-│   │   ├── TCPSocket.cpp
-│   │   ├── TCPSocket.h
-│   │   ├── UDPSocket.cpp
-│   │   └── UDPSocket.h
-│   ├── pci
-│   │   ├── PCI.cpp
-│   │   └── PCI.h
-│   ├── power.c
-│   ├── power.h
-│   ├── random.cpp
-│   ├── random.h
-│   ├── Result.cpp
-│   ├── Result.hpp
-│   ├── StackWalker.cpp
-│   ├── StackWalker.h
-│   ├── syscall
-│   │   ├── access.cpp
-│   │   ├── chdir.cpp
-│   │   ├── chmod.cpp
-│   │   ├── dup.cpp
-│   │   ├── exec.cpp
-│   │   ├── exit.cpp
-│   │   ├── fork.cpp
-│   │   ├── futex.cpp
-│   │   ├── getcwd.cpp
-│   │   ├── gettimeofday.cpp
-│   │   ├── ioctl.cpp
-│   │   ├── isatty.cpp
-│   │   ├── kill.cpp
-│   │   ├── link.cpp
-│   │   ├── mem.cpp
-│   │   ├── mkdir.cpp
-│   │   ├── pid.cpp
-│   │   ├── pipe.cpp
-│   │   ├── poll.cpp
-│   │   ├── ptrace.cpp
-│   │   ├── ptsname.cpp
-│   │   ├── read_write.cpp
-│   │   ├── sigaction.cpp
-│   │   ├── sleep.cpp
-│   │   ├── socket.cpp
-│   │   ├── stat.cpp
-│   │   ├── syscall.cpp
-│   │   ├── syscall.h
-│   │   ├── syscall_numbers.h
-│   │   ├── thread.cpp
-│   │   ├── truncate.cpp
-│   │   ├── uname.cpp
-│   │   └── waitpid.cpp
-│   ├── tasking
-│   │   ├── Blocker.cpp
-│   │   ├── Blocker.h
-│   │   ├── BooleanBlocker.cpp
-│   │   ├── BooleanBlocker.h
-│   │   ├── ELF.cpp
-│   │   ├── ELF.h
-│   │   ├── FileBlockers.cpp
-│   │   ├── FileBlockers.h
-│   │   ├── Futex.cpp
-│   │   ├── Futex.h
-│   │   ├── JoinBlocker.cpp
-│   │   ├── JoinBlocker.h
-│   │   ├── Lock.cpp
-│   │   ├── Lock.h
-│   │   ├── Mutex.cpp
-│   │   ├── Mutex.h
-│   │   ├── PollBlocker.cpp
-│   │   ├── PollBlocker.h
-│   │   ├── ProcessArgs.cpp
-│   │   ├── ProcessArgs.h
-│   │   ├── Process.cpp
-│   │   ├── Process.h
-│   │   ├── Reaper.cpp
-│   │   ├── Reaper.h
-│   │   ├── Signal.cpp
-│   │   ├── Signal.h
-│   │   ├── SleepBlocker.cpp
-│   │   ├── SleepBlocker.h
-│   │   ├── TaskManager.cpp
-│   │   ├── TaskManager.h
-│   │   ├── Thread.cpp
-│   │   ├── Thread.h
-│   │   ├── Tracer.cpp
-│   │   ├── Tracer.h
-│   │   ├── TSS.h
-│   │   ├── WaitBlocker.cpp
-│   │   └── WaitBlocker.h
-│   ├── terminal
-│   │   ├── PTYControllerDevice.cpp
-│   │   ├── PTYControllerDevice.h
-│   │   ├── PTYDevice.cpp
-│   │   ├── PTYDevice.h
-│   │   ├── PTYMuxDevice.cpp
-│   │   ├── PTYMuxDevice.h
-│   │   ├── TTYDevice.cpp
-│   │   ├── TTYDevice.h
-│   │   ├── VirtualTTY.cpp
-│   │   └── VirtualTTY.h
-│   ├── tests
-│   │   ├── KernelTest.cpp
-│   │   ├── KernelTest.h
-│   │   ├── kstd
-│   │   │   ├── TestArc.cpp
-│   │   │   └── TestMap.cpp
-│   │   └── TestMemory.cpp
-│   ├── time
-│   │   ├── Time.cpp
-│   │   ├── Time.h
-│   │   ├── TimeKeeper.cpp
-│   │   ├── TimeKeeper.h
-│   │   ├── TimeManager.cpp
-│   │   └── TimeManager.h
-│   ├── User.cpp
-│   ├── User.h
-│   ├── VMWare.cpp
-│   └── VMWare.h
-├── laporan
+│   ├── api
+│   │   ├── cdefs.h
+│   │   ├── endian.h
+│   │   ├── errno.h
+│   │   ├── fcntl.h
+│   │   ├── futex.h
+│   │   ├── hid.h
+│   │   ├── ifaddrs.h
+│   │   ├── if.h
+│   │   ├── in.h
+│   │   ├── ioctl.h
+│   │   ├── ipv4.h
+│   │   ├── mmap.h
+│   │   ├── net.h
+│   │   ├── page_size.h
+│   │   ├── poll.h
+│   │   ├── ptrace.h
+│   │   ├── ptrace_internal.h
+│   │   ├── registers.h
+│   │   ├── resource.h
+│   │   ├── route.h
+│   │   ├── sched.h
+│   │   ├── shm.h
+│   │   ├── signal.h
+│   │   ├── socket.h
+│   │   ├── stat.h
+│   │   ├── stdarg.h
+│   │   ├── stddef.h
+│   │   ├── stdint.h
+│   │   ├── strerror.c
+│   │   ├── strerror.h
+│   │   ├── tcp.h
+│   │   ├── termios.h
+│   │   ├── time.h
+│   │   ├── types.h
+│   │   ├── udp.h
+│   │   ├── un.h
+│   │   ├── unistd.h
+│   │   ├── utsname.h
+│   │   └── wait.h
+│   ├── arch
+│   │   ├── aarch64
+│   │   │   ├── aarch64util.h
+│   │   │   ├── ARMTimer.cpp
+│   │   │   ├── ARMTimer.h
+│   │   │   ├── asm
+│   │   │   │   ├── exception.h
+│   │   │   │   ├── exception.S
+│   │   │   │   └── startup.S
+│   │   │   ├── Device.cpp
+│   │   │   ├── kernel.ld
+│   │   │   ├── kstdio.cpp
+│   │   │   ├── MemoryManager.cpp
+│   │   │   ├── MMU.cpp
+│   │   │   ├── MMU.h
+│   │   │   ├── PageDirectory.cpp
+│   │   │   ├── PageDirectory.h
+│   │   │   ├── Processor.cpp
+│   │   │   ├── Processor.h
+│   │   │   ├── registers.h
+│   │   │   ├── rpi
+│   │   │   │   ├── DeviceInfo.cpp
+│   │   │   │   ├── DeviceInfo.h
+│   │   │   │   ├── Framebuffer.cpp
+│   │   │   │   ├── Framebuffer.h
+│   │   │   │   ├── GPIO.cpp
+│   │   │   │   ├── GPIO.h
+│   │   │   │   ├── Mailbox.cpp
+│   │   │   │   ├── Mailbox.h
+│   │   │   │   ├── MiniUART.cpp
+│   │   │   │   ├── MiniUART.h
+│   │   │   │   ├── MMIO.cpp
+│   │   │   │   └── MMIO.h
+│   │   │   ├── startup.cpp
+│   │   │   ├── tasking.cpp
+│   │   │   └── tasking.h
+│   │   ├── i386
+│   │   │   ├── asm
+│   │   │   │   ├── gdt.s
+│   │   │   │   ├── int.s
+│   │   │   │   ├── startup.s
+│   │   │   │   ├── syscall.s
+│   │   │   │   ├── tasking.s
+│   │   │   │   └── timing.s
+│   │   │   ├── CPUID.h
+│   │   │   ├── device
+│   │   │   │   ├── AC97Device.cpp
+│   │   │   │   ├── AC97Device.h
+│   │   │   │   ├── BochsVGADevice.cpp
+│   │   │   │   ├── BochsVGADevice.h
+│   │   │   │   ├── Device.cpp
+│   │   │   │   ├── PATADevice.cpp
+│   │   │   │   ├── PATADevice.h
+│   │   │   │   ├── ResolutionMenu.cpp
+│   │   │   │   └── ResolutionMenu.h
+│   │   │   ├── gdt.cpp
+│   │   │   ├── gdt.h
+│   │   │   ├── idt.cpp
+│   │   │   ├── idt.h
+│   │   │   ├── irq.cpp
+│   │   │   ├── irq.h
+│   │   │   ├── isr.cpp
+│   │   │   ├── isr.h
+│   │   │   ├── kernel.ld
+│   │   │   ├── kstdio.cpp
+│   │   │   ├── MemoryManager.cpp
+│   │   │   ├── PageDirectory.cpp
+│   │   │   ├── PageDirectory.h
+│   │   │   ├── PageTable.cpp
+│   │   │   ├── PageTable.h
+│   │   │   ├── Processor.cpp
+│   │   │   ├── Processor.h
+│   │   │   ├── registers.h
+│   │   │   ├── startup.cpp
+│   │   │   ├── tasking.cpp
+│   │   │   ├── tasking.h
+│   │   │   └── time
+│   │   │       ├── CMOS.cpp
+│   │   │       ├── CMOS.h
+│   │   │       ├── PIT.cpp
+│   │   │       ├── PIT.h
+│   │   │       ├── RTC.cpp
+│   │   │       └── RTC.h
+│   │   ├── Processor.h
+│   │   ├── registers.h
+│   │   └── tasking.h
+│   ├── Atomic.h
+│   ├── bootlogo.h
+│   ├── CMakeLists.txt
+│   ├── CommandLine.cpp
+│   ├── CommandLine.h
+│   ├── constructors.cpp
+│   ├── constructors.h
+│   ├── device
+│   │   ├── ATA.h
+│   │   ├── BlockDevice.cpp
+│   │   ├── BlockDevice.h
+│   │   ├── CharacterDevice.cpp
+│   │   ├── CharacterDevice.h
+│   │   ├── Device.cpp
+│   │   ├── Device.h
+│   │   ├── DiskDevice.cpp
+│   │   ├── DiskDevice.h
+│   │   ├── I8042.cpp
+│   │   ├── I8042.h
+│   │   ├── KernelLogDevice.cpp
+│   │   ├── KernelLogDevice.h
+│   │   ├── KeyboardDevice.cpp
+│   │   ├── KeyboardDevice.h
+│   │   ├── MouseDevice.cpp
+│   │   ├── MouseDevice.h
+│   │   ├── MultibootVGADevice.cpp
+│   │   ├── MultibootVGADevice.h
+│   │   ├── NullDevice.cpp
+│   │   ├── NullDevice.h
+│   │   ├── PartitionDevice.cpp
+│   │   ├── PartitionDevice.h
+│   │   ├── RandomDevice.cpp
+│   │   ├── RandomDevice.h
+│   │   ├── VGADevice.cpp
+│   │   ├── VGADevice.h
+│   │   ├── ZeroDevice.cpp
+│   │   └── ZeroDevice.h
+│   ├── filesystem
+│   │   ├── DirectoryEntry.cpp
+│   │   ├── DirectoryEntry.h
+│   │   ├── ext2
+│   │   │   ├── Ext2BlockGroup.cpp
+│   │   │   ├── Ext2BlockGroup.h
+│   │   │   ├── Ext2Filesystem.cpp
+│   │   │   ├── Ext2Filesystem.h
+│   │   │   ├── Ext2.h
+│   │   │   ├── Ext2Inode.cpp
+│   │   │   └── Ext2Inode.h
+│   │   ├── FileBasedFilesystem.cpp
+│   │   ├── FileBasedFilesystem.h
+│   │   ├── File.cpp
+│   │   ├── FileDescriptor.cpp
+│   │   ├── FileDescriptor.h
+│   │   ├── File.h
+│   │   ├── Filesystem.cpp
+│   │   ├── Filesystem.h
+│   │   ├── Inode.cpp
+│   │   ├── InodeFile.cpp
+│   │   ├── InodeFile.h
+│   │   ├── Inode.h
+│   │   ├── InodeMetadata.cpp
+│   │   ├── InodeMetadata.h
+│   │   ├── LinkedInode.cpp
+│   │   ├── LinkedInode.h
+│   │   ├── Pipe.cpp
+│   │   ├── Pipe.h
+│   │   ├── procfs
+│   │   │   ├── ProcFSContent.cpp
+│   │   │   ├── ProcFSContent.h
+│   │   │   ├── ProcFS.cpp
+│   │   │   ├── ProcFSEntry.cpp
+│   │   │   ├── ProcFSEntry.h
+│   │   │   ├── ProcFS.h
+│   │   │   ├── ProcFSInode.cpp
+│   │   │   ├── ProcFSInode.h
+│   │   │   └── ProcFSInodeType.h
+│   │   ├── ptyfs
+│   │   │   ├── PTYFS.cpp
+│   │   │   ├── PTYFS.h
+│   │   │   ├── PTYFSInode.cpp
+│   │   │   └── PTYFSInode.h
+│   │   ├── socketfs
+│   │   │   ├── SocketFSClient.h
+│   │   │   ├── SocketFS.cpp
+│   │   │   ├── socketfs_defines.h
+│   │   │   ├── SocketFS.h
+│   │   │   ├── SocketFSInode.cpp
+│   │   │   └── SocketFSInode.h
+│   │   ├── VFS.cpp
+│   │   └── VFS.h
+│   ├── font8x8
+│   │   ├── font8x8_basic.h
+│   │   ├── font8x8_block.h
+│   │   ├── font8x8_box.h
+│   │   ├── font8x8_control.h
+│   │   ├── font8x8_ext_latin.h
+│   │   ├── font8x8_greek.h
+│   │   ├── font8x8.h
+│   │   ├── font8x8_hiragana.h
+│   │   ├── font8x8_latin.h
+│   │   ├── font8x8_misc.h
+│   │   └── font8x8_sga.h
+│   ├── interrupt
+│   │   ├── interrupt.h
+│   │   ├── IRQHandler.cpp
+│   │   └── IRQHandler.h
+│   ├── IO.cpp
+│   ├── IO.h
+│   ├── kernel_c.cpp
+│   ├── kernel_c.h
+│   ├── KernelMapper.cpp
+│   ├── KernelMapper.h
+│   ├── keyboard.cpp
+│   ├── keyboard.h
+│   ├── kmain.cpp
+│   ├── kmain.h
+│   ├── kstd
+│   │   ├── Arc.h
+│   │   ├── Bitmap.h
+│   │   ├── bits
+│   │   │   ├── RefCount.cpp
+│   │   │   └── RefCount.h
+│   │   ├── circular_queue.hpp
+│   │   ├── cstring.cpp
+│   │   ├── cstring.h
+│   │   ├── defines.h
+│   │   ├── Function.h
+│   │   ├── icxxabi.cpp
+│   │   ├── icxxabi.h
+│   │   ├── Iteration.h
+│   │   ├── Iterator.h
+│   │   ├── KLog.cpp
+│   │   ├── KLog.h
+│   │   ├── kstddef.cpp
+│   │   ├── kstddef.h
+│   │   ├── kstdio.cpp
+│   │   ├── kstdio.h
+│   │   ├── kstdlib.cpp
+│   │   ├── kstdlib.h
+│   │   ├── ListQueue.h
+│   │   ├── LRUCache.h
+│   │   ├── map.hpp
+│   │   ├── Optional.cpp
+│   │   ├── Optional.h
+│   │   ├── pair.hpp
+│   │   ├── queue.hpp
+│   │   ├── string.cpp
+│   │   ├── string.h
+│   │   ├── types.h
+│   │   ├── type_traits.h
+│   │   ├── unix_types.h
+│   │   ├── utility.h
+│   │   └── vector.hpp
+│   ├── memory
+│   │   ├── AnonymousVMObject.cpp
+│   │   ├── AnonymousVMObject.h
+│   │   ├── BuddyZone.cpp
+│   │   ├── BuddyZone.h
+│   │   ├── Bytes.cpp
+│   │   ├── Bytes.h
+│   │   ├── InodeVMObject.cpp
+│   │   ├── InodeVMObject.h
+│   │   ├── KBuffer.cpp
+│   │   ├── KBuffer.h
+│   │   ├── kliballoc.h
+│   │   ├── liballoc.cpp
+│   │   ├── Memory.cpp
+│   │   ├── Memory.h
+│   │   ├── MemoryManager.cpp
+│   │   ├── MemoryManager.h
+│   │   ├── PageDirectory.cpp
+│   │   ├── PageDirectory.h
+│   │   ├── PhysicalPage.cpp
+│   │   ├── PhysicalPage.h
+│   │   ├── PhysicalRegion.cpp
+│   │   ├── PhysicalRegion.h
+│   │   ├── SafePointer.h
+│   │   ├── Stack.h
+│   │   ├── VMObject.cpp
+│   │   ├── VMObject.h
+│   │   ├── VMRegion.cpp
+│   │   ├── VMRegion.h
+│   │   ├── VMSpace.cpp
+│   │   └── VMSpace.h
+│   ├── multiboot.h
+│   ├── net
+│   │   ├── ARP.h
+│   │   ├── E1000Adapter.cpp
+│   │   ├── E1000Adapter.h
+│   │   ├── ICMP.h
+│   │   ├── ICMPSocket.cpp
+│   │   ├── ICMPSocket.h
+│   │   ├── IPSocket.cpp
+│   │   ├── IPSocket.h
+│   │   ├── NetworkAdapter.cpp
+│   │   ├── NetworkAdapter.h
+│   │   ├── NetworkManager.cpp
+│   │   ├── NetworkManager.h
+│   │   ├── Router.cpp
+│   │   ├── Router.h
+│   │   ├── Socket.cpp
+│   │   ├── Socket.h
+│   │   ├── TCPSocket.cpp
+│   │   ├── TCPSocket.h
+│   │   ├── UDPSocket.cpp
+│   │   └── UDPSocket.h
+│   ├── pci
+│   │   ├── PCI.cpp
+│   │   └── PCI.h
+│   ├── power.c
+│   ├── power.h
+│   ├── random.cpp
+│   ├── random.h
+│   ├── Result.cpp
+│   ├── Result.hpp
+│   ├── StackWalker.cpp
+│   ├── StackWalker.h
+│   ├── syscall
+│   │   ├── access.cpp
+│   │   ├── chdir.cpp
+│   │   ├── chmod.cpp
+│   │   ├── dup.cpp
+│   │   ├── exec.cpp
+│   │   ├── exit.cpp
+│   │   ├── fork.cpp
+│   │   ├── futex.cpp
+│   │   ├── getcwd.cpp
+│   │   ├── gettimeofday.cpp
+│   │   ├── ioctl.cpp
+│   │   ├── isatty.cpp
+│   │   ├── kill.cpp
+│   │   ├── link.cpp
+│   │   ├── mem.cpp
+│   │   ├── mkdir.cpp
+│   │   ├── pid.cpp
+│   │   ├── pipe.cpp
+│   │   ├── poll.cpp
+│   │   ├── ptrace.cpp
+│   │   ├── ptsname.cpp
+│   │   ├── read_write.cpp
+│   │   ├── sigaction.cpp
+│   │   ├── sleep.cpp
+│   │   ├── socket.cpp
+│   │   ├── stat.cpp
+│   │   ├── syscall.cpp
+│   │   ├── syscall.h
+│   │   ├── syscall_numbers.h
+│   │   ├── thread.cpp
+│   │   ├── truncate.cpp
+│   │   ├── uname.cpp
+│   │   └── waitpid.cpp
+│   ├── tasking
+│   │   ├── Blocker.cpp
+│   │   ├── Blocker.h
+│   │   ├── BooleanBlocker.cpp
+│   │   ├── BooleanBlocker.h
+│   │   ├── ELF.cpp
+│   │   ├── ELF.h
+│   │   ├── FileBlockers.cpp
+│   │   ├── FileBlockers.h
+│   │   ├── Futex.cpp
+│   │   ├── Futex.h
+│   │   ├── JoinBlocker.cpp
+│   │   ├── JoinBlocker.h
+│   │   ├── Lock.cpp
+│   │   ├── Lock.h
+│   │   ├── Mutex.cpp
+│   │   ├── Mutex.h
+│   │   ├── PollBlocker.cpp
+│   │   ├── PollBlocker.h
+│   │   ├── ProcessArgs.cpp
+│   │   ├── ProcessArgs.h
+│   │   ├── Process.cpp
+│   │   ├── Process.h
+│   │   ├── Reaper.cpp
+│   │   ├── Reaper.h
+│   │   ├── Signal.cpp
+│   │   ├── Signal.h
+│   │   ├── SleepBlocker.cpp
+│   │   ├── SleepBlocker.h
+│   │   ├── TaskManager.cpp
+│   │   ├── TaskManager.h
+│   │   ├── Thread.cpp
+│   │   ├── Thread.h
+│   │   ├── Tracer.cpp
+│   │   ├── Tracer.h
+│   │   ├── TSS.h
+│   │   ├── WaitBlocker.cpp
+│   │   └── WaitBlocker.h
+│   ├── terminal
+│   │   ├── PTYControllerDevice.cpp
+│   │   ├── PTYControllerDevice.h
+│   │   ├── PTYDevice.cpp
+│   │   ├── PTYDevice.h
+│   │   ├── PTYMuxDevice.cpp
+│   │   ├── PTYMuxDevice.h
+│   │   ├── TTYDevice.cpp
+│   │   ├── TTYDevice.h
+│   │   ├── VirtualTTY.cpp
+│   │   └── VirtualTTY.h
+│   ├── tests
+│   │   ├── KernelTest.cpp
+│   │   ├── KernelTest.h
+│   │   ├── kstd
+│   │   │   ├── TestArc.cpp
+│   │   │   └── TestMap.cpp
+│   │   └── TestMemory.cpp
+│   ├── time
+│   │   ├── Time.cpp
+│   │   ├── Time.h
+│   │   ├── TimeKeeper.cpp
+│   │   ├── TimeKeeper.h
+│   │   ├── TimeManager.cpp
+│   │   └── TimeManager.h
+│   ├── User.cpp
+│   ├── User.h
+│   ├── VMWare.cpp
+│   └── VMWare.h
+├── laporan.nsa
 ├── libraries
-│   ├── CMakeLists.txt
-│   ├── ld
-│   │   ├── CMakeLists.txt
-│   │   ├── ld.cpp
-│   │   ├── ld-nusaos.ld
-│   │   └── main.S
-│   ├── lib3d
-│   │   ├── Buffer2D.h
-│   │   ├── BufferSet.h
-│   │   ├── CMakeLists.txt
-│   │   ├── MatrixUtil.cpp
-│   │   ├── MatrixUtil.h
-│   │   ├── ObjReader.cpp
-│   │   ├── ObjReader.h
-│   │   ├── RenderContext.cpp
-│   │   ├── RenderContext.h
-│   │   ├── Texture.cpp
-│   │   ├── Texture.h
-│   │   ├── Vertex.h
-│   │   ├── ViewportWidget.cpp
-│   │   └── ViewportWidget.h
-│   ├── libapp
-│   │   ├── App.cpp
-│   │   ├── App.h
-│   │   └── CMakeLists.txt
-│   ├── libc
-│   │   ├── arpa
-│   │   │   ├── inet.cpp
-│   │   │   └── inet.h
-│   │   ├── assert.c
-│   │   ├── assert.h
-│   │   ├── CMakeLists.txt
-│   │   ├── complex.h
-│   │   ├── crt0.c
-│   │   ├── crti.S
-│   │   ├── crtn.S
-│   │   ├── ctype.c
-│   │   ├── ctype.h
-│   │   ├── cxxabi.c
-│   │   ├── dirent.c
-│   │   ├── dirent.h
-│   │   ├── dlfcn.cpp
-│   │   ├── dlfcn.h
-│   │   ├── DNS.c
-│   │   ├── DNS.h
-│   │   ├── endian.h
-│   │   ├── errno.c
-│   │   ├── errno.h
-│   │   ├── fcntl.c
-│   │   ├── fcntl.h
-│   │   ├── fenv.h
-│   │   ├── float.h
-│   │   ├── ifaddrs.c
-│   │   ├── ifaddrs.h
-│   │   ├── inttypes.h
-│   │   ├── iso646.h
-│   │   ├── libgen.cpp
-│   │   ├── libgen.h
-│   │   ├── limits.h
-│   │   ├── locale.c
-│   │   ├── locale.h
-│   │   ├── math.c
-│   │   ├── math.h
-│   │   ├── memory.h
-│   │   ├── net
-│   │   │   ├── if.h
-│   │   │   └── route.h
-│   │   ├── netinet
-│   │   │   └── in.h
-│   │   ├── poll.c
-│   │   ├── poll.h
-│   │   ├── pthread.cpp
-│   │   ├── pthread.h
-│   │   ├── sched.c
-│   │   ├── sched.h
-│   │   ├── setjmp.h
-│   │   ├── setjmp.S
-│   │   ├── signal.c
-│   │   ├── signal.h
-│   │   ├── stdalign.h
-│   │   ├── stdarg.h
-│   │   ├── stdatomic.h
-│   │   ├── stdbool.h
-│   │   ├── stdint.h
-│   │   ├── stdio.c
-│   │   ├── stdio.h
-│   │   ├── stdlib.c
-│   │   ├── stdlib.h
-│   │   ├── stdnoreturn.h
-│   │   ├── string.c
-│   │   ├── string.h
-│   │   ├── strings.c
-│   │   ├── strings.h
-│   │   ├── sys
-│   │   │   ├── cdefs.h
-│   │   │   ├── futex.c
-│   │   │   ├── futex.h
-│   │   │   ├── input.h
-│   │   │   ├── internals.h
-│   │   │   ├── ioctl.c
-│   │   │   ├── ioctl.h
-│   │   │   ├── keyboard.h
-│   │   │   ├── liballoc.cpp
-│   │   │   ├── liballoc.h
-│   │   │   ├── mman.c
-│   │   │   ├── mman.h
-│   │   │   ├── param.h
-│   │   │   ├── printf.c
-│   │   │   ├── printf.h
-│   │   │   ├── ptrace.c
-│   │   │   ├── ptrace.h
-│   │   │   ├── reboot.cpp
-│   │   │   ├── reboot.h
-│   │   │   ├── registers.h
-│   │   │   ├── resource.c
-│   │   │   ├── resource.h
-│   │   │   ├── scanf.c
-│   │   │   ├── scanf.h
-│   │   │   ├── shm.c
-│   │   │   ├── shm.h
-│   │   │   ├── socket.c
-│   │   │   ├── socketfs.c
-│   │   │   ├── socketfs.h
-│   │   │   ├── socket.h
-│   │   │   ├── stat.c
-│   │   │   ├── stat.h
-│   │   │   ├── status.c
-│   │   │   ├── status.h
-│   │   │   ├── syscall.c
-│   │   │   ├── syscall.h
-│   │   │   ├── thread.cpp
-│   │   │   ├── thread.h
-│   │   │   ├── time.h
-│   │   │   ├── types.h
-│   │   │   ├── un.h
-│   │   │   ├── utsname.c
-│   │   │   ├── utsname.h
-│   │   │   ├── wait.c
-│   │   │   └── wait.h
-│   │   ├── termios.c
-│   │   ├── termios.h
-│   │   ├── tgmath.h
-│   │   ├── threads.h
-│   │   ├── time.cpp
-│   │   ├── time.h
-│   │   ├── uchar.h
-│   │   ├── unistd.c
-│   │   ├── unistd.h
-│   │   ├── utime.c
-│   │   ├── utime.h
-│   │   ├── wchar.h
-│   │   └── wctype.h
-│   ├── libdebug
-│   │   ├── CMakeLists.txt
-│   │   ├── Debugger.cpp
-│   │   ├── Debugger.h
-│   │   ├── Info.cpp
-│   │   ├── Info.h
-│   │   ├── LiveDebugger.cpp
-│   │   └── LiveDebugger.h
-│   ├── libexec
-│   │   ├── CMakeLists.txt
-│   │   ├── dlfunc.cpp
-│   │   ├── dlfunc.h
-│   │   ├── elf.h
-│   │   ├── Loader.cpp
-│   │   ├── Loader.h
-│   │   ├── Object.cpp
-│   │   └── Object.h
-│   ├── libgraphics
-│   │   ├── CMakeLists.txt
-│   │   ├── Color.h
-│   │   ├── Deflate.cpp
-│   │   ├── Deflate.h
-│   │   ├── Font.cpp
-│   │   ├── Font.h
-│   │   ├── Framebuffer.cpp
-│   │   ├── Framebuffer.h
-│   │   ├── Geometry.cpp
-│   │   ├── Geometry.h
-│   │   ├── Graphics.cpp
-│   │   ├── Graphics.h
-│   │   ├── Image.cpp
-│   │   ├── Image.h
-│   │   ├── Memory.h
-│   │   ├── PNG.cpp
-│   │   └── PNG.h
-│   ├── libkeyboard
-│   │   ├── CMakeLists.txt
-│   │   ├── Keyboard.cpp
-│   │   └── Keyboard.h
-│   ├── libmatrix
-│   │   ├── Matrix.h
-│   │   └── Vec.h
-│   ├── libnusa
-│   │   ├── Args.cpp
-│   │   ├── Args.h
-│   │   ├── AtomicCircularQueue.h
-│   │   ├── bits
-│   │   │   └── IOBits.h
-│   │   ├── Buffer.h
-│   │   ├── ByteBuffer.cpp
-│   │   ├── ByteBuffer.h
-│   │   ├── CMakeLists.txt
-│   │   ├── Config.cpp
-│   │   ├── Config.h
-│   │   ├── DataSize.cpp
-│   │   ├── DataSize.h
-│   │   ├── DirectoryEntry.cpp
-│   │   ├── DirectoryEntry.h
-│   │   ├── File.cpp
-│   │   ├── File.h
-│   │   ├── FileStream.cpp
-│   │   ├── FileStream.h
-│   │   ├── Filesystem.h
-│   │   ├── FormatStream.cpp
-│   │   ├── FormatStream.h
-│   │   ├── Log.cpp
-│   │   ├── Log.h
-│   │   ├── MappedBuffer.cpp
-│   │   ├── MappedBuffer.h
-│   │   ├── Object.cpp
-│   │   ├── Object.h
-│   │   ├── Path.cpp
-│   │   ├── Path.h
-│   │   ├── Result.cpp
-│   │   ├── Result.h
-│   │   ├── Serializable.cpp
-│   │   ├── Serializable.h
-│   │   ├── serialization_utils.h
-│   │   ├── SharedBuffer.cpp
-│   │   ├── SharedBuffer.h
-│   │   ├── Socket.cpp
-│   │   ├── Socket.h
-│   │   ├── SpinLock.cpp
-│   │   ├── SpinLock.h
-│   │   ├── Stream.cpp
-│   │   ├── Stream.h
-│   │   ├── StringStream.cpp
-│   │   ├── StringStream.h
-│   │   ├── StringUtils.h
-│   │   ├── Time.cpp
-│   │   └── Time.h
-│   ├── libpond
-│   │   ├── CMakeLists.txt
-│   │   ├── Context.cpp
-│   │   ├── Context.h
-│   │   ├── Cursor.cpp
-│   │   ├── Cursor.h
-│   │   ├── enums.h
-│   │   ├── Event.cpp
-│   │   ├── Event.h
-│   │   ├── packet.cpp
-│   │   ├── packet.h
-│   │   ├── pond.h
-│   │   ├── Window.cpp
-│   │   └── Window.h
-│   ├── libriver
-│   │   ├── BusConnection.cpp
-│   │   ├── BusConnection.h
-│   │   ├── BusServer.cpp
-│   │   ├── BusServer.h
-│   │   ├── CMakeLists.txt
-│   │   ├── Endpoint.cpp
-│   │   ├── Endpoint.h
-│   │   ├── Function.hpp
-│   │   ├── IPCBuffer.cpp
-│   │   ├── IPCBuffer.h
-│   │   ├── Message.hpp
-│   │   ├── packet.cpp
-│   │   ├── packet.h
-│   │   ├── river.h
-│   │   └── SerializedString.hpp
-│   ├── libsound
-│   │   ├── CMakeLists.txt
-│   │   ├── Connection.cpp
-│   │   ├── Connection.h
-│   │   ├── SampleBuffer.cpp
-│   │   ├── SampleBuffer.h
-│   │   ├── Sample.h
-│   │   ├── Sound.cpp
-│   │   ├── Sound.h
-│   │   ├── SoundSource.cpp
-│   │   ├── SoundSource.h
-│   │   ├── WavReader.cpp
-│   │   └── WavReader.h
-│   ├── libsys
-│   │   ├── CMakeLists.txt
-│   │   ├── CPU.cpp
-│   │   ├── CPU.h
-│   │   ├── Memory.cpp
-│   │   ├── Memory.h
-│   │   ├── Process.cpp
-│   │   └── Process.h
-│   ├── libterm
-│   │   ├── CMakeLists.txt
-│   │   ├── Line.cpp
-│   │   ├── Line.h
-│   │   ├── Listener.h
-│   │   ├── Terminal.cpp
-│   │   ├── Terminal.h
-│   │   └── types.h
-│   ├── libtui
-│   │   ├── CMakeLists.txt
-│   │   ├── LineEditor.cpp
-│   │   └── LineEditor.h
-│   └── libui
-│       ├── bits
-│       │   ├── FilePicker.cpp
-│       │   └── FilePicker.h
-│       ├── CMakeLists.txt
-│       ├── DrawContext.cpp
-│       ├── DrawContext.h
-│       ├── libui.cpp
-│       ├── libui.h
-│       ├── Menu.cpp
-│       ├── Menu.h
-│       ├── Poll.h
-│       ├── TextLayout.cpp
-│       ├── TextLayout.h
-│       ├── TextStorage.cpp
-│       ├── TextStorage.h
-│       ├── Theme.cpp
-│       ├── Theme.h
-│       ├── Timer.cpp
-│       ├── Timer.h
-│       ├── UIException.cpp
-│       ├── UIException.h
-│       ├── widget
-│       │   ├── Button.cpp
-│       │   ├── Button.h
-│       │   ├── Cell.cpp
-│       │   ├── Cell.h
-│       │   ├── Checkbox.cpp
-│       │   ├── Checkbox.h
-│       │   ├── ContainerView.cpp
-│       │   ├── ContainerView.h
-│       │   ├── files
-│       │   │   ├── FileGridView.cpp
-│       │   │   ├── FileGridView.h
-│       │   │   ├── FileNavigationBar.cpp
-│       │   │   ├── FileNavigationBar.h
-│       │   │   ├── FileViewBase.cpp
-│       │   │   ├── FileViewBase.h
-│       │   │   └── FileViewDelegate.h
-│       │   ├── Image.cpp
-│       │   ├── Image.h
-│       │   ├── Label.cpp
-│       │   ├── Label.h
-│       │   ├── layout
-│       │   │   ├── BoxLayout.cpp
-│       │   │   ├── BoxLayout.h
-│       │   │   ├── FlexLayout.cpp
-│       │   │   ├── FlexLayout.h
-│       │   │   ├── GridLayout.cpp
-│       │   │   └── GridLayout.h
-│       │   ├── ListView.cpp
-│       │   ├── ListView.h
-│       │   ├── MenuBar.cpp
-│       │   ├── MenuBar.h
-│       │   ├── MenuWidget.cpp
-│       │   ├── MenuWidget.h
-│       │   ├── NamedCell.cpp
-│       │   ├── NamedCell.h
-│       │   ├── ProgressBar.cpp
-│       │   ├── ProgressBar.h
-│       │   ├── ScrollView.cpp
-│       │   ├── ScrollView.h
-│       │   ├── Stack.cpp
-│       │   ├── Stack.h
-│       │   ├── TableView.cpp
-│       │   ├── TableView.h
-│       │   ├── TextView.cpp
-│       │   ├── TextView.h
-│       │   ├── Widget.cpp
-│       │   └── Widget.h
-│       ├── Window.cpp
-│       └── Window.h
+│   ├── CMakeLists.txt
+│   ├── ld
+│   │   ├── CMakeLists.txt
+│   │   ├── ld.cpp
+│   │   ├── ld-nusaos.ld
+│   │   └── main.S
+│   ├── lib3d
+│   │   ├── Buffer2D.h
+│   │   ├── BufferSet.h
+│   │   ├── CMakeLists.txt
+│   │   ├── MatrixUtil.cpp
+│   │   ├── MatrixUtil.h
+│   │   ├── ObjReader.cpp
+│   │   ├── ObjReader.h
+│   │   ├── RenderContext.cpp
+│   │   ├── RenderContext.h
+│   │   ├── Texture.cpp
+│   │   ├── Texture.h
+│   │   ├── Vertex.h
+│   │   ├── ViewportWidget.cpp
+│   │   └── ViewportWidget.h
+│   ├── libapp
+│   │   ├── App.cpp
+│   │   ├── App.h
+│   │   └── CMakeLists.txt
+│   ├── libc
+│   │   ├── arpa
+│   │   │   ├── inet.cpp
+│   │   │   └── inet.h
+│   │   ├── assert.c
+│   │   ├── assert.h
+│   │   ├── CMakeLists.txt
+│   │   ├── complex.h
+│   │   ├── crt0.c
+│   │   ├── crti.S
+│   │   ├── crtn.S
+│   │   ├── ctype.c
+│   │   ├── ctype.h
+│   │   ├── cxxabi.c
+│   │   ├── dirent.c
+│   │   ├── dirent.h
+│   │   ├── dlfcn.cpp
+│   │   ├── dlfcn.h
+│   │   ├── DNS.c
+│   │   ├── DNS.h
+│   │   ├── endian.h
+│   │   ├── errno.c
+│   │   ├── errno.h
+│   │   ├── fcntl.c
+│   │   ├── fcntl.h
+│   │   ├── fenv.h
+│   │   ├── float.h
+│   │   ├── ifaddrs.c
+│   │   ├── ifaddrs.h
+│   │   ├── inttypes.h
+│   │   ├── iso646.h
+│   │   ├── libgen.cpp
+│   │   ├── libgen.h
+│   │   ├── limits.h
+│   │   ├── locale.c
+│   │   ├── locale.h
+│   │   ├── math.c
+│   │   ├── math.h
+│   │   ├── memory.h
+│   │   ├── net
+│   │   │   ├── if.h
+│   │   │   └── route.h
+│   │   ├── netinet
+│   │   │   └── in.h
+│   │   ├── poll.c
+│   │   ├── poll.h
+│   │   ├── pthread.cpp
+│   │   ├── pthread.h
+│   │   ├── sched.c
+│   │   ├── sched.h
+│   │   ├── setjmp.h
+│   │   ├── setjmp.S
+│   │   ├── signal.c
+│   │   ├── signal.h
+│   │   ├── stdalign.h
+│   │   ├── stdarg.h
+│   │   ├── stdatomic.h
+│   │   ├── stdbool.h
+│   │   ├── stdint.h
+│   │   ├── stdio.c
+│   │   ├── stdio.h
+│   │   ├── stdlib.c
+│   │   ├── stdlib.h
+│   │   ├── stdnoreturn.h
+│   │   ├── string.c
+│   │   ├── string.h
+│   │   ├── strings.c
+│   │   ├── strings.h
+│   │   ├── sys
+│   │   │   ├── cdefs.h
+│   │   │   ├── futex.c
+│   │   │   ├── futex.h
+│   │   │   ├── input.h
+│   │   │   ├── internals.h
+│   │   │   ├── ioctl.c
+│   │   │   ├── ioctl.h
+│   │   │   ├── keyboard.h
+│   │   │   ├── liballoc.cpp
+│   │   │   ├── liballoc.h
+│   │   │   ├── mman.c
+│   │   │   ├── mman.h
+│   │   │   ├── param.h
+│   │   │   ├── printf.c
+│   │   │   ├── printf.h
+│   │   │   ├── ptrace.c
+│   │   │   ├── ptrace.h
+│   │   │   ├── reboot.cpp
+│   │   │   ├── reboot.h
+│   │   │   ├── registers.h
+│   │   │   ├── resource.c
+│   │   │   ├── resource.h
+│   │   │   ├── scanf.c
+│   │   │   ├── scanf.h
+│   │   │   ├── shm.c
+│   │   │   ├── shm.h
+│   │   │   ├── socket.c
+│   │   │   ├── socketfs.c
+│   │   │   ├── socketfs.h
+│   │   │   ├── socket.h
+│   │   │   ├── stat.c
+│   │   │   ├── stat.h
+│   │   │   ├── status.c
+│   │   │   ├── status.h
+│   │   │   ├── syscall.c
+│   │   │   ├── syscall.h
+│   │   │   ├── thread.cpp
+│   │   │   ├── thread.h
+│   │   │   ├── time.h
+│   │   │   ├── types.h
+│   │   │   ├── un.h
+│   │   │   ├── utsname.c
+│   │   │   ├── utsname.h
+│   │   │   ├── wait.c
+│   │   │   └── wait.h
+│   │   ├── termios.c
+│   │   ├── termios.h
+│   │   ├── tgmath.h
+│   │   ├── threads.h
+│   │   ├── time.cpp
+│   │   ├── time.h
+│   │   ├── uchar.h
+│   │   ├── unistd.c
+│   │   ├── unistd.h
+│   │   ├── utime.c
+│   │   ├── utime.h
+│   │   ├── wchar.h
+│   │   └── wctype.h
+│   ├── libdebug
+│   │   ├── CMakeLists.txt
+│   │   ├── Debugger.cpp
+│   │   ├── Debugger.h
+│   │   ├── Info.cpp
+│   │   ├── Info.h
+│   │   ├── LiveDebugger.cpp
+│   │   └── LiveDebugger.h
+│   ├── libexec
+│   │   ├── CMakeLists.txt
+│   │   ├── dlfunc.cpp
+│   │   ├── dlfunc.h
+│   │   ├── elf.h
+│   │   ├── Loader.cpp
+│   │   ├── Loader.h
+│   │   ├── Object.cpp
+│   │   └── Object.h
+│   ├── libgraphics
+│   │   ├── CMakeLists.txt
+│   │   ├── Color.h
+│   │   ├── Deflate.cpp
+│   │   ├── Deflate.h
+│   │   ├── Font.cpp
+│   │   ├── Font.h
+│   │   ├── Framebuffer.cpp
+│   │   ├── Framebuffer.h
+│   │   ├── Geometry.cpp
+│   │   ├── Geometry.h
+│   │   ├── Graphics.cpp
+│   │   ├── Graphics.h
+│   │   ├── Image.cpp
+│   │   ├── Image.h
+│   │   ├── Memory.h
+│   │   ├── PNG.cpp
+│   │   └── PNG.h
+│   ├── libkeyboard
+│   │   ├── CMakeLists.txt
+│   │   ├── Keyboard.cpp
+│   │   └── Keyboard.h
+│   ├── libmatrix
+│   │   ├── Matrix.h
+│   │   └── Vec.h
+│   ├── libnusa
+│   │   ├── Args.cpp
+│   │   ├── Args.h
+│   │   ├── AtomicCircularQueue.h
+│   │   ├── bits
+│   │   │   └── IOBits.h
+│   │   ├── Buffer.h
+│   │   ├── ByteBuffer.cpp
+│   │   ├── ByteBuffer.h
+│   │   ├── CMakeLists.txt
+│   │   ├── Config.cpp
+│   │   ├── Config.h
+│   │   ├── DataSize.cpp
+│   │   ├── DataSize.h
+│   │   ├── DirectoryEntry.cpp
+│   │   ├── DirectoryEntry.h
+│   │   ├── File.cpp
+│   │   ├── File.h
+│   │   ├── FileStream.cpp
+│   │   ├── FileStream.h
+│   │   ├── Filesystem.h
+│   │   ├── FormatStream.cpp
+│   │   ├── FormatStream.h
+│   │   ├── Log.cpp
+│   │   ├── Log.h
+│   │   ├── MappedBuffer.cpp
+│   │   ├── MappedBuffer.h
+│   │   ├── Object.cpp
+│   │   ├── Object.h
+│   │   ├── Path.cpp
+│   │   ├── Path.h
+│   │   ├── Result.cpp
+│   │   ├── Result.h
+│   │   ├── Serializable.cpp
+│   │   ├── Serializable.h
+│   │   ├── serialization_utils.h
+│   │   ├── SharedBuffer.cpp
+│   │   ├── SharedBuffer.h
+│   │   ├── Socket.cpp
+│   │   ├── Socket.h
+│   │   ├── SpinLock.cpp
+│   │   ├── SpinLock.h
+│   │   ├── Stream.cpp
+│   │   ├── Stream.h
+│   │   ├── StringStream.cpp
+│   │   ├── StringStream.h
+│   │   ├── StringUtils.h
+│   │   ├── Time.cpp
+│   │   └── Time.h
+│   ├── libpond
+│   │   ├── CMakeLists.txt
+│   │   ├── Context.cpp
+│   │   ├── Context.h
+│   │   ├── Cursor.cpp
+│   │   ├── Cursor.h
+│   │   ├── enums.h
+│   │   ├── Event.cpp
+│   │   ├── Event.h
+│   │   ├── packet.cpp
+│   │   ├── packet.h
+│   │   ├── pond.h
+│   │   ├── Window.cpp
+│   │   └── Window.h
+│   ├── libriver
+│   │   ├── BusConnection.cpp
+│   │   ├── BusConnection.h
+│   │   ├── BusServer.cpp
+│   │   ├── BusServer.h
+│   │   ├── CMakeLists.txt
+│   │   ├── Endpoint.cpp
+│   │   ├── Endpoint.h
+│   │   ├── Function.hpp
+│   │   ├── IPCBuffer.cpp
+│   │   ├── IPCBuffer.h
+│   │   ├── Message.hpp
+│   │   ├── packet.cpp
+│   │   ├── packet.h
+│   │   ├── river.h
+│   │   └── SerializedString.hpp
+│   ├── libsound
+│   │   ├── CMakeLists.txt
+│   │   ├── Connection.cpp
+│   │   ├── Connection.h
+│   │   ├── SampleBuffer.cpp
+│   │   ├── SampleBuffer.h
+│   │   ├── Sample.h
+│   │   ├── Sound.cpp
+│   │   ├── Sound.h
+│   │   ├── SoundSource.cpp
+│   │   ├── SoundSource.h
+│   │   ├── WavReader.cpp
+│   │   └── WavReader.h
+│   ├── libsys
+│   │   ├── CMakeLists.txt
+│   │   ├── CPU.cpp
+│   │   ├── CPU.h
+│   │   ├── Memory.cpp
+│   │   ├── Memory.h
+│   │   ├── Process.cpp
+│   │   └── Process.h
+│   ├── libterm
+│   │   ├── CMakeLists.txt
+│   │   ├── Line.cpp
+│   │   ├── Line.h
+│   │   ├── Listener.h
+│   │   ├── Terminal.cpp
+│   │   ├── Terminal.h
+│   │   └── types.h
+│   ├── libtui
+│   │   ├── CMakeLists.txt
+│   │   ├── LineEditor.cpp
+│   │   └── LineEditor.h
+│   └── libui
+│       ├── bits
+│       │   ├── FilePicker.cpp
+│       │   └── FilePicker.h
+│       ├── CMakeLists.txt
+│       ├── DrawContext.cpp
+│       ├── DrawContext.h
+│       ├── libui.cpp
+│       ├── libui.h
+│       ├── Menu.cpp
+│       ├── Menu.h
+│       ├── Poll.h
+│       ├── TextLayout.cpp
+│       ├── TextLayout.h
+│       ├── TextStorage.cpp
+│       ├── TextStorage.h
+│       ├── Theme.cpp
+│       ├── Theme.h
+│       ├── Timer.cpp
+│       ├── Timer.h
+│       ├── UIException.cpp
+│       ├── UIException.h
+│       ├── widget
+│       │   ├── Button.cpp
+│       │   ├── Button.h
+│       │   ├── Cell.cpp
+│       │   ├── Cell.h
+│       │   ├── Checkbox.cpp
+│       │   ├── Checkbox.h
+│       │   ├── ContainerView.cpp
+│       │   ├── ContainerView.h
+│       │   ├── files
+│       │   │   ├── FileGridView.cpp
+│       │   │   ├── FileGridView.h
+│       │   │   ├── FileNavigationBar.cpp
+│       │   │   ├── FileNavigationBar.h
+│       │   │   ├── FileViewBase.cpp
+│       │   │   ├── FileViewBase.h
+│       │   │   └── FileViewDelegate.h
+│       │   ├── Image.cpp
+│       │   ├── Image.h
+│       │   ├── Label.cpp
+│       │   ├── Label.h
+│       │   ├── layout
+│       │   │   ├── BoxLayout.cpp
+│       │   │   ├── BoxLayout.h
+│       │   │   ├── FlexLayout.cpp
+│       │   │   ├── FlexLayout.h
+│       │   │   ├── GridLayout.cpp
+│       │   │   └── GridLayout.h
+│       │   ├── ListView.cpp
+│       │   ├── ListView.h
+│       │   ├── MenuBar.cpp
+│       │   ├── MenuBar.h
+│       │   ├── MenuWidget.cpp
+│       │   ├── MenuWidget.h
+│       │   ├── NamedCell.cpp
+│       │   ├── NamedCell.h
+│       │   ├── ProgressBar.cpp
+│       │   ├── ProgressBar.h
+│       │   ├── ScrollView.cpp
+│       │   ├── ScrollView.h
+│       │   ├── Stack.cpp
+│       │   ├── Stack.h
+│       │   ├── TableView.cpp
+│       │   ├── TableView.h
+│       │   ├── TextView.cpp
+│       │   ├── TextView.h
+│       │   ├── Widget.cpp
+│       │   └── Widget.h
+│       ├── Window.cpp
+│       └── Window.h
 ├── LICENSE.txt
-├── ports
-│   ├── binutils
-│   │   ├── binutils.patch -> ../../toolchain/binutils-2.41.patch
-│   │   └── build.sh
-│   ├── doom
-│   │   └── build.sh
-│   ├── freetype
-│   │   ├── build.sh
-│   │   └── sdl2.patch
-│   ├── gcc
-│   │   ├── build.sh
-│   │   └── gcc.patch -> ../../toolchain/gcc-13.2.0.patch
-│   ├── gmp
-│   │   ├── build.sh
-│   │   └── gmp.patch
-│   ├── libiconv
-│   │   ├── build.sh
-│   │   └── libiconv.patch
-│   ├── libjpeg
-│   │   ├── build.sh
-│   │   └── config.sub.patch
-│   ├── libpng
-│   │   ├── build.sh
-│   │   ├── config.sub.patch
-│   │   └── libtool-configure.patch
-│   ├── libtiff
-│   │   ├── build.sh
-│   │   └── libtiff.patch
-│   ├── mpc
-│   │   ├── build.sh
-│   │   ├── mpc.patch
-│   │   └── mpfr.patch
-│   ├── mpfr
-│   │   ├── build.sh
-│   │   └── mpfr.patch
-│   ├── ports.sh
-│   ├── sdl2
-│   │   ├── build.sh
-│   │   └── sdl2.patch
-│   ├── sdl2_gfx
-│   │   └── build.sh
-│   ├── sdl2_image
-│   │   ├── build.sh
-│   │   ├── config.sub.patch
-│   │   ├── makefile.in.patch
-│   │   └── sdl2_image.patch
-│   ├── sdl2_ttf
-│   │   └── build.sh
-│   ├── xz
-│   │   ├── build.sh
-│   │   └── config.sub.patch
-│   ├── zlib
-│   │   └── build.sh
-│   └── zstd
-│       ├── build.sh
-│       └── pthreadfix.patch
 ├── programs
-│   ├── applications
-│   │   ├── 3demo
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── DemoWidget.cpp
-│   │   │   ├── DemoWidget.h
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       ├── cube.obj
-│   │   │       └── icon
-│   │   │           ├──  16x16.png
-│   │   │           └── 32x32.png
-│   │   ├── 4inarow
-│   │   │   ├── 4inarow.cpp
-│   │   │   ├── 4inarow.h
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── GameWidget.cpp
-│   │   │   ├── GameWidget.h
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       └── icon
-│   │   │           └── 16x16.png
-│   │   ├── about
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       └── icon
-│   │   │           └── 16x16.png
-│   │   ├── calculator
-│   │   │   ├── CalculatorWidget.cpp
-│   │   │   ├── CalculatorWidget.h
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       └── icon
-│   │   │           ├── 16x16.png
-│   │   │           └── 32x32.png
-│   │   ├── CMakeLists.txt
-│   │   ├── desktop
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── Desktop.cpp
-│   │   │   ├── Desktop.h
-│   │   │   ├── DesktopWidget.cpp
-│   │   │   ├── DesktopWidget.h
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       └── app.conf
-│   │   ├── editor
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       ├── filetypes
-│   │   │       │   └── text.icon
-│   │   │       │       ├── 16x16.png
-│   │   │       │       └── 32x32.png
-│   │   │       └── icon
-│   │   │           ├── 16x16.png
-│   │   │           └── 32x32.png
-│   │   ├── files
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       └── icon
-│   │   │           ├── 16x16.png
-│   │   │           └── 32x32.png
-│   │   ├── monitor
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   ├── MemoryUsageWidget.cpp
-│   │   │   ├── MemoryUsageWidget.h
-│   │   │   ├── ProcessInspectorWidget.cpp
-│   │   │   ├── ProcessInspectorWidget.h
-│   │   │   ├── ProcessListWidget.cpp
-│   │   │   ├── ProcessListWidget.h
-│   │   │   ├── ProcessManager.cpp
-│   │   │   ├── ProcessManager.h
-│   │   │   ├── ProcessMemoryLayoutWidget.cpp
-│   │   │   ├── ProcessMemoryLayoutWidget.h
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       └── icon
-│   │   │           ├── 16x16.png
-│   │   │           └── 32x32.png
-│   │   ├── nusasweeper
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── Ducksweeper.cpp
-│   │   │   ├── Ducksweeper.h
-│   │   │   ├── ElapsedWidget.cpp
-│   │   │   ├── ElapsedWidget.h
-│   │   │   ├── GameWidget.cpp
-│   │   │   ├── GameWidget.h
-│   │   │   ├── main.cpp
-│   │   │   └── resources
-│   │   │       ├── app.conf
-│   │   │       ├── flag.png
-│   │   │       ├── icon
-│   │   │       │   └── 16x16.png
-│   │   │       └── nusa.png
-│   │   ├── sandbar
-│   │   │   ├── AppMenu.cpp
-│   │   │   ├── AppMenu.h
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   ├── modules
-│   │   │   │   ├── CPUModule.cpp
-│   │   │   │   ├── CPUModule.h
-│   │   │   │   ├── GraphModule.cpp
-│   │   │   │   ├── GraphModule.h
-│   │   │   │   ├── MemoryModule.cpp
-│   │   │   │   ├── MemoryModule.h
-│   │   │   │   ├── Module.h
-│   │   │   │   ├── TimeModule.cpp
-│   │   │   │   └── TimeModule.h
-│   │   │   ├── resources
-│   │   │   │   ├── app.conf
-│   │   │   │   └── icon
-│   │   │   │       ├── 16x16.png
-│   │   │   │       └── 32x32.png
-│   │   │   ├── Sandbar.cpp
-│   │   │   ├── Sandbar.h
-│   │   │   ├── SandbarWidget.cpp
-│   │   │   └── SandbarWidget.h
-│   │   ├── terminal
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── main.cpp
-│   │   │   ├── resources
-│   │   │   │   ├── app.conf
-│   │   │   │   └── icon
-│   │   │   │       ├── 16x16.png
-│   │   │   │       └── 32x32.png
-│   │   │   ├── TerminalWidget.cpp
-│   │   │   └── TerminalWidget.h
-│   │   ├── uxn
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── devices
-│   │   │   │   ├── ConsoleDevice.cpp
-│   │   │   │   ├── ConsoleDevice.h
-│   │   │   │   ├── Device.cpp
-│   │   │   │   ├── Device.h
-│   │   │   │   ├── ScreenDevice.cpp
-│   │   │   │   └── ScreenDevice.h
-│   │   │   ├── main.cpp
-│   │   │   ├── resources
-│   │   │   │   └── app.conf
-│   │   │   ├── Uxn.cpp
-│   │   │   └── Uxn.h
-│   │   └── viewer
-│   │       ├── CMakeLists.txt
-│   │       ├── main.cpp
-│   │       ├── resources
-│   │       │   ├── app.conf
-│   │       │   ├── filetypes
-│   │       │   │   └── audio.icon
-│   │       │   │       ├── 16x16.png
-│   │       │   │       └── 32x32.png
-│   │       │   └── icon
-│   │       │       ├── 16x16.png
-│   │       │       ├── 32x32.png
-│   │       │       └── 64x64.png
-│   │       ├── ViewerAudioWidget.cpp
-│   │       ├── ViewerAudioWidget.h
-│   │       ├── ViewerWidget.cpp
-│   │       └── ViewerWidget.h
-│   ├── CMakeLists.txt
-│   ├── coreutils
-│   │   ├── benchmark.cpp
-│   │   ├── cat.cpp
-│   │   ├── chmod.cpp
-│   │   ├── chown.cpp
-│   │   ├── CMakeLists.txt
-│   │   ├── cp.cpp
-│   │   ├── date.cpp
-│   │   ├── echo.cpp
-│   │   ├── fetch.cpp
-│   │   ├── free.cpp
-│   │   ├── kill.cpp
-│   │   ├── ln.cpp
-│   │   ├── ls.cpp
-│   │   ├── mkdir.cpp
-│   │   ├── mv.cpp
-│   │   ├── open.cpp
-│   │   ├── oshelp.cpp
-│   │   ├── ping.cpp
-│   │   ├── play.cpp
-│   │   ├── profile.cpp
-│   │   ├── ps.cpp
-│   │   ├── pwd.cpp
-│   │   ├── rm.cpp
-│   │   ├── rmdir.cpp
-│   │   ├── touch.cpp
-│   │   ├── truncate.cpp
-│   │   ├── uname.cpp
-│   │   └── uptime.cpp
-│   └── dsh
-│       ├── CMakeLists.txt
-│       ├── Command.cpp
-│       ├── Command.h
-│       ├── main.cpp
-│       ├── Shell.cpp
-│       ├── Shell.h
-│       ├── util.cpp
-│       └── util.h
+│   ├── applications
+│   │   ├── 3demo
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── DemoWidget.cpp
+│   │   │   ├── DemoWidget.h
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       ├── cube.obj
+│   │   │       └── icon
+│   │   │           ├──  16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── 4inarow
+│   │   │   ├── 4inarow.cpp
+│   │   │   ├── 4inarow.h
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── GameWidget.cpp
+│   │   │   ├── GameWidget.h
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           └── 16x16.png
+│   │   ├── about
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           └── 16x16.png
+│   │   ├── calculator
+│   │   │   ├── CalculatorWidget.cpp
+│   │   │   ├── CalculatorWidget.h
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── clock
+│   │   │   ├── ClockWidget.cpp
+│   │   │   ├── ClockWidget.h
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── CMakeLists.txt
+│   │   ├── desktop
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── Desktop.cpp
+│   │   │   ├── Desktop.h
+│   │   │   ├── DesktopWidget.cpp
+│   │   │   ├── DesktopWidget.h
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           └── 16x16.png
+│   │   ├── doom
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── doomgeneric
+│   │   │   │   ├── am_map.c
+│   │   │   │   ├── am_map.h
+│   │   │   │   ├── config.h
+│   │   │   │   ├── deh_main.h
+│   │   │   │   ├── deh_misc.h
+│   │   │   │   ├── deh_str.h
+│   │   │   │   ├── d_englsh.h
+│   │   │   │   ├── d_event.c
+│   │   │   │   ├── d_event.h
+│   │   │   │   ├── d_items.c
+│   │   │   │   ├── d_items.h
+│   │   │   │   ├── d_iwad.c
+│   │   │   │   ├── d_iwad.h
+│   │   │   │   ├── d_loop.c
+│   │   │   │   ├── d_loop.h
+│   │   │   │   ├── d_main.c
+│   │   │   │   ├── d_main.h
+│   │   │   │   ├── d_mode.c
+│   │   │   │   ├── d_mode.h
+│   │   │   │   ├── d_net.c
+│   │   │   │   ├── doomdata.h
+│   │   │   │   ├── doomdef.c
+│   │   │   │   ├── doomdef.h
+│   │   │   │   ├── doomfeatures.h
+│   │   │   │   ├── doomgeneric.c
+│   │   │   │   ├── doomgeneric_duckos.cpp
+│   │   │   │   ├── doomgeneric.h
+│   │   │   │   ├── doom.h
+│   │   │   │   ├── doomkeys.h
+│   │   │   │   ├── doomstat.c
+│   │   │   │   ├── doomstat.h
+│   │   │   │   ├── doomtype.h
+│   │   │   │   ├── d_player.h
+│   │   │   │   ├── dstrings.c
+│   │   │   │   ├── dstrings.h
+│   │   │   │   ├── d_textur.h
+│   │   │   │   ├── d_think.h
+│   │   │   │   ├── d_ticcmd.h
+│   │   │   │   ├── dummy.c
+│   │   │   │   ├── f_finale.c
+│   │   │   │   ├── f_finale.h
+│   │   │   │   ├── f_wipe.c
+│   │   │   │   ├── f_wipe.h
+│   │   │   │   ├── g_game.c
+│   │   │   │   ├── g_game.h
+│   │   │   │   ├── gusconf.c
+│   │   │   │   ├── gusconf.h
+│   │   │   │   ├── hu_lib.c
+│   │   │   │   ├── hu_lib.h
+│   │   │   │   ├── hu_stuff.c
+│   │   │   │   ├── hu_stuff.h
+│   │   │   │   ├── i_cdmus.c
+│   │   │   │   ├── i_cdmus.h
+│   │   │   │   ├── icon.c
+│   │   │   │   ├── i_endoom.c
+│   │   │   │   ├── i_endoom.h
+│   │   │   │   ├── i_input.c
+│   │   │   │   ├── i_joystick.c
+│   │   │   │   ├── i_joystick.h
+│   │   │   │   ├── i_main.c
+│   │   │   │   ├── info.c
+│   │   │   │   ├── info.h
+│   │   │   │   ├── i_scale.c
+│   │   │   │   ├── i_scale.h
+│   │   │   │   ├── i_sound.c
+│   │   │   │   ├── i_sound.h
+│   │   │   │   ├── i_swap.h
+│   │   │   │   ├── i_system.c
+│   │   │   │   ├── i_system.h
+│   │   │   │   ├── i_timer.c
+│   │   │   │   ├── i_timer.h
+│   │   │   │   ├── i_video.c
+│   │   │   │   ├── i_video.h
+│   │   │   │   ├── Makefile
+│   │   │   │   ├── m_argv.c
+│   │   │   │   ├── m_argv.h
+│   │   │   │   ├── m_bbox.c
+│   │   │   │   ├── m_bbox.h
+│   │   │   │   ├── m_cheat.c
+│   │   │   │   ├── m_cheat.h
+│   │   │   │   ├── m_config.c
+│   │   │   │   ├── m_config.h
+│   │   │   │   ├── m_controls.c
+│   │   │   │   ├── m_controls.h
+│   │   │   │   ├── memio.c
+│   │   │   │   ├── memio.h
+│   │   │   │   ├── m_fixed.c
+│   │   │   │   ├── m_fixed.h
+│   │   │   │   ├── m_menu.c
+│   │   │   │   ├── m_menu.h
+│   │   │   │   ├── m_misc.c
+│   │   │   │   ├── m_misc.h
+│   │   │   │   ├── m_random.c
+│   │   │   │   ├── m_random.h
+│   │   │   │   ├── net_client.h
+│   │   │   │   ├── net_dedicated.h
+│   │   │   │   ├── net_defs.h
+│   │   │   │   ├── net_gui.h
+│   │   │   │   ├── net_io.h
+│   │   │   │   ├── net_loop.h
+│   │   │   │   ├── net_packet.h
+│   │   │   │   ├── net_query.h
+│   │   │   │   ├── net_sdl.h
+│   │   │   │   ├── net_server.h
+│   │   │   │   ├── p_ceilng.c
+│   │   │   │   ├── p_doors.c
+│   │   │   │   ├── p_enemy.c
+│   │   │   │   ├── p_floor.c
+│   │   │   │   ├── p_inter.c
+│   │   │   │   ├── p_inter.h
+│   │   │   │   ├── p_lights.c
+│   │   │   │   ├── p_local.h
+│   │   │   │   ├── p_map.c
+│   │   │   │   ├── p_maputl.c
+│   │   │   │   ├── p_mobj.c
+│   │   │   │   ├── p_mobj.h
+│   │   │   │   ├── p_plats.c
+│   │   │   │   ├── p_pspr.c
+│   │   │   │   ├── p_pspr.h
+│   │   │   │   ├── p_saveg.c
+│   │   │   │   ├── p_saveg.h
+│   │   │   │   ├── p_setup.c
+│   │   │   │   ├── p_setup.h
+│   │   │   │   ├── p_sight.c
+│   │   │   │   ├── p_spec.c
+│   │   │   │   ├── p_spec.h
+│   │   │   │   ├── p_switch.c
+│   │   │   │   ├── p_telept.c
+│   │   │   │   ├── p_tick.c
+│   │   │   │   ├── p_tick.h
+│   │   │   │   ├── p_user.c
+│   │   │   │   ├── r_bsp.c
+│   │   │   │   ├── r_bsp.h
+│   │   │   │   ├── r_data.c
+│   │   │   │   ├── r_data.h
+│   │   │   │   ├── r_defs.h
+│   │   │   │   ├── r_draw.c
+│   │   │   │   ├── r_draw.h
+│   │   │   │   ├── r_local.h
+│   │   │   │   ├── r_main.c
+│   │   │   │   ├── r_main.h
+│   │   │   │   ├── r_plane.c
+│   │   │   │   ├── r_plane.h
+│   │   │   │   ├── r_segs.c
+│   │   │   │   ├── r_segs.h
+│   │   │   │   ├── r_sky.c
+│   │   │   │   ├── r_sky.h
+│   │   │   │   ├── r_state.h
+│   │   │   │   ├── r_things.c
+│   │   │   │   ├── r_things.h
+│   │   │   │   ├── sha1.c
+│   │   │   │   ├── sha1.h
+│   │   │   │   ├── sounds.c
+│   │   │   │   ├── sounds.h
+│   │   │   │   ├── s_sound.c
+│   │   │   │   ├── s_sound.h
+│   │   │   │   ├── statdump.c
+│   │   │   │   ├── statdump.h
+│   │   │   │   ├── st_lib.c
+│   │   │   │   ├── st_lib.h
+│   │   │   │   ├── st_stuff.c
+│   │   │   │   ├── st_stuff.h
+│   │   │   │   ├── tables.c
+│   │   │   │   ├── tables.h
+│   │   │   │   ├── v_patch.h
+│   │   │   │   ├── v_video.c
+│   │   │   │   ├── v_video.h
+│   │   │   │   ├── w_checksum.c
+│   │   │   │   ├── w_checksum.h
+│   │   │   │   ├── w_file.c
+│   │   │   │   ├── w_file.h
+│   │   │   │   ├── w_file_stdc.c
+│   │   │   │   ├── wi_stuff.c
+│   │   │   │   ├── wi_stuff.h
+│   │   │   │   ├── w_main.c
+│   │   │   │   ├── w_main.h
+│   │   │   │   ├── w_merge.h
+│   │   │   │   ├── w_wad.c
+│   │   │   │   ├── w_wad.h
+│   │   │   │   ├── z_zone.c
+│   │   │   │   └── z_zone.h
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           └── 16x16.png
+│   │   ├── ducksweeper
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── Ducksweeper.cpp
+│   │   │   ├── Ducksweeper.h
+│   │   │   ├── ElapsedWidget.cpp
+│   │   │   ├── ElapsedWidget.h
+│   │   │   ├── GameWidget.cpp
+│   │   │   ├── GameWidget.h
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       ├── flag.png
+│   │   │       ├── icon
+│   │   │       │   └── 16x16.png
+│   │   │       └── nusa.png
+│   │   ├── editor
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       ├── filetypes
+│   │   │       │   └── text.icon
+│   │   │       │       ├── 16x16.png
+│   │   │       │       └── 32x32.png
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── files
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── flappybird
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── FlappyBird.cpp
+│   │   │   ├── FlappyBird.h
+│   │   │   ├── GameWidget.cpp
+│   │   │   ├── GameWidget.h
+│   │   │   ├── main.cpp
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── monitor
+│   │   │   ├── AppListWidget.cpp
+│   │   │   ├── AppListWidget.h
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── CpuGraphWidget.cpp
+│   │   │   ├── CpuGraphWidget.h
+│   │   │   ├── main.cpp
+│   │   │   ├── MemGraphWidget.cpp
+│   │   │   ├── MemGraphWidget.h
+│   │   │   └── resources
+│   │   │       ├── app.conf
+│   │   │       └── icon
+│   │   │           ├── 16x16.png
+│   │   │           └── 32x32.png
+│   │   ├── sandbar
+│   │   │   ├── AppMenu.cpp
+│   │   │   ├── AppMenu.h
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   ├── modules
+│   │   │   │   ├── CPUModule.cpp
+│   │   │   │   ├── CPUModule.h
+│   │   │   │   ├── GraphModule.cpp
+│   │   │   │   ├── GraphModule.h
+│   │   │   │   ├── MemoryModule.cpp
+│   │   │   │   ├── MemoryModule.h
+│   │   │   │   ├── Module.h
+│   │   │   │   ├── TimeModule.cpp
+│   │   │   │   └── TimeModule.h
+│   │   │   ├── resources
+│   │   │   │   ├── app.conf
+│   │   │   │   └── icon
+│   │   │   │       ├── 16x16.png
+│   │   │   │       └── 32x32.png
+│   │   │   ├── Sandbar.cpp
+│   │   │   ├── Sandbar.h
+│   │   │   ├── SandbarWidget.cpp
+│   │   │   └── SandbarWidget.h
+│   │   ├── terminal
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   ├── resources
+│   │   │   │   ├── app.conf
+│   │   │   │   └── icon
+│   │   │   │       ├── 16x16.png
+│   │   │   │       └── 32x32.png
+│   │   │   ├── TerminalWidget.cpp
+│   │   │   └── TerminalWidget.h
+│   │   ├── tetris
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cpp
+│   │   │   ├── readme.md
+│   │   │   ├── resources
+│   │   │   │   ├── app.conf
+│   │   │   │   └── icon
+│   │   │   │       ├── 16x16.png
+│   │   │   │       └── 32x32.png
+│   │   │   ├── TetrisWidget.cpp
+│   │   │   └── TetrisWidget.h
+│   │   ├── uxn
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── devices
+│   │   │   │   ├── ConsoleDevice.cpp
+│   │   │   │   ├── ConsoleDevice.h
+│   │   │   │   ├── Device.cpp
+│   │   │   │   ├── Device.h
+│   │   │   │   ├── ScreenDevice.cpp
+│   │   │   │   └── ScreenDevice.h
+│   │   │   ├── main.cpp
+│   │   │   ├── resources
+│   │   │   │   └── app.conf
+│   │   │   ├── Uxn.cpp
+│   │   │   └── Uxn.h
+│   │   └── viewer
+│   │       ├── CMakeLists.txt
+│   │       ├── main.cpp
+│   │       ├── resources
+│   │       │   ├── app.conf
+│   │       │   ├── filetypes
+│   │       │   │   └── audio.icon
+│   │       │   │       ├── 16x16.png
+│   │       │   │       └── 32x32.png
+│   │       │   └── icon
+│   │       │       ├── 16x16.png
+│   │       │       ├── 32x32.png
+│   │       │       └── 64x64.png
+│   │       ├── ViewerAudioWidget.cpp
+│   │       ├── ViewerAudioWidget.h
+│   │       ├── ViewerWidget.cpp
+│   │       └── ViewerWidget.h
+│   ├── CMakeLists.txt
+│   ├── coreutils
+│   │   ├── benchmark.cpp
+│   │   ├── cat.cpp
+│   │   ├── chmod.cpp
+│   │   ├── chown.cpp
+│   │   ├── CMakeLists.txt
+│   │   ├── cp.cpp
+│   │   ├── date.cpp
+│   │   ├── echo.cpp
+│   │   ├── fetch.cpp
+│   │   ├── free.cpp
+│   │   ├── kill.cpp
+│   │   ├── ln.cpp
+│   │   ├── ls.cpp
+│   │   ├── mkdir.cpp
+│   │   ├── mv.cpp
+│   │   ├── open.cpp
+│   │   ├── oshelp.cpp
+│   │   ├── ping.cpp
+│   │   ├── play.cpp
+│   │   ├── profile.cpp
+│   │   ├── ps.cpp
+│   │   ├── pwd.cpp
+│   │   ├── rm.cpp
+│   │   ├── rmdir.cpp
+│   │   ├── touch.cpp
+│   │   ├── truncate.cpp
+│   │   ├── uname.cpp
+│   │   └── uptime.cpp
+│   └── dsh
+│       ├── CMakeLists.txt
+│       ├── Command.cpp
+│       ├── Command.h
+│       ├── main.cpp
+│       ├── Shell.cpp
+│       ├── Shell.h
+│       ├── util.cpp
+│       └── util.h
 ├── README.md
 ├── scripts
-│   ├── base-system.sh
-│   ├── bootlogo.py
-│   ├── debugd.py
-│   ├── grub.cfg
-│   ├── image.sh
-│   ├── kernel-map.sh
-│   ├── nusaos.sh
-│   ├── qemu.sh
-│   └── version.sh
+│   ├── base-system.sh
+│   ├── bootlogo.py
+│   ├── debugd.py
+│   ├── grub.cfg
+│   ├── image.sh
+│   ├── kernel-map.sh
+│   ├── nusaos.sh
+│   ├── qemu.sh
+│   └── version.sh
 ├── services
-│   ├── CMakeLists.txt
-│   ├── dhcpclient
-│   │   ├── Client.cpp
-│   │   ├── Client.h
-│   │   ├── CMakeLists.txt
-│   │   ├── DHCP.cpp
-│   │   ├── DHCP.h
-│   │   └── main.cpp
-│   ├── init
-│   │   ├── CMakeLists.txt
-│   │   ├── main.cpp
-│   │   ├── Service.cpp
-│   │   └── Service.h
-│   ├── pond
-│   │   ├── Client.cpp
-│   │   ├── Client.h
-│   │   ├── CMakeLists.txt
-│   │   ├── Display.cpp
-│   │   ├── Display.h
-│   │   ├── FontManager.cpp
-│   │   ├── FontManager.h
-│   │   ├── main.cpp
-│   │   ├── Mouse.cpp
-│   │   ├── Mouse.h
-│   │   ├── Server.cpp
-│   │   ├── Server.h
-│   │   ├── Window.cpp
-│   │   └── Window.h
-│   └── quack
-│       ├── Client.cpp
-│       ├── Client.h
-│       ├── CMakeLists.txt
-│       ├── main.cpp
-│       ├── SoundServer.cpp
-│       └── SoundServer.h
-└── structure.md
+│   ├── CMakeLists.txt
+│   ├── dhcpclient
+│   │   ├── Client.cpp
+│   │   ├── Client.h
+│   │   ├── CMakeLists.txt
+│   │   ├── DHCP.cpp
+│   │   ├── DHCP.h
+│   │   └── main.cpp
+│   ├── init
+│   │   ├── CMakeLists.txt
+│   │   ├── main.cpp
+│   │   ├── Service.cpp
+│   │   └── Service.h
+│   ├── pond
+│   │   ├── Client.cpp
+│   │   ├── Client.h
+│   │   ├── CMakeLists.txt
+│   │   ├── Display.cpp
+│   │   ├── Display.h
+│   │   ├── FontManager.cpp
+│   │   ├── FontManager.h
+│   │   ├── main.cpp
+│   │   ├── Mouse.cpp
+│   │   ├── Mouse.h
+│   │   ├── Server.cpp
+│   │   ├── Server.h
+│   │   ├── Window.cpp
+│   │   └── Window.h
+│   └── quack
+│       ├── Client.cpp
+│       ├── Client.h
+│       ├── CMakeLists.txt
+│       ├── main.cpp
+│       ├── SoundServer.cpp
+│       └── SoundServer.h
+├── structure.md
+├── struktur.md
+└── toolchain
+    ├── binutils-2.41.patch
+    ├── build-ext2-fuse.sh
+    ├── build-toolchain.sh
+    ├── CMake
+    │   └── Platform
+    │       └── nusaOS.cmake
+    ├── CMakeToolchain.txt.in
+    ├── edit-toolchain.sh
+    ├── gcc-13.2.0.patch
+    ├── gen-patches.sh
+    ├── toolchain-common.sh
+    └── tools
+        ├── i686
+        │   ├── i686-pc-nusaos
+        │   │   ├── include
+        │   │   │   ├── arpa
+        │   │   │   │   └── inet.h
+        │   │   │   ├── assert.h
+        │   │   │   ├── c++
+        │   │   │   │   └── 13.2.0
+        │   │   │   │       ├── algorithm
+        │   │   │   │       ├── any
+        │   │   │   │       ├── array
+        │   │   │   │       ├── atomic
+        │   │   │   │       ├── backward
+        │   │   │   │       │   ├── auto_ptr.h
+        │   │   │   │       │   ├── backward_warning.h
+        │   │   │   │       │   ├── binders.h
+        │   │   │   │       │   ├── hash_fun.h
+        │   │   │   │       │   ├── hash_map
+        │   │   │   │       │   ├── hash_set
+        │   │   │   │       │   ├── hashtable.h
+        │   │   │   │       │   └── strstream
+        │   │   │   │       ├── barrier
+        │   │   │   │       ├── bit
+        │   │   │   │       ├── bits
+        │   │   │   │       │   ├── algorithmfwd.h
+        │   │   │   │       │   ├── align.h
+        │   │   │   │       │   ├── allocated_ptr.h
+        │   │   │   │       │   ├── allocator.h
+        │   │   │   │       │   ├── alloc_traits.h
+        │   │   │   │       │   ├── atomic_base.h
+        │   │   │   │       │   ├── atomic_futex.h
+        │   │   │   │       │   ├── atomic_lockfree_defines.h
+        │   │   │   │       │   ├── atomic_timed_wait.h
+        │   │   │   │       │   ├── atomic_wait.h
+        │   │   │   │       │   ├── basic_ios.h
+        │   │   │   │       │   ├── basic_ios.tcc
+        │   │   │   │       │   ├── basic_string.h
+        │   │   │   │       │   ├── basic_string.tcc
+        │   │   │   │       │   ├── boost_concept_check.h
+        │   │   │   │       │   ├── c++0x_warning.h
+        │   │   │   │       │   ├── charconv.h
+        │   │   │   │       │   ├── char_traits.h
+        │   │   │   │       │   ├── chrono.h
+        │   │   │   │       │   ├── chrono_io.h
+        │   │   │   │       │   ├── codecvt.h
+        │   │   │   │       │   ├── concept_check.h
+        │   │   │   │       │   ├── cow_string.h
+        │   │   │   │       │   ├── cpp_type_traits.h
+        │   │   │   │       │   ├── cxxabi_forced.h
+        │   │   │   │       │   ├── cxxabi_init_exception.h
+        │   │   │   │       │   ├── deque.tcc
+        │   │   │   │       │   ├── enable_special_members.h
+        │   │   │   │       │   ├── erase_if.h
+        │   │   │   │       │   ├── exception_defines.h
+        │   │   │   │       │   ├── exception.h
+        │   │   │   │       │   ├── exception_ptr.h
+        │   │   │   │       │   ├── forward_list.h
+        │   │   │   │       │   ├── forward_list.tcc
+        │   │   │   │       │   ├── fs_dir.h
+        │   │   │   │       │   ├── fs_fwd.h
+        │   │   │   │       │   ├── fs_ops.h
+        │   │   │   │       │   ├── fs_path.h
+        │   │   │   │       │   ├── fstream.tcc
+        │   │   │   │       │   ├── functexcept.h
+        │   │   │   │       │   ├── functional_hash.h
+        │   │   │   │       │   ├── gslice_array.h
+        │   │   │   │       │   ├── gslice.h
+        │   │   │   │       │   ├── hash_bytes.h
+        │   │   │   │       │   ├── hashtable.h
+        │   │   │   │       │   ├── hashtable_policy.h
+        │   │   │   │       │   ├── indirect_array.h
+        │   │   │   │       │   ├── invoke.h
+        │   │   │   │       │   ├── ios_base.h
+        │   │   │   │       │   ├── istream.tcc
+        │   │   │   │       │   ├── iterator_concepts.h
+        │   │   │   │       │   ├── list.tcc
+        │   │   │   │       │   ├── locale_classes.h
+        │   │   │   │       │   ├── locale_classes.tcc
+        │   │   │   │       │   ├── locale_conv.h
+        │   │   │   │       │   ├── locale_facets.h
+        │   │   │   │       │   ├── locale_facets_nonio.h
+        │   │   │   │       │   ├── locale_facets_nonio.tcc
+        │   │   │   │       │   ├── locale_facets.tcc
+        │   │   │   │       │   ├── localefwd.h
+        │   │   │   │       │   ├── mask_array.h
+        │   │   │   │       │   ├── max_size_type.h
+        │   │   │   │       │   ├── memoryfwd.h
+        │   │   │   │       │   ├── memory_resource.h
+        │   │   │   │       │   ├── mofunc_impl.h
+        │   │   │   │       │   ├── move.h
+        │   │   │   │       │   ├── move_only_function.h
+        │   │   │   │       │   ├── nested_exception.h
+        │   │   │   │       │   ├── new_allocator.h
+        │   │   │   │       │   ├── node_handle.h
+        │   │   │   │       │   ├── ostream_insert.h
+        │   │   │   │       │   ├── ostream.tcc
+        │   │   │   │       │   ├── parse_numbers.h
+        │   │   │   │       │   ├── postypes.h
+        │   │   │   │       │   ├── predefined_ops.h
+        │   │   │   │       │   ├── ptr_traits.h
+        │   │   │   │       │   ├── quoted_string.h
+        │   │   │   │       │   ├── random.h
+        │   │   │   │       │   ├── random.tcc
+        │   │   │   │       │   ├── range_access.h
+        │   │   │   │       │   ├── ranges_algobase.h
+        │   │   │   │       │   ├── ranges_algo.h
+        │   │   │   │       │   ├── ranges_base.h
+        │   │   │   │       │   ├── ranges_cmp.h
+        │   │   │   │       │   ├── ranges_uninitialized.h
+        │   │   │   │       │   ├── ranges_util.h
+        │   │   │   │       │   ├── refwrap.h
+        │   │   │   │       │   ├── regex_automaton.h
+        │   │   │   │       │   ├── regex_automaton.tcc
+        │   │   │   │       │   ├── regex_compiler.h
+        │   │   │   │       │   ├── regex_compiler.tcc
+        │   │   │   │       │   ├── regex_constants.h
+        │   │   │   │       │   ├── regex_error.h
+        │   │   │   │       │   ├── regex_executor.h
+        │   │   │   │       │   ├── regex_executor.tcc
+        │   │   │   │       │   ├── regex.h
+        │   │   │   │       │   ├── regex_scanner.h
+        │   │   │   │       │   ├── regex_scanner.tcc
+        │   │   │   │       │   ├── regex.tcc
+        │   │   │   │       │   ├── requires_hosted.h
+        │   │   │   │       │   ├── semaphore_base.h
+        │   │   │   │       │   ├── shared_ptr_atomic.h
+        │   │   │   │       │   ├── shared_ptr_base.h
+        │   │   │   │       │   ├── shared_ptr.h
+        │   │   │   │       │   ├── slice_array.h
+        │   │   │   │       │   ├── specfun.h
+        │   │   │   │       │   ├── sstream.tcc
+        │   │   │   │       │   ├── std_abs.h
+        │   │   │   │       │   ├── std_function.h
+        │   │   │   │       │   ├── std_mutex.h
+        │   │   │   │       │   ├── std_thread.h
+        │   │   │   │       │   ├── stl_algobase.h
+        │   │   │   │       │   ├── stl_algo.h
+        │   │   │   │       │   ├── stl_bvector.h
+        │   │   │   │       │   ├── stl_construct.h
+        │   │   │   │       │   ├── stl_deque.h
+        │   │   │   │       │   ├── stl_function.h
+        │   │   │   │       │   ├── stl_heap.h
+        │   │   │   │       │   ├── stl_iterator_base_funcs.h
+        │   │   │   │       │   ├── stl_iterator_base_types.h
+        │   │   │   │       │   ├── stl_iterator.h
+        │   │   │   │       │   ├── stl_list.h
+        │   │   │   │       │   ├── stl_map.h
+        │   │   │   │       │   ├── stl_multimap.h
+        │   │   │   │       │   ├── stl_multiset.h
+        │   │   │   │       │   ├── stl_numeric.h
+        │   │   │   │       │   ├── stl_pair.h
+        │   │   │   │       │   ├── stl_queue.h
+        │   │   │   │       │   ├── stl_raw_storage_iter.h
+        │   │   │   │       │   ├── stl_relops.h
+        │   │   │   │       │   ├── stl_set.h
+        │   │   │   │       │   ├── stl_stack.h
+        │   │   │   │       │   ├── stl_tempbuf.h
+        │   │   │   │       │   ├── stl_tree.h
+        │   │   │   │       │   ├── stl_uninitialized.h
+        │   │   │   │       │   ├── stl_vector.h
+        │   │   │   │       │   ├── streambuf_iterator.h
+        │   │   │   │       │   ├── streambuf.tcc
+        │   │   │   │       │   ├── stream_iterator.h
+        │   │   │   │       │   ├── stringfwd.h
+        │   │   │   │       │   ├── string_view.tcc
+        │   │   │   │       │   ├── this_thread_sleep.h
+        │   │   │   │       │   ├── uniform_int_dist.h
+        │   │   │   │       │   ├── unique_lock.h
+        │   │   │   │       │   ├── unique_ptr.h
+        │   │   │   │       │   ├── unordered_map.h
+        │   │   │   │       │   ├── unordered_set.h
+        │   │   │   │       │   ├── uses_allocator_args.h
+        │   │   │   │       │   ├── uses_allocator.h
+        │   │   │   │       │   ├── utility.h
+        │   │   │   │       │   ├── valarray_after.h
+        │   │   │   │       │   ├── valarray_array.h
+        │   │   │   │       │   ├── valarray_array.tcc
+        │   │   │   │       │   ├── valarray_before.h
+        │   │   │   │       │   └── vector.tcc
+        │   │   │   │       ├── bitset
+        │   │   │   │       ├── cassert
+        │   │   │   │       ├── ccomplex
+        │   │   │   │       ├── cctype
+        │   │   │   │       ├── cerrno
+        │   │   │   │       ├── cfenv
+        │   │   │   │       ├── cfloat
+        │   │   │   │       ├── charconv
+        │   │   │   │       ├── chrono
+        │   │   │   │       ├── cinttypes
+        │   │   │   │       ├── ciso646
+        │   │   │   │       ├── climits
+        │   │   │   │       ├── clocale
+        │   │   │   │       ├── cmath
+        │   │   │   │       ├── codecvt
+        │   │   │   │       ├── compare
+        │   │   │   │       ├── complex
+        │   │   │   │       ├── complex.h
+        │   │   │   │       ├── concepts
+        │   │   │   │       ├── condition_variable
+        │   │   │   │       ├── coroutine
+        │   │   │   │       ├── csetjmp
+        │   │   │   │       ├── csignal
+        │   │   │   │       ├── cstdalign
+        │   │   │   │       ├── cstdarg
+        │   │   │   │       ├── cstdbool
+        │   │   │   │       ├── cstddef
+        │   │   │   │       ├── cstdint
+        │   │   │   │       ├── cstdio
+        │   │   │   │       ├── cstdlib
+        │   │   │   │       ├── cstring
+        │   │   │   │       ├── ctgmath
+        │   │   │   │       ├── ctime
+        │   │   │   │       ├── cuchar
+        │   │   │   │       ├── cwchar
+        │   │   │   │       ├── cwctype
+        │   │   │   │       ├── cxxabi.h
+        │   │   │   │       ├── debug
+        │   │   │   │       │   ├── assertions.h
+        │   │   │   │       │   ├── bitset
+        │   │   │   │       │   ├── debug.h
+        │   │   │   │       │   ├── deque
+        │   │   │   │       │   ├── formatter.h
+        │   │   │   │       │   ├── forward_list
+        │   │   │   │       │   ├── functions.h
+        │   │   │   │       │   ├── helper_functions.h
+        │   │   │   │       │   ├── list
+        │   │   │   │       │   ├── macros.h
+        │   │   │   │       │   ├── map
+        │   │   │   │       │   ├── map.h
+        │   │   │   │       │   ├── multimap.h
+        │   │   │   │       │   ├── multiset.h
+        │   │   │   │       │   ├── safe_base.h
+        │   │   │   │       │   ├── safe_container.h
+        │   │   │   │       │   ├── safe_iterator.h
+        │   │   │   │       │   ├── safe_iterator.tcc
+        │   │   │   │       │   ├── safe_local_iterator.h
+        │   │   │   │       │   ├── safe_local_iterator.tcc
+        │   │   │   │       │   ├── safe_sequence.h
+        │   │   │   │       │   ├── safe_sequence.tcc
+        │   │   │   │       │   ├── safe_unordered_base.h
+        │   │   │   │       │   ├── safe_unordered_container.h
+        │   │   │   │       │   ├── safe_unordered_container.tcc
+        │   │   │   │       │   ├── set
+        │   │   │   │       │   ├── set.h
+        │   │   │   │       │   ├── stl_iterator.h
+        │   │   │   │       │   ├── string
+        │   │   │   │       │   ├── unordered_map
+        │   │   │   │       │   ├── unordered_set
+        │   │   │   │       │   └── vector
+        │   │   │   │       ├── decimal
+        │   │   │   │       │   ├── decimal
+        │   │   │   │       │   └── decimal.h
+        │   │   │   │       ├── deque
+        │   │   │   │       ├── exception
+        │   │   │   │       ├── execution
+        │   │   │   │       ├── expected
+        │   │   │   │       ├── experimental
+        │   │   │   │       │   ├── algorithm
+        │   │   │   │       │   ├── any
+        │   │   │   │       │   ├── array
+        │   │   │   │       │   ├── bits
+        │   │   │   │       │   │   ├── lfts_config.h
+        │   │   │   │       │   │   ├── net.h
+        │   │   │   │       │   │   ├── numeric_traits.h
+        │   │   │   │       │   │   ├── shared_ptr.h
+        │   │   │   │       │   │   ├── simd_builtin.h
+        │   │   │   │       │   │   ├── simd_converter.h
+        │   │   │   │       │   │   ├── simd_detail.h
+        │   │   │   │       │   │   ├── simd_fixed_size.h
+        │   │   │   │       │   │   ├── simd.h
+        │   │   │   │       │   │   ├── simd_math.h
+        │   │   │   │       │   │   ├── simd_neon.h
+        │   │   │   │       │   │   ├── simd_ppc.h
+        │   │   │   │       │   │   ├── simd_scalar.h
+        │   │   │   │       │   │   ├── simd_x86_conversions.h
+        │   │   │   │       │   │   ├── simd_x86.h
+        │   │   │   │       │   │   └── string_view.tcc
+        │   │   │   │       │   ├── buffer
+        │   │   │   │       │   ├── chrono
+        │   │   │   │       │   ├── contract
+        │   │   │   │       │   ├── deque
+        │   │   │   │       │   ├── executor
+        │   │   │   │       │   ├── forward_list
+        │   │   │   │       │   ├── functional
+        │   │   │   │       │   ├── internet
+        │   │   │   │       │   ├── io_context
+        │   │   │   │       │   ├── iterator
+        │   │   │   │       │   ├── list
+        │   │   │   │       │   ├── map
+        │   │   │   │       │   ├── memory
+        │   │   │   │       │   ├── memory_resource
+        │   │   │   │       │   ├── net
+        │   │   │   │       │   ├── netfwd
+        │   │   │   │       │   ├── numeric
+        │   │   │   │       │   ├── optional
+        │   │   │   │       │   ├── propagate_const
+        │   │   │   │       │   ├── random
+        │   │   │   │       │   ├── ratio
+        │   │   │   │       │   ├── regex
+        │   │   │   │       │   ├── scope
+        │   │   │   │       │   ├── set
+        │   │   │   │       │   ├── simd
+        │   │   │   │       │   ├── socket
+        │   │   │   │       │   ├── source_location
+        │   │   │   │       │   ├── string
+        │   │   │   │       │   ├── string_view
+        │   │   │   │       │   ├── synchronized_value
+        │   │   │   │       │   ├── system_error
+        │   │   │   │       │   ├── timer
+        │   │   │   │       │   ├── tuple
+        │   │   │   │       │   ├── type_traits
+        │   │   │   │       │   ├── unordered_map
+        │   │   │   │       │   ├── unordered_set
+        │   │   │   │       │   ├── utility
+        │   │   │   │       │   └── vector
+        │   │   │   │       ├── ext
+        │   │   │   │       │   ├── algorithm
+        │   │   │   │       │   ├── aligned_buffer.h
+        │   │   │   │       │   ├── alloc_traits.h
+        │   │   │   │       │   ├── atomicity.h
+        │   │   │   │       │   ├── bitmap_allocator.h
+        │   │   │   │       │   ├── cast.h
+        │   │   │   │       │   ├── cmath
+        │   │   │   │       │   ├── codecvt_specializations.h
+        │   │   │   │       │   ├── concurrence.h
+        │   │   │   │       │   ├── debug_allocator.h
+        │   │   │   │       │   ├── enc_filebuf.h
+        │   │   │   │       │   ├── extptr_allocator.h
+        │   │   │   │       │   ├── functional
+        │   │   │   │       │   ├── hash_map
+        │   │   │   │       │   ├── hash_set
+        │   │   │   │       │   ├── iterator
+        │   │   │   │       │   ├── malloc_allocator.h
+        │   │   │   │       │   ├── memory
+        │   │   │   │       │   ├── mt_allocator.h
+        │   │   │   │       │   ├── new_allocator.h
+        │   │   │   │       │   ├── numeric
+        │   │   │   │       │   ├── numeric_traits.h
+        │   │   │   │       │   ├── pb_ds
+        │   │   │   │       │   │   ├── assoc_container.hpp
+        │   │   │   │       │   │   ├── detail
+        │   │   │   │       │   │   │   ├── binary_heap_
+        │   │   │   │       │   │   │   │   ├── binary_heap_.hpp
+        │   │   │   │       │   │   │   │   ├── const_iterator.hpp
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── entry_cmp.hpp
+        │   │   │   │       │   │   │   │   ├── entry_pred.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── point_const_iterator.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_policy.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── binomial_heap_
+        │   │   │   │       │   │   │   │   ├── binomial_heap_.hpp
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── binomial_heap_base_
+        │   │   │   │       │   │   │   │   ├── binomial_heap_base_.hpp
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── bin_search_tree_
+        │   │   │   │       │   │   │   │   ├── bin_search_tree_.hpp
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── node_iterators.hpp
+        │   │   │   │       │   │   │   │   ├── point_iterators.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── r_erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── rotate_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── traits.hpp
+        │   │   │   │       │   │   │   ├── branch_policy
+        │   │   │   │       │   │   │   │   ├── branch_policy.hpp
+        │   │   │   │       │   │   │   │   ├── null_node_metadata.hpp
+        │   │   │   │       │   │   │   │   └── traits.hpp
+        │   │   │   │       │   │   │   ├── cc_hash_table_map_
+        │   │   │   │       │   │   │   │   ├── cc_ht_map_.hpp
+        │   │   │   │       │   │   │   │   ├── cmp_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── cond_key_dtor_entry_dealtor.hpp
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── entry_list_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── size_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── cond_dealtor.hpp
+        │   │   │   │       │   │   │   ├── container_base_dispatch.hpp
+        │   │   │   │       │   │   │   ├── debug_map_base.hpp
+        │   │   │   │       │   │   │   ├── eq_fn
+        │   │   │   │       │   │   │   │   ├── eq_by_less.hpp
+        │   │   │   │       │   │   │   │   └── hash_eq_fn.hpp
+        │   │   │   │       │   │   │   ├── gp_hash_table_map_
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── gp_ht_map_.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterator_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_no_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── resize_store_hash_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── hash_fn
+        │   │   │   │       │   │   │   │   ├── direct_mask_range_hashing_imp.hpp
+        │   │   │   │       │   │   │   │   ├── direct_mod_range_hashing_imp.hpp
+        │   │   │   │       │   │   │   │   ├── linear_probe_fn_imp.hpp
+        │   │   │   │       │   │   │   │   ├── mask_based_range_hashing.hpp
+        │   │   │   │       │   │   │   │   ├── mod_based_range_hashing.hpp
+        │   │   │   │       │   │   │   │   ├── probe_fn_base.hpp
+        │   │   │   │       │   │   │   │   ├── quadratic_probe_fn_imp.hpp
+        │   │   │   │       │   │   │   │   ├── ranged_hash_fn.hpp
+        │   │   │   │       │   │   │   │   ├── ranged_probe_fn.hpp
+        │   │   │   │       │   │   │   │   ├── sample_probe_fn.hpp
+        │   │   │   │       │   │   │   │   ├── sample_ranged_hash_fn.hpp
+        │   │   │   │       │   │   │   │   ├── sample_ranged_probe_fn.hpp
+        │   │   │   │       │   │   │   │   └── sample_range_hashing.hpp
+        │   │   │   │       │   │   │   ├── left_child_next_sibling_heap_
+        │   │   │   │       │   │   │   │   ├── const_iterator.hpp
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── left_child_next_sibling_heap_.hpp
+        │   │   │   │       │   │   │   │   ├── node.hpp
+        │   │   │   │       │   │   │   │   ├── point_const_iterator.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── list_update_map_
+        │   │   │   │       │   │   │   │   ├── constructor_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── entry_metadata_base.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── lu_map_.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── list_update_policy
+        │   │   │   │       │   │   │   │   ├── lu_counter_metadata.hpp
+        │   │   │   │       │   │   │   │   └── sample_update_policy.hpp
+        │   │   │   │       │   │   │   ├── ov_tree_map_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── node_iterators.hpp
+        │   │   │   │       │   │   │   │   ├── ov_tree_map_.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── traits.hpp
+        │   │   │   │       │   │   │   ├── pairing_heap_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── pairing_heap_.hpp
+        │   │   │   │       │   │   │   │   └── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── pat_trie_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── iterators_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── pat_trie_base.hpp
+        │   │   │   │       │   │   │   │   ├── pat_trie_.hpp
+        │   │   │   │       │   │   │   │   ├── policy_access_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── r_erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── rotate_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── split_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── synth_access_traits.hpp
+        │   │   │   │       │   │   │   │   ├── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── traits.hpp
+        │   │   │   │       │   │   │   │   └── update_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── priority_queue_base_dispatch.hpp
+        │   │   │   │       │   │   │   ├── rb_tree_map_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── node.hpp
+        │   │   │   │       │   │   │   │   ├── rb_tree_.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── traits.hpp
+        │   │   │   │       │   │   │   ├── rc_binomial_heap_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── rc_binomial_heap_.hpp
+        │   │   │   │       │   │   │   │   ├── rc.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── resize_policy
+        │   │   │   │       │   │   │   │   ├── cc_hash_max_collision_check_resize_trigger_imp.hpp
+        │   │   │   │       │   │   │   │   ├── hash_exponential_size_policy_imp.hpp
+        │   │   │   │       │   │   │   │   ├── hash_load_check_resize_trigger_imp.hpp
+        │   │   │   │       │   │   │   │   ├── hash_load_check_resize_trigger_size_base.hpp
+        │   │   │   │       │   │   │   │   ├── hash_prime_size_policy_imp.hpp
+        │   │   │   │       │   │   │   │   ├── hash_standard_resize_policy_imp.hpp
+        │   │   │   │       │   │   │   │   ├── sample_resize_policy.hpp
+        │   │   │   │       │   │   │   │   ├── sample_resize_trigger.hpp
+        │   │   │   │       │   │   │   │   └── sample_size_policy.hpp
+        │   │   │   │       │   │   │   ├── splay_tree_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── info_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── node.hpp
+        │   │   │   │       │   │   │   │   ├── splay_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── splay_tree_.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   └── traits.hpp
+        │   │   │   │       │   │   │   ├── standard_policies.hpp
+        │   │   │   │       │   │   │   ├── thin_heap_
+        │   │   │   │       │   │   │   │   ├── constructors_destructor_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── debug_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── erase_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── find_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── insert_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── split_join_fn_imps.hpp
+        │   │   │   │       │   │   │   │   ├── thin_heap_.hpp
+        │   │   │   │       │   │   │   │   └── trace_fn_imps.hpp
+        │   │   │   │       │   │   │   ├── tree_policy
+        │   │   │   │       │   │   │   │   ├── node_metadata_selector.hpp
+        │   │   │   │       │   │   │   │   ├── order_statistics_imp.hpp
+        │   │   │   │       │   │   │   │   └── sample_tree_node_update.hpp
+        │   │   │   │       │   │   │   ├── tree_trace_base.hpp
+        │   │   │   │       │   │   │   ├── trie_policy
+        │   │   │   │       │   │   │   │   ├── node_metadata_selector.hpp
+        │   │   │   │       │   │   │   │   ├── order_statistics_imp.hpp
+        │   │   │   │       │   │   │   │   ├── prefix_search_node_update_imp.hpp
+        │   │   │   │       │   │   │   │   ├── sample_trie_access_traits.hpp
+        │   │   │   │       │   │   │   │   ├── sample_trie_node_update.hpp
+        │   │   │   │       │   │   │   │   ├── trie_policy_base.hpp
+        │   │   │   │       │   │   │   │   └── trie_string_access_traits_imp.hpp
+        │   │   │   │       │   │   │   ├── types_traits.hpp
+        │   │   │   │       │   │   │   ├── type_utils.hpp
+        │   │   │   │       │   │   │   └── unordered_iterator
+        │   │   │   │       │   │   │       ├── const_iterator.hpp
+        │   │   │   │       │   │   │       ├── iterator.hpp
+        │   │   │   │       │   │   │       ├── point_const_iterator.hpp
+        │   │   │   │       │   │   │       └── point_iterator.hpp
+        │   │   │   │       │   │   ├── exception.hpp
+        │   │   │   │       │   │   ├── hash_policy.hpp
+        │   │   │   │       │   │   ├── list_update_policy.hpp
+        │   │   │   │       │   │   ├── priority_queue.hpp
+        │   │   │   │       │   │   ├── tag_and_trait.hpp
+        │   │   │   │       │   │   ├── tree_policy.hpp
+        │   │   │   │       │   │   └── trie_policy.hpp
+        │   │   │   │       │   ├── pod_char_traits.h
+        │   │   │   │       │   ├── pointer.h
+        │   │   │   │       │   ├── pool_allocator.h
+        │   │   │   │       │   ├── random
+        │   │   │   │       │   ├── random.tcc
+        │   │   │   │       │   ├── rb_tree
+        │   │   │   │       │   ├── rc_string_base.h
+        │   │   │   │       │   ├── rope
+        │   │   │   │       │   ├── ropeimpl.h
+        │   │   │   │       │   ├── slist
+        │   │   │   │       │   ├── sso_string_base.h
+        │   │   │   │       │   ├── stdio_filebuf.h
+        │   │   │   │       │   ├── stdio_sync_filebuf.h
+        │   │   │   │       │   ├── string_conversions.h
+        │   │   │   │       │   ├── throw_allocator.h
+        │   │   │   │       │   ├── typelist.h
+        │   │   │   │       │   ├── type_traits.h
+        │   │   │   │       │   ├── vstring_fwd.h
+        │   │   │   │       │   ├── vstring.h
+        │   │   │   │       │   ├── vstring.tcc
+        │   │   │   │       │   └── vstring_util.h
+        │   │   │   │       ├── fenv.h
+        │   │   │   │       ├── filesystem
+        │   │   │   │       ├── format
+        │   │   │   │       ├── forward_list
+        │   │   │   │       ├── fstream
+        │   │   │   │       ├── functional
+        │   │   │   │       ├── future
+        │   │   │   │       ├── i686-pc-nusaos
+        │   │   │   │       │   ├── bits
+        │   │   │   │       │   │   ├── atomic_word.h
+        │   │   │   │       │   │   ├── basic_file.h
+        │   │   │   │       │   │   ├── c++allocator.h
+        │   │   │   │       │   │   ├── c++config.h
+        │   │   │   │       │   │   ├── c++io.h
+        │   │   │   │       │   │   ├── c++locale.h
+        │   │   │   │       │   │   ├── cpu_defines.h
+        │   │   │   │       │   │   ├── ctype_base.h
+        │   │   │   │       │   │   ├── ctype_inline.h
+        │   │   │   │       │   │   ├── cxxabi_tweaks.h
+        │   │   │   │       │   │   ├── error_constants.h
+        │   │   │   │       │   │   ├── extc++.h
+        │   │   │   │       │   │   ├── gthr-default.h
+        │   │   │   │       │   │   ├── gthr.h
+        │   │   │   │       │   │   ├── gthr-posix.h
+        │   │   │   │       │   │   ├── gthr-single.h
+        │   │   │   │       │   │   ├── messages_members.h
+        │   │   │   │       │   │   ├── opt_random.h
+        │   │   │   │       │   │   ├── os_defines.h
+        │   │   │   │       │   │   ├── stdc++.h
+        │   │   │   │       │   │   ├── stdtr1c++.h
+        │   │   │   │       │   │   └── time_members.h
+        │   │   │   │       │   └── ext
+        │   │   │   │       │       └── opt_random.h
+        │   │   │   │       ├── initializer_list
+        │   │   │   │       ├── iomanip
+        │   │   │   │       ├── ios
+        │   │   │   │       ├── iosfwd
+        │   │   │   │       ├── iostream
+        │   │   │   │       ├── istream
+        │   │   │   │       ├── iterator
+        │   │   │   │       ├── latch
+        │   │   │   │       ├── limits
+        │   │   │   │       ├── list
+        │   │   │   │       ├── locale
+        │   │   │   │       ├── map
+        │   │   │   │       ├── math.h
+        │   │   │   │       ├── memory
+        │   │   │   │       ├── memory_resource
+        │   │   │   │       ├── mutex
+        │   │   │   │       ├── new
+        │   │   │   │       ├── numbers
+        │   │   │   │       ├── numeric
+        │   │   │   │       ├── optional
+        │   │   │   │       ├── ostream
+        │   │   │   │       ├── parallel
+        │   │   │   │       │   ├── algobase.h
+        │   │   │   │       │   ├── algo.h
+        │   │   │   │       │   ├── algorithm
+        │   │   │   │       │   ├── algorithmfwd.h
+        │   │   │   │       │   ├── balanced_quicksort.h
+        │   │   │   │       │   ├── base.h
+        │   │   │   │       │   ├── basic_iterator.h
+        │   │   │   │       │   ├── checkers.h
+        │   │   │   │       │   ├── compatibility.h
+        │   │   │   │       │   ├── compiletime_settings.h
+        │   │   │   │       │   ├── equally_split.h
+        │   │   │   │       │   ├── features.h
+        │   │   │   │       │   ├── find.h
+        │   │   │   │       │   ├── find_selectors.h
+        │   │   │   │       │   ├── for_each.h
+        │   │   │   │       │   ├── for_each_selectors.h
+        │   │   │   │       │   ├── iterator.h
+        │   │   │   │       │   ├── list_partition.h
+        │   │   │   │       │   ├── losertree.h
+        │   │   │   │       │   ├── merge.h
+        │   │   │   │       │   ├── multiseq_selection.h
+        │   │   │   │       │   ├── multiway_merge.h
+        │   │   │   │       │   ├── multiway_mergesort.h
+        │   │   │   │       │   ├── numeric
+        │   │   │   │       │   ├── numericfwd.h
+        │   │   │   │       │   ├── omp_loop.h
+        │   │   │   │       │   ├── omp_loop_static.h
+        │   │   │   │       │   ├── parallel.h
+        │   │   │   │       │   ├── par_loop.h
+        │   │   │   │       │   ├── partial_sum.h
+        │   │   │   │       │   ├── partition.h
+        │   │   │   │       │   ├── queue.h
+        │   │   │   │       │   ├── quicksort.h
+        │   │   │   │       │   ├── random_number.h
+        │   │   │   │       │   ├── random_shuffle.h
+        │   │   │   │       │   ├── search.h
+        │   │   │   │       │   ├── set_operations.h
+        │   │   │   │       │   ├── settings.h
+        │   │   │   │       │   ├── sort.h
+        │   │   │   │       │   ├── tags.h
+        │   │   │   │       │   ├── types.h
+        │   │   │   │       │   ├── unique_copy.h
+        │   │   │   │       │   └── workstealing.h
+        │   │   │   │       ├── pstl
+        │   │   │   │       │   ├── algorithm_fwd.h
+        │   │   │   │       │   ├── algorithm_impl.h
+        │   │   │   │       │   ├── execution_defs.h
+        │   │   │   │       │   ├── execution_impl.h
+        │   │   │   │       │   ├── glue_algorithm_defs.h
+        │   │   │   │       │   ├── glue_algorithm_impl.h
+        │   │   │   │       │   ├── glue_execution_defs.h
+        │   │   │   │       │   ├── glue_memory_defs.h
+        │   │   │   │       │   ├── glue_memory_impl.h
+        │   │   │   │       │   ├── glue_numeric_defs.h
+        │   │   │   │       │   ├── glue_numeric_impl.h
+        │   │   │   │       │   ├── memory_impl.h
+        │   │   │   │       │   ├── numeric_fwd.h
+        │   │   │   │       │   ├── numeric_impl.h
+        │   │   │   │       │   ├── parallel_backend.h
+        │   │   │   │       │   ├── parallel_backend_serial.h
+        │   │   │   │       │   ├── parallel_backend_tbb.h
+        │   │   │   │       │   ├── parallel_backend_utils.h
+        │   │   │   │       │   ├── parallel_impl.h
+        │   │   │   │       │   ├── pstl_config.h
+        │   │   │   │       │   ├── unseq_backend_simd.h
+        │   │   │   │       │   └── utils.h
+        │   │   │   │       ├── queue
+        │   │   │   │       ├── random
+        │   │   │   │       ├── ranges
+        │   │   │   │       ├── ratio
+        │   │   │   │       ├── regex
+        │   │   │   │       ├── scoped_allocator
+        │   │   │   │       ├── semaphore
+        │   │   │   │       ├── set
+        │   │   │   │       ├── shared_mutex
+        │   │   │   │       ├── source_location
+        │   │   │   │       ├── span
+        │   │   │   │       ├── spanstream
+        │   │   │   │       ├── sstream
+        │   │   │   │       ├── stack
+        │   │   │   │       ├── stacktrace
+        │   │   │   │       ├── stdatomic.h
+        │   │   │   │       ├── stdexcept
+        │   │   │   │       ├── stdfloat
+        │   │   │   │       ├── stdlib.h
+        │   │   │   │       ├── stop_token
+        │   │   │   │       ├── streambuf
+        │   │   │   │       ├── string
+        │   │   │   │       ├── string_view
+        │   │   │   │       ├── syncstream
+        │   │   │   │       ├── system_error
+        │   │   │   │       ├── tgmath.h
+        │   │   │   │       ├── thread
+        │   │   │   │       ├── tr1
+        │   │   │   │       │   ├── array
+        │   │   │   │       │   ├── bessel_function.tcc
+        │   │   │   │       │   ├── beta_function.tcc
+        │   │   │   │       │   ├── ccomplex
+        │   │   │   │       │   ├── cctype
+        │   │   │   │       │   ├── cfenv
+        │   │   │   │       │   ├── cfloat
+        │   │   │   │       │   ├── cinttypes
+        │   │   │   │       │   ├── climits
+        │   │   │   │       │   ├── cmath
+        │   │   │   │       │   ├── complex
+        │   │   │   │       │   ├── complex.h
+        │   │   │   │       │   ├── cstdarg
+        │   │   │   │       │   ├── cstdbool
+        │   │   │   │       │   ├── cstdint
+        │   │   │   │       │   ├── cstdio
+        │   │   │   │       │   ├── cstdlib
+        │   │   │   │       │   ├── ctgmath
+        │   │   │   │       │   ├── ctime
+        │   │   │   │       │   ├── ctype.h
+        │   │   │   │       │   ├── cwchar
+        │   │   │   │       │   ├── cwctype
+        │   │   │   │       │   ├── ell_integral.tcc
+        │   │   │   │       │   ├── exp_integral.tcc
+        │   │   │   │       │   ├── fenv.h
+        │   │   │   │       │   ├── float.h
+        │   │   │   │       │   ├── functional
+        │   │   │   │       │   ├── functional_hash.h
+        │   │   │   │       │   ├── gamma.tcc
+        │   │   │   │       │   ├── hashtable.h
+        │   │   │   │       │   ├── hashtable_policy.h
+        │   │   │   │       │   ├── hypergeometric.tcc
+        │   │   │   │       │   ├── inttypes.h
+        │   │   │   │       │   ├── legendre_function.tcc
+        │   │   │   │       │   ├── limits.h
+        │   │   │   │       │   ├── math.h
+        │   │   │   │       │   ├── memory
+        │   │   │   │       │   ├── modified_bessel_func.tcc
+        │   │   │   │       │   ├── poly_hermite.tcc
+        │   │   │   │       │   ├── poly_laguerre.tcc
+        │   │   │   │       │   ├── random
+        │   │   │   │       │   ├── random.h
+        │   │   │   │       │   ├── random.tcc
+        │   │   │   │       │   ├── regex
+        │   │   │   │       │   ├── riemann_zeta.tcc
+        │   │   │   │       │   ├── shared_ptr.h
+        │   │   │   │       │   ├── special_function_util.h
+        │   │   │   │       │   ├── stdarg.h
+        │   │   │   │       │   ├── stdbool.h
+        │   │   │   │       │   ├── stdint.h
+        │   │   │   │       │   ├── stdio.h
+        │   │   │   │       │   ├── stdlib.h
+        │   │   │   │       │   ├── tgmath.h
+        │   │   │   │       │   ├── tuple
+        │   │   │   │       │   ├── type_traits
+        │   │   │   │       │   ├── unordered_map
+        │   │   │   │       │   ├── unordered_map.h
+        │   │   │   │       │   ├── unordered_set
+        │   │   │   │       │   ├── unordered_set.h
+        │   │   │   │       │   ├── utility
+        │   │   │   │       │   ├── wchar.h
+        │   │   │   │       │   └── wctype.h
+        │   │   │   │       ├── tr2
+        │   │   │   │       │   ├── bool_set
+        │   │   │   │       │   ├── bool_set.tcc
+        │   │   │   │       │   ├── dynamic_bitset
+        │   │   │   │       │   ├── dynamic_bitset.tcc
+        │   │   │   │       │   ├── ratio
+        │   │   │   │       │   └── type_traits
+        │   │   │   │       ├── tuple
+        │   │   │   │       ├── typeindex
+        │   │   │   │       ├── typeinfo
+        │   │   │   │       ├── type_traits
+        │   │   │   │       ├── unordered_map
+        │   │   │   │       ├── unordered_set
+        │   │   │   │       ├── utility
+        │   │   │   │       ├── valarray
+        │   │   │   │       ├── variant
+        │   │   │   │       ├── vector
+        │   │   │   │       └── version
+        │   │   │   ├── complex.h
+        │   │   │   ├── ctype.h
+        │   │   │   ├── dirent.h
+        │   │   │   ├── dlfcn.h
+        │   │   │   ├── endian.h
+        │   │   │   ├── errno.h
+        │   │   │   ├── fcntl.h
+        │   │   │   ├── fenv.h
+        │   │   │   ├── float.h
+        │   │   │   ├── ifaddrs.h
+        │   │   │   ├── inttypes.h
+        │   │   │   ├── iso646.h
+        │   │   │   ├── libgen.h
+        │   │   │   ├── limits.h
+        │   │   │   ├── locale.h
+        │   │   │   ├── math.h
+        │   │   │   ├── memory.h
+        │   │   │   ├── net
+        │   │   │   │   ├── if.h
+        │   │   │   │   └── route.h
+        │   │   │   ├── netinet
+        │   │   │   │   └── in.h
+        │   │   │   ├── poll.h
+        │   │   │   ├── pthread.h
+        │   │   │   ├── sched.h
+        │   │   │   ├── setjmp.h
+        │   │   │   ├── signal.h
+        │   │   │   ├── stdalign.h
+        │   │   │   ├── stdarg.h
+        │   │   │   ├── stdatomic.h
+        │   │   │   ├── stdbool.h
+        │   │   │   ├── stdint.h
+        │   │   │   ├── stdio.h
+        │   │   │   ├── stdlib.h
+        │   │   │   ├── stdnoreturn.h
+        │   │   │   ├── string.h
+        │   │   │   ├── strings.h
+        │   │   │   ├── sys
+        │   │   │   │   ├── cdefs.h
+        │   │   │   │   ├── futex.h
+        │   │   │   │   ├── input.h
+        │   │   │   │   ├── internals.h
+        │   │   │   │   ├── ioctl.h
+        │   │   │   │   ├── keyboard.h
+        │   │   │   │   ├── liballoc.h
+        │   │   │   │   ├── mman.h
+        │   │   │   │   ├── param.h
+        │   │   │   │   ├── printf.h
+        │   │   │   │   ├── ptrace.h
+        │   │   │   │   ├── registers.h
+        │   │   │   │   ├── resource.h
+        │   │   │   │   ├── scanf.h
+        │   │   │   │   ├── shm.h
+        │   │   │   │   ├── socketfs.h
+        │   │   │   │   ├── socket.h
+        │   │   │   │   ├── stat.h
+        │   │   │   │   ├── status.h
+        │   │   │   │   ├── syscall.h
+        │   │   │   │   ├── thread.h
+        │   │   │   │   ├── time.h
+        │   │   │   │   ├── types.h
+        │   │   │   │   ├── un.h
+        │   │   │   │   ├── utsname.h
+        │   │   │   │   └── wait.h
+        │   │   │   ├── termios.h
+        │   │   │   ├── tgmath.h
+        │   │   │   ├── threads.h
+        │   │   │   ├── time.h
+        │   │   │   ├── uchar.h
+        │   │   │   ├── unistd.h
+        │   │   │   ├── utime.h
+        │   │   │   ├── wchar.h
+        │   │   │   └── wctype.h
+        │   │   └── lib
+        │   │       ├── ldscripts
+        │   │       │   ├── elf_i386_nusaos.x
+        │   │       │   ├── elf_i386_nusaos.xbn
+        │   │       │   ├── elf_i386_nusaos.xc
+        │   │       │   ├── elf_i386_nusaos.xce
+        │   │       │   ├── elf_i386_nusaos.xd
+        │   │       │   ├── elf_i386_nusaos.xdc
+        │   │       │   ├── elf_i386_nusaos.xdce
+        │   │       │   ├── elf_i386_nusaos.xde
+        │   │       │   ├── elf_i386_nusaos.xdw
+        │   │       │   ├── elf_i386_nusaos.xdwe
+        │   │       │   ├── elf_i386_nusaos.xe
+        │   │       │   ├── elf_i386_nusaos.xn
+        │   │       │   ├── elf_i386_nusaos.xr
+        │   │       │   ├── elf_i386_nusaos.xs
+        │   │       │   ├── elf_i386_nusaos.xsc
+        │   │       │   ├── elf_i386_nusaos.xsce
+        │   │       │   ├── elf_i386_nusaos.xse
+        │   │       │   ├── elf_i386_nusaos.xsw
+        │   │       │   ├── elf_i386_nusaos.xswe
+        │   │       │   ├── elf_i386_nusaos.xu
+        │   │       │   ├── elf_i386_nusaos.xw
+        │   │       │   ├── elf_i386_nusaos.xwe
+        │   │       │   ├── elf_i386.x
+        │   │       │   ├── elf_i386.xbn
+        │   │       │   ├── elf_i386.xc
+        │   │       │   ├── elf_i386.xce
+        │   │       │   ├── elf_i386.xd
+        │   │       │   ├── elf_i386.xdc
+        │   │       │   ├── elf_i386.xdce
+        │   │       │   ├── elf_i386.xde
+        │   │       │   ├── elf_i386.xdw
+        │   │       │   ├── elf_i386.xdwe
+        │   │       │   ├── elf_i386.xe
+        │   │       │   ├── elf_i386.xn
+        │   │       │   ├── elf_i386.xr
+        │   │       │   ├── elf_i386.xs
+        │   │       │   ├── elf_i386.xsc
+        │   │       │   ├── elf_i386.xsce
+        │   │       │   ├── elf_i386.xse
+        │   │       │   ├── elf_i386.xsw
+        │   │       │   ├── elf_i386.xswe
+        │   │       │   ├── elf_i386.xu
+        │   │       │   ├── elf_i386.xw
+        │   │       │   └── elf_i386.xwe
+        │   │       ├── libgcc_s.so -> libgcc_s.so.1
+        │   │       ├── libgcc_s.so.1
+        │   │       ├── libm.a
+        │   │       ├── libm.so -> /home/dava/github/os-project/duckOS/toolchain/tools/i686/i686-pc-duckos/lib/libc.so
+        │   │       ├── libstdc++.a
+        │   │       ├── libstdc++.a-gdb.py
+        │   │       ├── libstdc++exp.a
+        │   │       ├── libstdc++exp.la
+        │   │       ├── libstdc++.la
+        │   │       ├── libsupc++.a
+        │   │       └── libsupc++.la
+        │   ├── include
+        │   │   ├── ctf-api.h
+        │   │   ├── ctf.h
+        │   │   ├── sframe-api.h
+        │   │   └── sframe.h
+        │   ├── lib
+        │   │   ├── bfd-plugins
+        │   │   │   └── libdep.so
+        │   │   ├── gcc
+        │   │   │   └── i686-pc-nusaos
+        │   │   │       └── 13.2.0
+        │   │   │           ├── crtbegin.o
+        │   │   │           ├── crtend.o
+        │   │   │           ├── crti.o
+        │   │   │           ├── crtn.o
+        │   │   │           ├── include
+        │   │   │           │   ├── adxintrin.h
+        │   │   │           │   ├── ammintrin.h
+        │   │   │           │   ├── amxbf16intrin.h
+        │   │   │           │   ├── amxcomplexintrin.h
+        │   │   │           │   ├── amxfp16intrin.h
+        │   │   │           │   ├── amxint8intrin.h
+        │   │   │           │   ├── amxtileintrin.h
+        │   │   │           │   ├── avx2intrin.h
+        │   │   │           │   ├── avx5124fmapsintrin.h
+        │   │   │           │   ├── avx5124vnniwintrin.h
+        │   │   │           │   ├── avx512bf16intrin.h
+        │   │   │           │   ├── avx512bf16vlintrin.h
+        │   │   │           │   ├── avx512bitalgintrin.h
+        │   │   │           │   ├── avx512bwintrin.h
+        │   │   │           │   ├── avx512cdintrin.h
+        │   │   │           │   ├── avx512dqintrin.h
+        │   │   │           │   ├── avx512erintrin.h
+        │   │   │           │   ├── avx512fintrin.h
+        │   │   │           │   ├── avx512fp16intrin.h
+        │   │   │           │   ├── avx512fp16vlintrin.h
+        │   │   │           │   ├── avx512ifmaintrin.h
+        │   │   │           │   ├── avx512ifmavlintrin.h
+        │   │   │           │   ├── avx512pfintrin.h
+        │   │   │           │   ├── avx512vbmi2intrin.h
+        │   │   │           │   ├── avx512vbmi2vlintrin.h
+        │   │   │           │   ├── avx512vbmiintrin.h
+        │   │   │           │   ├── avx512vbmivlintrin.h
+        │   │   │           │   ├── avx512vlbwintrin.h
+        │   │   │           │   ├── avx512vldqintrin.h
+        │   │   │           │   ├── avx512vlintrin.h
+        │   │   │           │   ├── avx512vnniintrin.h
+        │   │   │           │   ├── avx512vnnivlintrin.h
+        │   │   │           │   ├── avx512vp2intersectintrin.h
+        │   │   │           │   ├── avx512vp2intersectvlintrin.h
+        │   │   │           │   ├── avx512vpopcntdqintrin.h
+        │   │   │           │   ├── avx512vpopcntdqvlintrin.h
+        │   │   │           │   ├── avxifmaintrin.h
+        │   │   │           │   ├── avxintrin.h
+        │   │   │           │   ├── avxneconvertintrin.h
+        │   │   │           │   ├── avxvnniint8intrin.h
+        │   │   │           │   ├── avxvnniintrin.h
+        │   │   │           │   ├── bmi2intrin.h
+        │   │   │           │   ├── bmiintrin.h
+        │   │   │           │   ├── bmmintrin.h
+        │   │   │           │   ├── cet.h
+        │   │   │           │   ├── cetintrin.h
+        │   │   │           │   ├── cldemoteintrin.h
+        │   │   │           │   ├── clflushoptintrin.h
+        │   │   │           │   ├── clwbintrin.h
+        │   │   │           │   ├── clzerointrin.h
+        │   │   │           │   ├── cmpccxaddintrin.h
+        │   │   │           │   ├── cpuid.h
+        │   │   │           │   ├── cross-stdarg.h
+        │   │   │           │   ├── emmintrin.h
+        │   │   │           │   ├── enqcmdintrin.h
+        │   │   │           │   ├── f16cintrin.h
+        │   │   │           │   ├── float.h
+        │   │   │           │   ├── fma4intrin.h
+        │   │   │           │   ├── fmaintrin.h
+        │   │   │           │   ├── fxsrintrin.h
+        │   │   │           │   ├── gcov.h
+        │   │   │           │   ├── gfniintrin.h
+        │   │   │           │   ├── hresetintrin.h
+        │   │   │           │   ├── ia32intrin.h
+        │   │   │           │   ├── immintrin.h
+        │   │   │           │   ├── iso646.h
+        │   │   │           │   ├── keylockerintrin.h
+        │   │   │           │   ├── limits.h
+        │   │   │           │   ├── lwpintrin.h
+        │   │   │           │   ├── lzcntintrin.h
+        │   │   │           │   ├── mm3dnow.h
+        │   │   │           │   ├── mmintrin.h
+        │   │   │           │   ├── mm_malloc.h
+        │   │   │           │   ├── movdirintrin.h
+        │   │   │           │   ├── mwaitintrin.h
+        │   │   │           │   ├── mwaitxintrin.h
+        │   │   │           │   ├── nmmintrin.h
+        │   │   │           │   ├── pconfigintrin.h
+        │   │   │           │   ├── pkuintrin.h
+        │   │   │           │   ├── pmmintrin.h
+        │   │   │           │   ├── popcntintrin.h
+        │   │   │           │   ├── prfchiintrin.h
+        │   │   │           │   ├── prfchwintrin.h
+        │   │   │           │   ├── raointintrin.h
+        │   │   │           │   ├── rdseedintrin.h
+        │   │   │           │   ├── rtmintrin.h
+        │   │   │           │   ├── serializeintrin.h
+        │   │   │           │   ├── sgxintrin.h
+        │   │   │           │   ├── shaintrin.h
+        │   │   │           │   ├── smmintrin.h
+        │   │   │           │   ├── stdalign.h
+        │   │   │           │   ├── stdarg.h
+        │   │   │           │   ├── stdatomic.h
+        │   │   │           │   ├── stdbool.h
+        │   │   │           │   ├── stddef.h
+        │   │   │           │   ├── stdfix.h
+        │   │   │           │   ├── stdnoreturn.h
+        │   │   │           │   ├── syslimits.h
+        │   │   │           │   ├── tbmintrin.h
+        │   │   │           │   ├── tgmath.h
+        │   │   │           │   ├── tmmintrin.h
+        │   │   │           │   ├── tsxldtrkintrin.h
+        │   │   │           │   ├── uintrintrin.h
+        │   │   │           │   ├── unwind.h
+        │   │   │           │   ├── vaesintrin.h
+        │   │   │           │   ├── varargs.h
+        │   │   │           │   ├── vpclmulqdqintrin.h
+        │   │   │           │   ├── waitpkgintrin.h
+        │   │   │           │   ├── wbnoinvdintrin.h
+        │   │   │           │   ├── wmmintrin.h
+        │   │   │           │   ├── x86gprintrin.h
+        │   │   │           │   ├── x86intrin.h
+        │   │   │           │   ├── xmmintrin.h
+        │   │   │           │   ├── xopintrin.h
+        │   │   │           │   ├── xsavecintrin.h
+        │   │   │           │   ├── xsaveintrin.h
+        │   │   │           │   ├── xsaveoptintrin.h
+        │   │   │           │   ├── xsavesintrin.h
+        │   │   │           │   └── xtestintrin.h
+        │   │   │           ├── include-fixed
+        │   │   │           │   └── README
+        │   │   │           ├── install-tools
+        │   │   │           │   ├── fixinc_list
+        │   │   │           │   ├── gsyslimits.h
+        │   │   │           │   ├── include
+        │   │   │           │   │   ├── limits.h
+        │   │   │           │   │   └── README
+        │   │   │           │   ├── macro_list
+        │   │   │           │   └── mkheaders.conf
+        │   │   │           ├── libgcc.a
+        │   │   │           ├── libgcc_eh.a
+        │   │   │           ├── libgcov.a
+        │   │   │           └── plugin
+        │   │   │               ├── gtype.state
+        │   │   │               └── include
+        │   │   │                   ├── ada
+        │   │   │                   │   └── gcc-interface
+        │   │   │                   │       └── ada-tree.def
+        │   │   │                   ├── addresses.h
+        │   │   │                   ├── alias.h
+        │   │   │                   ├── align.h
+        │   │   │                   ├── alloc-pool.h
+        │   │   │                   ├── all-tree.def
+        │   │   │                   ├── ansidecl.h
+        │   │   │                   ├── array-traits.h
+        │   │   │                   ├── asan.h
+        │   │   │                   ├── attr-fnspec.h
+        │   │   │                   ├── attribs.h
+        │   │   │                   ├── auto-host.h
+        │   │   │                   ├── auto-profile.h
+        │   │   │                   ├── backend.h
+        │   │   │                   ├── basic-block.h
+        │   │   │                   ├── bb-reorder.h
+        │   │   │                   ├── b-header-vars
+        │   │   │                   ├── bitmap.h
+        │   │   │                   ├── builtin-attrs.def
+        │   │   │                   ├── builtins.def
+        │   │   │                   ├── builtins.h
+        │   │   │                   ├── builtin-types.def
+        │   │   │                   ├── bversion.h
+        │   │   │                   ├── calls.h
+        │   │   │                   ├── ccmp.h
+        │   │   │                   ├── c-family
+        │   │   │                   │   ├── c-common.def
+        │   │   │                   │   ├── c-common.h
+        │   │   │                   │   ├── c-objc.h
+        │   │   │                   │   ├── c-pragma.h
+        │   │   │                   │   └── c-pretty-print.h
+        │   │   │                   ├── cfganal.h
+        │   │   │                   ├── cfgbuild.h
+        │   │   │                   ├── cfgcleanup.h
+        │   │   │                   ├── cfgexpand.h
+        │   │   │                   ├── cfg-flags.def
+        │   │   │                   ├── cfg.h
+        │   │   │                   ├── cfghooks.h
+        │   │   │                   ├── cfgloop.h
+        │   │   │                   ├── cfgloopmanip.h
+        │   │   │                   ├── cfgrtl.h
+        │   │   │                   ├── cgraph.h
+        │   │   │                   ├── cif-code.def
+        │   │   │                   ├── collect2-aix.h
+        │   │   │                   ├── collect2.h
+        │   │   │                   ├── collect-utils.h
+        │   │   │                   ├── color-macros.h
+        │   │   │                   ├── common
+        │   │   │                   │   └── config
+        │   │   │                   │       └── i386
+        │   │   │                   │           └── i386-cpuinfo.h
+        │   │   │                   ├── conditions.h
+        │   │   │                   ├── config
+        │   │   │                   │   ├── elfos.h
+        │   │   │                   │   ├── glibc-stdint.h
+        │   │   │                   │   ├── i386
+        │   │   │                   │   │   ├── att.h
+        │   │   │                   │   │   ├── i386elf.h
+        │   │   │                   │   │   ├── i386.h
+        │   │   │                   │   │   ├── i386-isa.def
+        │   │   │                   │   │   ├── i386-opts.h
+        │   │   │                   │   │   ├── i386-protos.h
+        │   │   │                   │   │   ├── nusaos.h
+        │   │   │                   │   │   ├── stringop.def
+        │   │   │                   │   │   ├── unix.h
+        │   │   │                   │   │   └── x86-tune.def
+        │   │   │                   │   ├── initfini-array.h
+        │   │   │                   │   ├── nusaos.h
+        │   │   │                   │   └── vxworks-dummy.h
+        │   │   │                   ├── configargs.h
+        │   │   │                   ├── config.h
+        │   │   │                   ├── context.h
+        │   │   │                   ├── convert.h
+        │   │   │                   ├── coretypes.h
+        │   │   │                   ├── coroutine-builtins.def
+        │   │   │                   ├── coverage.h
+        │   │   │                   ├── cp
+        │   │   │                   │   ├── contracts.h
+        │   │   │                   │   ├── cp-trait.def
+        │   │   │                   │   ├── cp-tree.def
+        │   │   │                   │   ├── cp-tree.h
+        │   │   │                   │   ├── cxx-pretty-print.h
+        │   │   │                   │   ├── name-lookup.h
+        │   │   │                   │   ├── operators.def
+        │   │   │                   │   └── type-utils.h
+        │   │   │                   ├── cppbuiltin.h
+        │   │   │                   ├── cppdefault.h
+        │   │   │                   ├── cpplib.h
+        │   │   │                   ├── cselib.h
+        │   │   │                   ├── ctfc.h
+        │   │   │                   ├── c-tree.h
+        │   │   │                   ├── d
+        │   │   │                   │   └── d-tree.def
+        │   │   │                   ├── data-streamer.h
+        │   │   │                   ├── dbgcnt.def
+        │   │   │                   ├── dbgcnt.h
+        │   │   │                   ├── dce.h
+        │   │   │                   ├── ddg.h
+        │   │   │                   ├── debug.h
+        │   │   │                   ├── defaults.h
+        │   │   │                   ├── df.h
+        │   │   │                   ├── dfp.h
+        │   │   │                   ├── diagnostic-client-data-hooks.h
+        │   │   │                   ├── diagnostic-color.h
+        │   │   │                   ├── diagnostic-core.h
+        │   │   │                   ├── diagnostic.def
+        │   │   │                   ├── diagnostic-event-id.h
+        │   │   │                   ├── diagnostic.h
+        │   │   │                   ├── diagnostic-metadata.h
+        │   │   │                   ├── diagnostic-path.h
+        │   │   │                   ├── diagnostic-spec.h
+        │   │   │                   ├── diagnostic-url.h
+        │   │   │                   ├── digraph.h
+        │   │   │                   ├── dojump.h
+        │   │   │                   ├── dominance.h
+        │   │   │                   ├── domwalk.h
+        │   │   │                   ├── double-int.h
+        │   │   │                   ├── dump-context.h
+        │   │   │                   ├── dumpfile.h
+        │   │   │                   ├── dwarf2asm.h
+        │   │   │                   ├── dwarf2ctf.h
+        │   │   │                   ├── dwarf2out.h
+        │   │   │                   ├── edit-context.h
+        │   │   │                   ├── emit-rtl.h
+        │   │   │                   ├── errors.h
+        │   │   │                   ├── escaped_string.h
+        │   │   │                   ├── et-forest.h
+        │   │   │                   ├── except.h
+        │   │   │                   ├── explow.h
+        │   │   │                   ├── expmed.h
+        │   │   │                   ├── expr.h
+        │   │   │                   ├── fibonacci_heap.h
+        │   │   │                   ├── file-find.h
+        │   │   │                   ├── filenames.h
+        │   │   │                   ├── file-prefix-map.h
+        │   │   │                   ├── fixed-value.h
+        │   │   │                   ├── flags.h
+        │   │   │                   ├── flag-types.h
+        │   │   │                   ├── fold-const-call.h
+        │   │   │                   ├── fold-const.h
+        │   │   │                   ├── function-abi.h
+        │   │   │                   ├── function.h
+        │   │   │                   ├── gcc.h
+        │   │   │                   ├── gcc-plugin.h
+        │   │   │                   ├── gcc-rich-location.h
+        │   │   │                   ├── gcc-symtab.h
+        │   │   │                   ├── gcov-counter.def
+        │   │   │                   ├── gcov-io.h
+        │   │   │                   ├── gcse-common.h
+        │   │   │                   ├── gcse.h
+        │   │   │                   ├── generic-match.h
+        │   │   │                   ├── gengtype.h
+        │   │   │                   ├── genrtl.h
+        │   │   │                   ├── gensupport.h
+        │   │   │                   ├── ggc.h
+        │   │   │                   ├── ggc-internal.h
+        │   │   │                   ├── gimple-array-bounds.h
+        │   │   │                   ├── gimple-builder.h
+        │   │   │                   ├── gimple.def
+        │   │   │                   ├── gimple-expr.h
+        │   │   │                   ├── gimple-fold.h
+        │   │   │                   ├── gimple.h
+        │   │   │                   ├── gimple-iterator.h
+        │   │   │                   ├── gimple-low.h
+        │   │   │                   ├── gimple-match.h
+        │   │   │                   ├── gimple-predicate-analysis.h
+        │   │   │                   ├── gimple-predict.h
+        │   │   │                   ├── gimple-pretty-print.h
+        │   │   │                   ├── gimple-range-cache.h
+        │   │   │                   ├── gimple-range-edge.h
+        │   │   │                   ├── gimple-range-fold.h
+        │   │   │                   ├── gimple-range-gori.h
+        │   │   │                   ├── gimple-range.h
+        │   │   │                   ├── gimple-range-infer.h
+        │   │   │                   ├── gimple-range-op.h
+        │   │   │                   ├── gimple-range-path.h
+        │   │   │                   ├── gimple-range-trace.h
+        │   │   │                   ├── gimple-ssa.h
+        │   │   │                   ├── gimple-ssa-warn-access.h
+        │   │   │                   ├── gimple-ssa-warn-restrict.h
+        │   │   │                   ├── gimple-streamer.h
+        │   │   │                   ├── gimple-walk.h
+        │   │   │                   ├── gimplify.h
+        │   │   │                   ├── gimplify-me.h
+        │   │   │                   ├── glimits.h
+        │   │   │                   ├── gomp-constants.h
+        │   │   │                   ├── graphds.h
+        │   │   │                   ├── graph.h
+        │   │   │                   ├── graphite.h
+        │   │   │                   ├── graphviz.h
+        │   │   │                   ├── gsstruct.def
+        │   │   │                   ├── gsyms.h
+        │   │   │                   ├── gsyslimits.h
+        │   │   │                   ├── gtm-builtins.def
+        │   │   │                   ├── gtype-desc.h
+        │   │   │                   ├── hard-reg-set.h
+        │   │   │                   ├── hash-map.h
+        │   │   │                   ├── hash-map-traits.h
+        │   │   │                   ├── hash-set.h
+        │   │   │                   ├── hashtab.h
+        │   │   │                   ├── hash-table.h
+        │   │   │                   ├── hash-traits.h
+        │   │   │                   ├── highlev-plugin-common.h
+        │   │   │                   ├── hooks.h
+        │   │   │                   ├── hosthooks-def.h
+        │   │   │                   ├── hosthooks.h
+        │   │   │                   ├── hw-doloop.h
+        │   │   │                   ├── hwint.h
+        │   │   │                   ├── ifcvt.h
+        │   │   │                   ├── inchash.h
+        │   │   │                   ├── incpath.h
+        │   │   │                   ├── input.h
+        │   │   │                   ├── insn-addr.h
+        │   │   │                   ├── insn-attr-common.h
+        │   │   │                   ├── insn-attr.h
+        │   │   │                   ├── insn-codes.h
+        │   │   │                   ├── insn-config.h
+        │   │   │                   ├── insn-constants.h
+        │   │   │                   ├── insn-flags.h
+        │   │   │                   ├── insn-modes.h
+        │   │   │                   ├── insn-modes-inline.h
+        │   │   │                   ├── insn-notes.def
+        │   │   │                   ├── internal-fn.def
+        │   │   │                   ├── internal-fn.h
+        │   │   │                   ├── intl.h
+        │   │   │                   ├── int-vector-builder.h
+        │   │   │                   ├── ipa-fnsummary.h
+        │   │   │                   ├── ipa-icf-gimple.h
+        │   │   │                   ├── ipa-icf.h
+        │   │   │                   ├── ipa-inline.h
+        │   │   │                   ├── ipa-modref.h
+        │   │   │                   ├── ipa-modref-tree.h
+        │   │   │                   ├── ipa-param-manipulation.h
+        │   │   │                   ├── ipa-predicate.h
+        │   │   │                   ├── ipa-prop.h
+        │   │   │                   ├── ipa-reference.h
+        │   │   │                   ├── ipa-ref.h
+        │   │   │                   ├── ipa-utils.h
+        │   │   │                   ├── ira.h
+        │   │   │                   ├── ira-int.h
+        │   │   │                   ├── is-a.h
+        │   │   │                   ├── iterator-utils.h
+        │   │   │                   ├── json.h
+        │   │   │                   ├── langhooks-def.h
+        │   │   │                   ├── langhooks.h
+        │   │   │                   ├── lcm.h
+        │   │   │                   ├── libfuncs.h
+        │   │   │                   ├── libiberty.h
+        │   │   │                   ├── limitx.h
+        │   │   │                   ├── limity.h
+        │   │   │                   ├── line-map.h
+        │   │   │                   ├── logical-location.h
+        │   │   │                   ├── loop-unroll.h
+        │   │   │                   ├── lower-subreg.h
+        │   │   │                   ├── lra.h
+        │   │   │                   ├── lra-int.h
+        │   │   │                   ├── lto-compress.h
+        │   │   │                   ├── lto-section-names.h
+        │   │   │                   ├── lto-streamer.h
+        │   │   │                   ├── m2
+        │   │   │                   │   └── m2-tree.def
+        │   │   │                   ├── machmode.def
+        │   │   │                   ├── machmode.h
+        │   │   │                   ├── make-unique.h
+        │   │   │                   ├── md5.h
+        │   │   │                   ├── memmodel.h
+        │   │   │                   ├── memory-block.h
+        │   │   │                   ├── mem-stats.h
+        │   │   │                   ├── mem-stats-traits.h
+        │   │   │                   ├── mode-classes.def
+        │   │   │                   ├── mux-utils.h
+        │   │   │                   ├── objc
+        │   │   │                   │   └── objc-tree.def
+        │   │   │                   ├── obstack.h
+        │   │   │                   ├── obstack-utils.h
+        │   │   │                   ├── omp-builtins.def
+        │   │   │                   ├── omp-expand.h
+        │   │   │                   ├── omp-general.h
+        │   │   │                   ├── omp-low.h
+        │   │   │                   ├── omp-offload.h
+        │   │   │                   ├── omp-simd-clone.h
+        │   │   │                   ├── optabs.def
+        │   │   │                   ├── optabs.h
+        │   │   │                   ├── optabs-libfuncs.h
+        │   │   │                   ├── optabs-query.h
+        │   │   │                   ├── optabs-tree.h
+        │   │   │                   ├── optinfo-emit-json.h
+        │   │   │                   ├── optinfo.h
+        │   │   │                   ├── options.h
+        │   │   │                   ├── opt-problem.h
+        │   │   │                   ├── opts-diagnostic.h
+        │   │   │                   ├── opts.h
+        │   │   │                   ├── opts-jobserver.h
+        │   │   │                   ├── opt-suggestions.h
+        │   │   │                   ├── ordered-hash-map.h
+        │   │   │                   ├── output.h
+        │   │   │                   ├── passes.def
+        │   │   │                   ├── pass-instances.def
+        │   │   │                   ├── pass_manager.h
+        │   │   │                   ├── plugin-api.h
+        │   │   │                   ├── plugin.def
+        │   │   │                   ├── plugin.h
+        │   │   │                   ├── plugin-version.h
+        │   │   │                   ├── pointer-query.h
+        │   │   │                   ├── poly-int.h
+        │   │   │                   ├── poly-int-types.h
+        │   │   │                   ├── predict.def
+        │   │   │                   ├── predict.h
+        │   │   │                   ├── prefix.h
+        │   │   │                   ├── pretty-print.h
+        │   │   │                   ├── print-rtl.h
+        │   │   │                   ├── print-tree.h
+        │   │   │                   ├── profile-count.h
+        │   │   │                   ├── profile.h
+        │   │   │                   ├── range.h
+        │   │   │                   ├── range-op.h
+        │   │   │                   ├── read-md.h
+        │   │   │                   ├── read-rtl-function.h
+        │   │   │                   ├── real.h
+        │   │   │                   ├── realmpfr.h
+        │   │   │                   ├── recog.h
+        │   │   │                   ├── regcprop.h
+        │   │   │                   ├── reg-notes.def
+        │   │   │                   ├── regrename.h
+        │   │   │                   ├── regset.h
+        │   │   │                   ├── regs.h
+        │   │   │                   ├── reload.h
+        │   │   │                   ├── resource.h
+        │   │   │                   ├── rtlanal.h
+        │   │   │                   ├── rtl.def
+        │   │   │                   ├── rtl-error.h
+        │   │   │                   ├── rtl.h
+        │   │   │                   ├── rtlhash.h
+        │   │   │                   ├── rtlhooks-def.h
+        │   │   │                   ├── rtl-iter.h
+        │   │   │                   ├── rtl-ssa.h
+        │   │   │                   ├── rtx-vector-builder.h
+        │   │   │                   ├── run-rtl-passes.h
+        │   │   │                   ├── safe-ctype.h
+        │   │   │                   ├── sanitizer.def
+        │   │   │                   ├── sbitmap.h
+        │   │   │                   ├── sched-int.h
+        │   │   │                   ├── selftest-diagnostic.h
+        │   │   │                   ├── selftest.h
+        │   │   │                   ├── selftest-rtl.h
+        │   │   │                   ├── sel-sched-dump.h
+        │   │   │                   ├── sel-sched.h
+        │   │   │                   ├── sel-sched-ir.h
+        │   │   │                   ├── sese.h
+        │   │   │                   ├── shortest-paths.h
+        │   │   │                   ├── shrink-wrap.h
+        │   │   │                   ├── signop.h
+        │   │   │                   ├── sparseset.h
+        │   │   │                   ├── spellcheck.h
+        │   │   │                   ├── spellcheck-tree.h
+        │   │   │                   ├── splay-tree.h
+        │   │   │                   ├── splay-tree-utils.h
+        │   │   │                   ├── sreal.h
+        │   │   │                   ├── ssa.h
+        │   │   │                   ├── ssa-iterators.h
+        │   │   │                   ├── statistics.h
+        │   │   │                   ├── stmt.h
+        │   │   │                   ├── stor-layout.h
+        │   │   │                   ├── streamer-hooks.h
+        │   │   │                   ├── stringpool.h
+        │   │   │                   ├── substring-locations.h
+        │   │   │                   ├── symbol-summary.h
+        │   │   │                   ├── symtab-clones.h
+        │   │   │                   ├── symtab.h
+        │   │   │                   ├── symtab-thunks.h
+        │   │   │                   ├── sync-builtins.def
+        │   │   │                   ├── system.h
+        │   │   │                   ├── target.def
+        │   │   │                   ├── target-def.h
+        │   │   │                   ├── target-globals.h
+        │   │   │                   ├── target.h
+        │   │   │                   ├── target-hooks-macros.h
+        │   │   │                   ├── target-insns.def
+        │   │   │                   ├── targhooks.h
+        │   │   │                   ├── timevar.def
+        │   │   │                   ├── timevar.h
+        │   │   │                   ├── tm.h
+        │   │   │                   ├── tm_p.h
+        │   │   │                   ├── tm-preds.h
+        │   │   │                   ├── toplev.h
+        │   │   │                   ├── tracer.h
+        │   │   │                   ├── trans-mem.h
+        │   │   │                   ├── tree-affine.h
+        │   │   │                   ├── tree-cfgcleanup.h
+        │   │   │                   ├── tree-cfg.h
+        │   │   │                   ├── tree-check.h
+        │   │   │                   ├── tree-chrec.h
+        │   │   │                   ├── tree-core.h
+        │   │   │                   ├── tree-data-ref.h
+        │   │   │                   ├── tree.def
+        │   │   │                   ├── tree-dfa.h
+        │   │   │                   ├── tree-diagnostic.h
+        │   │   │                   ├── tree-dump.h
+        │   │   │                   ├── tree-eh.h
+        │   │   │                   ├── tree.h
+        │   │   │                   ├── tree-hasher.h
+        │   │   │                   ├── tree-hash-traits.h
+        │   │   │                   ├── tree-if-conv.h
+        │   │   │                   ├── tree-inline.h
+        │   │   │                   ├── tree-into-ssa.h
+        │   │   │                   ├── tree-iterator.h
+        │   │   │                   ├── tree-logical-location.h
+        │   │   │                   ├── tree-nested.h
+        │   │   │                   ├── tree-object-size.h
+        │   │   │                   ├── tree-outof-ssa.h
+        │   │   │                   ├── tree-parloops.h
+        │   │   │                   ├── tree-pass.h
+        │   │   │                   ├── tree-phinodes.h
+        │   │   │                   ├── tree-pretty-print.h
+        │   │   │                   ├── tree-scalar-evolution.h
+        │   │   │                   ├── tree-sra.h
+        │   │   │                   ├── tree-ssa-address.h
+        │   │   │                   ├── tree-ssa-alias-compare.h
+        │   │   │                   ├── tree-ssa-alias.h
+        │   │   │                   ├── tree-ssa-ccp.h
+        │   │   │                   ├── tree-ssa-coalesce.h
+        │   │   │                   ├── tree-ssa-dce.h
+        │   │   │                   ├── tree-ssa-dom.h
+        │   │   │                   ├── tree-ssa-dse.h
+        │   │   │                   ├── tree-ssa.h
+        │   │   │                   ├── tree-ssa-live.h
+        │   │   │                   ├── tree-ssa-loop.h
+        │   │   │                   ├── tree-ssa-loop-ivopts.h
+        │   │   │                   ├── tree-ssa-loop-manip.h
+        │   │   │                   ├── tree-ssa-loop-niter.h
+        │   │   │                   ├── tree-ssa-math-opts.h
+        │   │   │                   ├── tree-ssanames.h
+        │   │   │                   ├── tree-ssa-operands.h
+        │   │   │                   ├── tree-ssa-propagate.h
+        │   │   │                   ├── tree-ssa-reassoc.h
+        │   │   │                   ├── tree-ssa-sccvn.h
+        │   │   │                   ├── tree-ssa-scopedtables.h
+        │   │   │                   ├── tree-ssa-strlen.h
+        │   │   │                   ├── tree-ssa-ter.h
+        │   │   │                   ├── tree-ssa-threadedge.h
+        │   │   │                   ├── tree-ssa-threadupdate.h
+        │   │   │                   ├── tree-stdarg.h
+        │   │   │                   ├── tree-streamer.h
+        │   │   │                   ├── treestruct.def
+        │   │   │                   ├── tree-switch-conversion.h
+        │   │   │                   ├── tree-vector-builder.h
+        │   │   │                   ├── tree-vectorizer.h
+        │   │   │                   ├── tree-vrp.h
+        │   │   │                   ├── tristate.h
+        │   │   │                   ├── tsan.h
+        │   │   │                   ├── tsystem.h
+        │   │   │                   ├── typeclass.h
+        │   │   │                   ├── typed-splay-tree.h
+        │   │   │                   ├── ubsan.h
+        │   │   │                   ├── valtrack.h
+        │   │   │                   ├── value-pointer-equiv.h
+        │   │   │                   ├── value-prof.h
+        │   │   │                   ├── value-query.h
+        │   │   │                   ├── value-range.h
+        │   │   │                   ├── value-range-pretty-print.h
+        │   │   │                   ├── value-range-storage.h
+        │   │   │                   ├── value-relation.h
+        │   │   │                   ├── varasm.h
+        │   │   │                   ├── vec.h
+        │   │   │                   ├── vec-perm-indices.h
+        │   │   │                   ├── vector-builder.h
+        │   │   │                   ├── version.h
+        │   │   │                   ├── vmsdbg.h
+        │   │   │                   ├── vr-values.h
+        │   │   │                   ├── vtable-verify.h
+        │   │   │                   ├── wide-int-bitmask.h
+        │   │   │                   ├── wide-int.h
+        │   │   │                   ├── wide-int-print.h
+        │   │   │                   └── xcoff.h
+        │   │   ├── libctf.a
+        │   │   ├── libctf.la
+        │   │   ├── libctf-nobfd.a
+        │   │   ├── libctf-nobfd.la
+        │   │   ├── libctf-nobfd.so -> libctf-nobfd.so.0.0.0
+        │   │   ├── libctf-nobfd.so.0 -> libctf-nobfd.so.0.0.0
+        │   │   ├── libctf-nobfd.so.0.0.0
+        │   │   ├── libctf.so -> libctf.so.0.0.0
+        │   │   ├── libctf.so.0 -> libctf.so.0.0.0
+        │   │   ├── libctf.so.0.0.0
+        │   │   ├── libsframe.a
+        │   │   ├── libsframe.la
+        │   │   ├── libsframe.so -> libsframe.so.1.0.0
+        │   │   ├── libsframe.so.1 -> libsframe.so.1.0.0
+        │   │   └── libsframe.so.1.0.0
+        │   ├── libexec
+        │   │   └── gcc
+        │   │       └── i686-pc-nusaos
+        │   │           └── 13.2.0
+        │   │               ├── cc1
+        │   │               ├── cc1plus
+        │   │               ├── collect2
+        │   │               ├── install-tools
+        │   │               │   ├── fixincl
+        │   │               │   ├── fixinc.sh
+        │   │               │   ├── mkheaders
+        │   │               │   └── mkinstalldirs
+        │   │               ├── liblto_plugin.la
+        │   │               ├── liblto_plugin.so
+        │   │               ├── lto1
+        │   │               ├── lto-wrapper
+        │   │               └── plugin
+        │   │                   └── gengtype
+        │   ├── share
+        │   │   ├── gcc-13.2.0
+        │   │   │   └── python
+        │   │   │       └── libstdcxx
+        │   │   │           ├── __init__.py
+        │   │   │           └── v6
+        │   │   │               ├── __init__.py
+        │   │   │               ├── printers.py
+        │   │   │               └── xmethods.py
+        │   │   ├── info
+        │   │   │   ├── as.info
+        │   │   │   ├── bfd.info
+        │   │   │   ├── binutils.info
+        │   │   │   ├── cpp.info
+        │   │   │   ├── cppinternals.info
+        │   │   │   ├── ctf-spec.info
+        │   │   │   ├── dir
+        │   │   │   ├── gcc.info
+        │   │   │   ├── gccinstall.info
+        │   │   │   ├── gccint.info
+        │   │   │   ├── gprof.info
+        │   │   │   ├── ld.info
+        │   │   │   ├── ldint.info
+        │   │   │   └── sframe-spec.info
+        │   │   └── man
+        │   │       ├── man1
+        │   │       │   ├── i686-pc-nusaos-addr2line.1
+        │   │       │   ├── i686-pc-nusaos-ar.1
+        │   │       │   ├── i686-pc-nusaos-as.1
+        │   │       │   ├── i686-pc-nusaos-c++filt.1
+        │   │       │   ├── i686-pc-nusaos-cpp.1
+        │   │       │   ├── i686-pc-nusaos-dlltool.1
+        │   │       │   ├── i686-pc-nusaos-elfedit.1
+        │   │       │   ├── i686-pc-nusaos-g++.1
+        │   │       │   ├── i686-pc-nusaos-gcc.1
+        │   │       │   ├── i686-pc-nusaos-gcov.1
+        │   │       │   ├── i686-pc-nusaos-gcov-dump.1
+        │   │       │   ├── i686-pc-nusaos-gcov-tool.1
+        │   │       │   ├── i686-pc-nusaos-gprof.1
+        │   │       │   ├── i686-pc-nusaos-ld.1
+        │   │       │   ├── i686-pc-nusaos-lto-dump.1
+        │   │       │   ├── i686-pc-nusaos-nm.1
+        │   │       │   ├── i686-pc-nusaos-objcopy.1
+        │   │       │   ├── i686-pc-nusaos-objdump.1
+        │   │       │   ├── i686-pc-nusaos-ranlib.1
+        │   │       │   ├── i686-pc-nusaos-readelf.1
+        │   │       │   ├── i686-pc-nusaos-size.1
+        │   │       │   ├── i686-pc-nusaos-strings.1
+        │   │       │   ├── i686-pc-nusaos-strip.1
+        │   │       │   ├── i686-pc-nusaos-windmc.1
+        │   │       │   └── i686-pc-nusaos-windres.1
+        │   │       └── man7
+        │   │           ├── fsf-funding.7
+        │   │           ├── gfdl.7
+        │   │           └── gpl.7
+        │   └── x86_64-pc-linux-gnu
+        │       └── i686-pc-nusaos
+        │           ├── include
+        │           │   ├── ansidecl.h
+        │           │   ├── bfd.h
+        │           │   ├── bfdlink.h
+        │           │   ├── diagnostics.h
+        │           │   ├── dis-asm.h
+        │           │   ├── plugin-api.h
+        │           │   └── symcat.h
+        │           └── lib
+        │               ├── libbfd-2.41.so
+        │               ├── libbfd.a
+        │               ├── libbfd.la
+        │               ├── libbfd.so -> libbfd-2.41.so
+        │               ├── libopcodes-2.41.so
+        │               ├── libopcodes.a
+        │               ├── libopcodes.la
+        │               └── libopcodes.so -> libopcodes-2.41.so
+        └── libexec
+            └── gcc
+                └── i686-elf
+                    └── 7.1.0
+                        ├── cc1
+                        ├── cc1plus
+                        ├── collect2
+                        ├── install-tools
+                        │   ├── fixincl
+                        │   ├── fixinc.sh
+                        │   ├── mkheaders
+                        │   └── mkinstalldirs
+                        ├── liblto_plugin.la
+                        ├── liblto_plugin.so
+                        ├── liblto_plugin.so.0
+                        ├── liblto_plugin.so.0.0.0
+                        ├── lto1
+                        ├── lto-wrapper
+                        ├── plugin
+                        │   └── gengtype
+                        ├── sedEoy9wd
+                        └── sedOMMoxp
 
-159 directories, 1058 files
+256 directories, 2875 files

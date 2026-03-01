@@ -35,18 +35,18 @@ namespace Interrupt {
 
 	[[noreturn]] void double_fault();
 
-	void isr_init(){
-		idt_set_gate(0, (unsigned)isr0, 0x08, 0x8E);
-		idt_set_gate(1, (unsigned)isr1, 0x08, 0x8E);
-		idt_set_gate(2, (unsigned)isr2, 0x08, 0x8E);
-		idt_set_gate(3, (unsigned)isr3, 0x08, 0x8E);
-		idt_set_gate(4, (unsigned)isr4, 0x08, 0x8E);
-		idt_set_gate(5, (unsigned)isr5, 0x08, 0x8E);
-		idt_set_gate(6, (unsigned)isr6, 0x08, 0x8E);
-		idt_set_gate(7, (unsigned)isr7, 0x08, 0x8E);
-		// Special case for double-fault; we want to use a separate TSS so we can be sure we have a clean stack to work with.
-		idt_set_gate(8, 0, 0x30, 0x85);
-		idt_set_gate(9, (unsigned)isr9, 0x08, 0x8E);
+	void isr_init() {
+		idt_set_gate(0,  (unsigned)isr0,  0x08, 0x8E);
+		idt_set_gate(1,  (unsigned)isr1,  0x08, 0x8E);
+		idt_set_gate(2,  (unsigned)isr2,  0x08, 0x8E);
+		idt_set_gate(3,  (unsigned)isr3,  0x08, 0x8E);
+		idt_set_gate(4,  (unsigned)isr4,  0x08, 0x8E);
+		idt_set_gate(5,  (unsigned)isr5,  0x08, 0x8E);
+		idt_set_gate(6,  (unsigned)isr6,  0x08, 0x8E);
+		idt_set_gate(7,  (unsigned)isr7,  0x08, 0x8E);
+		// Double-fault uses a separate TSS (task gate) for a clean stack
+		idt_set_gate(8,  0,               0x30, 0x85);
+		idt_set_gate(9,  (unsigned)isr9,  0x08, 0x8E);
 		idt_set_gate(10, (unsigned)isr10, 0x08, 0x8E);
 		idt_set_gate(11, (unsigned)isr11, 0x08, 0x8E);
 		idt_set_gate(12, (unsigned)isr12, 0x08, 0x8E);
@@ -70,46 +70,39 @@ namespace Interrupt {
 		idt_set_gate(30, (unsigned)isr30, 0x08, 0x8E);
 		idt_set_gate(31, (unsigned)isr31, 0x08, 0x8E);
 
-		// Setup the double-fault TSS and a stack for it
-		memset(&fault_tss, 0, sizeof(TSS));	
-		fault_tss.ss0 = 0x10;
-		fault_tss.cs = 0x08;
-		fault_tss.ss = 0x10;  // ss ditetapkan sekali saja (sebelumnya duplikat di bawah)
-		fault_tss.ds = 0x10;
-		fault_tss.es = 0x10;
-		fault_tss.fs = 0x10;
-		fault_tss.gs = 0x10;
+		// Setup the double-fault TSS
+		memset(&fault_tss, 0, sizeof(TSS));
+		fault_tss.ss0    = 0x10;
+		fault_tss.cs     = 0x08;
+		fault_tss.ss     = 0x10;
+		fault_tss.ds     = 0x10;
+		fault_tss.es     = 0x10;
+		fault_tss.fs     = 0x10;
+		fault_tss.gs     = 0x10;
 		fault_tss.eflags = 0x2;
-		fault_tss.cr3 = MM.kernel_page_directory.entries_physaddr();
-		// BUG FIX: setelah memset, iobp = 0 yang artinya CPU mengira I/O bitmap
-		// berada di awal TSS (tumpang tindih dengan data TSS itu sendiri).
-		// Harus diset ke sizeof(TSS) untuk menandakan tidak ada I/O bitmap.
-		fault_tss.iobp = sizeof(TSS);
-		// BUG FIX: naikkan dari PAGE_SIZE*2 (8KB) ke PAGE_SIZE*4 (16KB).
-		// PANIC_NOHLT dan fungsi diagnostik membutuhkan stack yang cukup.
-		fault_tss.esp0 = MM.inst().alloc_kernel_stack_region(PAGE_SIZE * 4)->end();
-		fault_tss.esp = fault_tss.esp0;
-		fault_tss.eip = (size_t) double_fault;
+		fault_tss.cr3    = MM.kernel_page_directory.entries_physaddr();
+		// iobp must point past the end of the TSS; 0 would overlap TSS fields
+		fault_tss.iobp   = sizeof(TSS);
+		// Allocate a 16 KiB stack so diagnostic code has plenty of room
+		fault_tss.esp0   = MM.inst().alloc_kernel_stack_region(PAGE_SIZE * 4)->end();
+		fault_tss.esp    = fault_tss.esp0;
+		fault_tss.eip    = (size_t)double_fault;
 	}
 
 	[[noreturn]] void double_fault() {
-		// BUG FIX: kode diagnostik harus dijalankan SEBELUM PANIC_NOHLT.
-		// Sebelumnya PANIC_NOHLT dipanggil pertama (noreturn), sehingga
-		// cek stack overflow dan stacktrace di bawahnya tidak pernah berjalan sama sekali.
+		// --- Diagnostics FIRST, PANIC_NOHLT (noreturn) LAST ---
 
-		// Cek apakah ini disebabkan kernel stack overflow
-		if (!MM.kernel_page_directory.is_mapped(TaskManager::tss.esp, false)) {
+		if(!MM.kernel_page_directory.is_mapped(TaskManager::tss.esp, false)) {
 			printf("Kernel stack overflow detected!\n");
 			printf("  Crashed thread ESP: 0x%x  EBP: 0x%x  EIP: 0x%x\n",
-				TaskManager::tss.esp, TaskManager::tss.ebp, TaskManager::tss.eip);
+			       TaskManager::tss.esp, TaskManager::tss.ebp, TaskManager::tss.eip);
 		} else {
 			printf("Double fault at EIP: 0x%x  ESP: 0x%x\n",
-				TaskManager::tss.eip, TaskManager::tss.esp);
+			       TaskManager::tss.eip, TaskManager::tss.esp);
 		}
 
 		KernelMapper::print_stacktrace(TaskManager::tss.ebp);
 
-		// PANIC_NOHLT adalah [[noreturn]] - dipanggil terakhir setelah info diagnostik dicetak
 		PANIC_NOHLT("DOUBLE_FAULT", "A double fault occurred. Something has gone horribly wrong.");
 		__builtin_unreachable();
 	}
@@ -125,23 +118,23 @@ namespace Interrupt {
 		}
 	}
 
-	void fault_handler(ISRRegisters* regs){
-		if(regs->isr_num < 32){
-			switch(regs->isr_num){
+	void fault_handler(ISRRegisters* regs) {
+		if(regs->isr_num < 32) {
+			switch(regs->isr_num) {
 				case 0:
 					handle_fault("DIVIDE_BY_ZERO", "Please don't do that.", SIGILL, regs);
 					break;
 
-				case 13: //GPF
+				case 13: // GPF
 					handle_fault("GENERAL_PROTECTION_FAULT", "How did you manage to do that?", SIGILL, regs);
 					break;
 
-				case 14: //Page fault
+				case 14: // Page fault
 				{
 					size_t err_pos;
-					asm volatile ("mov %%cr2, %0" : "=r" (err_pos));
+					asm volatile("mov %%cr2, %0" : "=r"(err_pos));
 					PageFault::Type type;
-					switch (regs->err_code) {
+					switch(regs->err_code) {
 						case FAULT_USER_READ:
 						case FAULT_USER_READ_GPF:
 						case FAULT_KERNEL_READ:
@@ -159,7 +152,6 @@ namespace Interrupt {
 					}
 					const PageFault fault { err_pos, regs, type };
 					if(TaskManager::is_preempting() || fault.type == PageFault::Type::Unknown || !TaskManager::current_thread()) {
-						// Never want to fault while preempting
 						MemoryManager::inst().page_fault_handler(regs);
 					} else {
 						auto thread = TaskManager::current_thread();
