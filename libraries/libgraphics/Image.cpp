@@ -94,6 +94,9 @@ void Image::multiply(Color color) {
 }
 
 Duck::Ptr<const Framebuffer> Image::framebuffer(Dimensions dims) const {
+	// BUG-13: calling begin() on an empty map is UB (crash for Image::empty())
+	if(m_framebuffers.empty()) return nullptr;
+
 	if (dims.width == -1 && dims.height == -1)
 		dims = m_size;
 

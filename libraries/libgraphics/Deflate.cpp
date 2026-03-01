@@ -63,7 +63,8 @@ void create_huffman(const uint8_t lengths[], uint32_t size, huffman* huff) {
 uint16_t huffman_decode(DEFLATE* def, huffman* huff) {
 	int count = 0;
 	int cur = 0;
-	for(int i = 1; cur >= 0; i++) {
+	// BUG-10: was unbounded loop; cap at 16 (max huffman code length)
+	for(int i = 1; i <= 16 && cur >= 0; i++) {
 		cur = read_bits(def, 1) | (cur << 1);
 		count += huff->counts[i];
 		cur -= huff->counts[i];
@@ -128,7 +129,7 @@ void inflate_dynamic(DEFLATE* def) {
 
 	//Get the lengths for the literal/length alphabet
 	uint16_t i = 0;
-	uint8_t lengths[320];
+	uint8_t lengths[320] = {0}; // BUG-09: must be zero-initialised; unread entries fed into huffman table
 	while(i < hdist + hlit) {
 		uint16_t sym = huffman_decode(def, &codes_huff);
 		if(sym < 16) { //0-15: Represent code lengths of 0 - 15
@@ -189,7 +190,26 @@ int inflate_uncompressed(DEFLATE* def) {
 
 huffman fixed_len_huff;
 huffman fixed_dist_huff;
-int made_fixed = 0;
+
+// BUG-11: global + int flag is not thread-safe. Use function-local static
+// (C++11 guarantees exactly-once, thread-safe initialisation).
+static void init_fixed_huffman() {
+	uint8_t len_lengths[288];
+	for(uint16_t i = 0; i < 288; i++) {
+		if(i < 144 || i >= 280)
+			len_lengths[i] = 8;
+		else if(i < 256)
+			len_lengths[i] = 9;
+		else if(i < 280)
+			len_lengths[i] = 7;
+	}
+	create_huffman(len_lengths, 288, &fixed_len_huff);
+
+	uint8_t dist_lengths[30];
+	for(uint8_t i = 0; i < 30; i++)
+		dist_lengths[i] = 5;
+	create_huffman(dist_lengths, 30, &fixed_dist_huff);
+}
 
 int decompress(DEFLATE* def) {
 	def->bit_pos = 8;
@@ -198,25 +218,8 @@ int decompress(DEFLATE* def) {
 
 	uint8_t bfinal = 0;
 
-	//Make the huffman code tables for fixed code inflation if they don't exist already
-	if(!made_fixed) {
-		made_fixed = 1;
-		uint8_t len_lengths[288];
-		for(uint16_t i = 0; i < 288; i++) {
-			if(i < 144 || i >= 280)
-				len_lengths[i] = 8;
-			else if(i < 256)
-				len_lengths[i] = 9;
-			else if(i < 280)
-				len_lengths[i] = 7;
-		}
-		create_huffman(len_lengths, 288, &fixed_len_huff);
-
-		uint8_t dist_lengths[30];
-		for(uint8_t i = 0; i < 30; i++)
-			dist_lengths[i] = 5;
-		create_huffman(dist_lengths, 30, &fixed_dist_huff);
-	}
+	// BUG-11: thread-safe one-time init via local static boolean
+	static bool fixed_initialized = (init_fixed_huffman(), true);
 
 	while(!bfinal) {
 		bfinal = read_bits(def, 1);

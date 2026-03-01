@@ -152,6 +152,8 @@ void Framebuffer::copy_blitting_flipped(const Framebuffer& other, Rect other_are
 }
 
 void Framebuffer::copy_tiled(const Framebuffer& other, Rect other_area, const Point& pos) const {
+	// BUG-06: guard against division by zero when source has zero dimensions
+	if(other.width == 0 || other.height == 0) return;
 	//Make sure self_area is in bounds of the framebuffer
 	Rect self_area = {pos.x, pos.y, other_area.width, other_area.height};
 	self_area = self_area.overlapping_area({0, 0, width, height});
@@ -222,7 +224,11 @@ void Framebuffer::draw_image_scaled(const Framebuffer& other, const Rect& rect) 
 	for(int y = 0; y < self_area.height; y++) {
 		for(int x = 0; x < self_area.width; x++) {
 			auto& this_val = data[(self_area.x + x) + (self_area.y + y) * width];
-			auto& other_val = other.data[(int) (other_area.x + x / scale_x) + (int) (other_area.y + y / scale_y) * other.width];
+			// BUG-05: clamp source coordinates to prevent OOB read
+			int ox = (int)(other_area.x + x / scale_x);
+			int oy = (int)(other_area.y + y / scale_y);
+			if(ox < 0 || ox >= other.width || oy < 0 || oy >= other.height) continue;
+			auto& other_val = other.data[ox + oy * other.width];
 			this_val = this_val.blended(other_val);
 		}
 	}
@@ -267,15 +273,19 @@ void Framebuffer::fill_blitting(Rect area, Color color) const {
 }
 
 void Framebuffer::fill_gradient_h(Rect area, Color color_a, Color color_b) const {
-	if(color_a == color_b)
+	if(color_a == color_b) {
 		fill(area, color_a);
+		return; // BUG-12: was missing return, causing double-draw
+	}
 	for(int x = 0; x < area.width; x++)
 		fill({area.x + x, area.y, 1, area.height}, color_a.mixed(color_b, (float) x / area.width));
 }
 
 void Framebuffer::fill_gradient_v(Rect area, Color color_a, Color color_b) const {
-	if(color_a == color_b)
+	if(color_a == color_b) {
 		fill(area, color_a);
+		return; // BUG-12: was missing return, causing double-draw
+	}
 	for(int y = 0; y < area.height; y++)
 		fill({area.x, area.y + y, area.width, 1}, color_a.mixed(color_b, (float) y / area.height));
 }

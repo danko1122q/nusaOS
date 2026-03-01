@@ -81,6 +81,10 @@ public:
 		return Color(255 - r, 255 - g, 255 - b, a);
 	}
 
+	// BUG-14: operator== / != were missing; needed by fill_gradient_h/v
+	inline bool operator==(const Color& other) const { return value == other.value; }
+	inline bool operator!=(const Color& other) const { return value != other.value; }
+
 } Color;
 }
 

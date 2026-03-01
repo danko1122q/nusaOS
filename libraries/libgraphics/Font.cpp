@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cstring>
 #include <climits>
+#include <vector>
 #include <sys/shm.h>
 #include <memory>
 
@@ -80,8 +81,9 @@ Font* Font::load_bdf_shm(const char* path) {
 			}
 		} else if(!strcmp(property, "CHARS")) {
 			font.num_glyphs = atoi(strtok(NULL, " "));
-			if(font.size == INT_MAX) {
-				fprintf(stderr, "Couldn't load font: Invalid SIZE");
+			// BUG-08: was checking font.size instead of font.num_glyphs
+			if(font.num_glyphs <= 0 || font.num_glyphs == INT_MAX) {
+				fprintf(stderr, "Couldn't load font: Invalid CHARS count\n");
 				return nullptr;
 			}
 			break;
@@ -91,7 +93,9 @@ Font* Font::load_bdf_shm(const char* path) {
 	shm fontshm;
 	{
 		//Read all of the glyphs from the file
-		std::shared_ptr<FontGlyph> glyphs[font.num_glyphs];
+		// BUG-07: was stack VLA (std::shared_ptr<FontGlyph> glyphs[font.num_glyphs])
+		// which causes stack overflow for large fonts. Use heap vector instead.
+		std::vector<std::shared_ptr<FontGlyph>> glyphs(font.num_glyphs);
 		size_t total_memsz = sizeof(FontData);
 		for(size_t i = 0; i < font.num_glyphs; i++) {
 			//Find the next STARTCHAR
@@ -273,4 +277,3 @@ Dimensions Font::size_of(std::string_view string) {
 	}
 	return bounding_box.dimensions();
 }
-
