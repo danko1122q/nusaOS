@@ -19,7 +19,7 @@
 #include <cstring>
 #include <ctime>
 
-// ─── Piece definitions (sama persis dengan tetris.c) ─────────────────────────
+// Piece definitions
 const Piece TetrisWidget::s_pieces[PIECE_COUNT] = {
 	// CYAN  — I
 	{ {BLK_NONE,BLK_NONE,BLK_NONE,BLK_NONE},
@@ -58,7 +58,7 @@ const Piece TetrisWidget::s_pieces[PIECE_COUNT] = {
 	  {BLK_NONE,BLK_NONE,BLK_NONE,BLK_NONE} },
 };
 
-// ─── Colors ───────────────────────────────────────────────────────────────────
+// Colors 
 const Gfx::Color TetrisWidget::s_normal[BLK_COUNT] = {
 	Gfx::Color(0x00,0x00,0x00), // NONE
 	Gfx::Color(0x00,0xE5,0xFF), // CYAN
@@ -96,8 +96,7 @@ const Gfx::Color TetrisWidget::s_shadow[BLK_COUNT] = {
 	Gfx::Color(0x11,0x11,0x11),
 };
 
-// ─── Constructor / initialize ─────────────────────────────────────────────────
-
+// Constructor / initialize
 TetrisWidget::TetrisWidget() {
 	srand((unsigned)time(nullptr));
 }
@@ -107,14 +106,11 @@ void TetrisWidget::initialize() {
 	m_timer = UI::set_interval([this] { tick(); }, START_TICK_MS);
 }
 
-// Dipanggil setelah widget di-attach ke window dan ukuran di-set.
-// Ini adalah tempat paling aman untuk request focus, karena _root_window
-// sudah valid saat ini.
 void TetrisWidget::on_layout_change(const Gfx::Rect& old_rect) {
 	focus();
 }
 
-// Klik pada widget = ambil focus kembali (misal setelah alt-tab)
+
 bool TetrisWidget::on_mouse_button(Pond::MouseButtonEvent evt) {
 	focus();
 	return true;
@@ -124,7 +120,7 @@ Gfx::Dimensions TetrisWidget::preferred_size() {
 	return { TETRIS_W, TETRIS_H };
 }
 
-// ─── Game logic ───────────────────────────────────────────────────────────────
+// Game logic 
 
 void TetrisWidget::game_pause() {
 	m_state = State::START;
@@ -278,7 +274,7 @@ void TetrisWidget::field_clear_tick() {
 	}
 }
 
-// ─── Tick (dipanggil timer) ───────────────────────────────────────────────────
+// Tick
 
 void TetrisWidget::tick() {
 	switch (m_state) {
@@ -286,7 +282,7 @@ void TetrisWidget::tick() {
 	case State::GAMEOVER:
 		m_blink = !m_blink;
 		repaint();
-		// timer sudah diset START_TICK_MS oleh initialize(), tidak perlu reschedule
+		
 		return;
 
 	case State::CLEARING:
@@ -295,7 +291,6 @@ void TetrisWidget::tick() {
 		return;
 
 	case State::PLAYING: {
-		// Turunkan piece satu baris
 		if (piece_oob(m_cur_piece, m_cur_x, m_cur_y + 1) ||
 		    piece_collides(m_cur_piece, m_cur_x, m_cur_y + 1))
 		{
@@ -324,7 +319,7 @@ void TetrisWidget::tick() {
 // Scancode standar PS/2 set 1 untuk arrow keys:
 //   Up=0x48, Down=0x50, Left=0x4B, Right=0x4D
 // Enter = scancode 0x1C, character '\r' (0x0D)
-
+//────────────────────────────────────────────────────────────────────────────────
 #ifndef KEY_ENTER
 #  define KEY_ENTER   0x1C
 #endif
@@ -342,7 +337,6 @@ void TetrisWidget::tick() {
 #endif
 
 bool TetrisWidget::on_keyboard(Pond::KeyEvent evt) {
-	// pressed = true saat tombol ditekan, false saat dilepas
 	bool pressed = KBD_ISPRESSED(evt);
 
 	if (m_state == State::START || m_state == State::GAMEOVER) {
@@ -394,7 +388,7 @@ bool TetrisWidget::on_keyboard(Pond::KeyEvent evt) {
 			m_timer = UI::set_interval([this] { tick(); }, DROP_TICK_MS);
 		}
 
-	// Lepas S / Arrow Down — kembalikan kecepatan normal
+	// Lepas S / Arrow Down
 	} else if (!pressed && (evt.character == 's' || evt.key == KEY_DOWN)) {
 		if (m_dropping) {
 			m_dropping = false;
@@ -420,6 +414,7 @@ bool TetrisWidget::on_keyboard(Pond::KeyEvent evt) {
 // Gambar satu blok di koordinat field (fx, fy)
 // Menggunakan ctx.fill() karena DrawContext tidak punya draw_line.
 // Efek 3D: highlight atas/kiri, shadow bawah/kanan, fill tengah.
+//───────────────────────────────────────────────────────────────────────────────
 void TetrisWidget::draw_block(const UI::DrawContext& ctx, Block b, int fx, int fy) const {
 	int px = FIELD_LEFT + fx * BLOCK_SIZE;
 	int py = FIELD_TOP  + fy * BLOCK_SIZE;
@@ -490,8 +485,6 @@ void TetrisWidget::draw_field_border(const UI::DrawContext& ctx) const {
 	           2, FIELD_HEIGHT * BLOCK_SIZE + 4 }, Gfx::Color(0x44, 0x44, 0x66));
 }
 
-// draw_field sudah menggambar seluruh field setiap frame, sehingga
-// tidak perlu hapus posisi lama — cukup gambar ghost dan piece di atas.
 void TetrisWidget::draw_current_piece(const UI::DrawContext& ctx) const {
 	if (m_state != State::PLAYING && m_state != State::CLEARING) return;
 
@@ -604,7 +597,7 @@ void TetrisWidget::draw_gameover(const UI::DrawContext& ctx) const {
 	}
 }
 
-// ─── do_repaint ───────────────────────────────────────────────────────────────
+// do_repaint
 
 void TetrisWidget::do_repaint(const UI::DrawContext& ctx) {
 	// Background window

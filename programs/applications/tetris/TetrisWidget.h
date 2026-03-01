@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <cstring>
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
+// Layout
 #define BLOCK_SIZE       20
 #define FIELD_PADDING    10
 #define FIELD_WIDTH      10
@@ -31,18 +31,18 @@
 #define TETRIS_W         (FIELD_RIGHT + FIELD_PADDING + SIDE_W + FIELD_PADDING)
 #define TETRIS_H         (FIELD_BOTTOM + FIELD_PADDING)
 
-// ─── Kecepatan timer (ms) ─────────────────────────────────────────────────────
+// Kecepatan timer (ms)
 #define TICK_MS          800
 #define DROP_TICK_MS     60
 #define CLEAR_TICK_MS    60
 #define START_TICK_MS    600
 
-// ─── Piece shape ─────────────────────────────────────────────────────────────
+// Piece shape
 #define PIECE_W          4
 #define PIECE_H          4
 #define PIECE_COUNT      7
 
-// ─── Block type ───────────────────────────────────────────────────────────────
+// Block type 
 enum Block : uint8_t {
 	BLK_NONE = 0,
 	BLK_CYAN,
@@ -75,7 +75,7 @@ protected:
 private:
 	TetrisWidget();
 
-	// ── State ────────────────────────────────────────────────────────────────
+	// State
 	enum class State { START, PLAYING, CLEARING, GAMEOVER };
 	State   m_state = State::START;
 	bool    m_blink = false;
@@ -92,15 +92,15 @@ private:
 
 	Duck::Ptr<UI::Timer> m_timer;
 
-	// ── Piece definitions ────────────────────────────────────────────────────
+	// Piece definitions 
 	static const Piece s_pieces[PIECE_COUNT];
 
-	// ── Colors ───────────────────────────────────────────────────────────────
+	// Colors
 	static const Gfx::Color s_normal[BLK_COUNT];
 	static const Gfx::Color s_highlight[BLK_COUNT];
 	static const Gfx::Color s_shadow[BLK_COUNT];
 
-	// ── Helpers ──────────────────────────────────────────────────────────────
+	// Helpers 
 	void game_start();
 	void game_pause();   // reset to start screen
 

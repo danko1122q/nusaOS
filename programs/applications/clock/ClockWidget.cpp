@@ -17,29 +17,24 @@ const char* ClockWidget::s_months[12] = {
 
 static constexpr float PI = 3.14159265358979323846f;
 
-// ─── Kalender helper (untuk bypass localtime() yang mungkin buggy di nusaOS) ──
-
+// Kalender helper untuk bypass localtime() yang mungkin buggy di nusaOS
 #define LEAPYEAR(y) (((y) % 4 == 0) && (((y) % 100 != 0) || ((y) % 400 == 0)))
 
 static const int s_days_per_month[12] = {
 	31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };
 
-// Konversi Unix timestamp → komponen tanggal/waktu secara manual.
-// Tidak bergantung localtime() agar tidak kena bug libc nusaOS
-// (diketahui tm_mday return 0 untuk beberapa nilai timestamp).
-// Ini implementasi UTC — cukup untuk menampilkan waktu RTC yang juga UTC.
 static ClockWidget::ClockTime timestamp_to_time(time_t ts) {
-	// Jaga-jaga jika timestamp negatif (RTC belum diset / CMOS invalid)
+	// Jaga-jaga jika timestamp negatif (RTC belum diset atau CMOS invalid)
 	if (ts < 0) ts = 0;
 
-	// ── Pisahkan detik ────────────────────────────────────────────────────────
+	// Pisahkan satuan waktu dasar
 	int second = ts % 60; ts /= 60;
 	int minute = ts % 60; ts /= 60;
 	int hour   = ts % 24; ts /= 24;
-	// ts sekarang = jumlah hari sejak 1 Jan 1970
+	// ts sekarang berisi jumlah hari sejak 1 Jan 1970 (Epoch)
 
-	// ── Rekonstruksi tahun ────────────────────────────────────────────────────
+	// Rekonstruksi tahun
 	int year = 1970;
 	while (true) {
 		int days_in_year = LEAPYEAR(year) ? 366 : 365;
@@ -47,27 +42,25 @@ static ClockWidget::ClockTime timestamp_to_time(time_t ts) {
 			break;
 		ts -= days_in_year;
 		year++;
-		if (year > 2100) { year = 2026; ts = 0; break; } // sanity cap
+		// Batasi tahun agar tidak loop selamanya jika data korup
+		if (year > 2100) { year = 2026; ts = 0; break; }
 	}
-	// ts sekarang = hari ke-N dalam tahun 'year' (0-indexed)
 
-	// ── Rekonstruksi bulan ────────────────────────────────────────────────────
-	int month = 0; // 0-indexed (0=Jan ... 11=Dec), seperti tm_mon
+	// Rekonstruksi bulan (0-indexed seperti struktur tm)
+	int month = 0; 
 	for (int m = 0; m < 12; m++) {
 		int dim = s_days_per_month[m];
-		if (m == 1 && LEAPYEAR(year)) dim = 29; // Februari kabisat
-		if (ts < dim)  { month = m; break; }
+		if (m == 1 && LEAPYEAR(year)) dim = 29; // Cek kabisat Februari
+		if (ts < dim) { month = m; break; }
 		ts -= dim;
 	}
-	// ts sekarang = hari ke-N dalam bulan 'month' (0-indexed)
 
-	int day = (int)ts + 1; // Konversi ke 1-indexed
+	int day = (int)ts + 1; // Jadikan 1-indexed
 
 	return { hour, minute, second, day, month, year };
 }
 
-// ─── Constructor ─────────────────────────────────────────────────────────────
-
+// Constructor
 ClockWidget::ClockWidget() {
 	set_uses_alpha(false);
 }
@@ -78,30 +71,26 @@ void ClockWidget::initialize() {
 	}, CLOCK_TICK_MS);
 }
 
-// ─── Ukuran ──────────────────────────────────────────────────────────────────
-
+// Ukuran widget
 Gfx::Dimensions ClockWidget::preferred_size() {
 	return { CLOCK_WIDTH, CLOCK_HEIGHT };
 }
 
-// ─── Baca waktu ──────────────────────────────────────────────────────────────
-
+// Ambil waktu sistem
 ClockWidget::ClockTime ClockWidget::get_time() {
 	time_t raw = time(nullptr);
-	// Gunakan parser manual — localtime() di nusaOS libc diketahui
-	// return tm_mday=0 untuk beberapa nilai timestamp (off-by-one bug).
+	// Gunakan parser manual karena localtime() nusaOS libc terkadang
+	// kena bug off-by-one pada nilai tm_mday.
 	return timestamp_to_time(raw);
 }
 
-// ─── Geometri ────────────────────────────────────────────────────────────────
-
+// Kalkulasi geometri ujung jarum jam
 Gfx::Point ClockWidget::hand_endpoint(int cx, int cy, float angle_rad, float length) {
 	float a = angle_rad - PI / 2.0f;
 	return { (int)(cx + cosf(a) * length), (int)(cy + sinf(a) * length) };
 }
 
-// ─── Bresenham line ───────────────────────────────────────────────────────────
-
+// Implementasi garis Bresenham
 void ClockWidget::draw_line(const UI::DrawContext& ctx,
                              Gfx::Point from, Gfx::Point to,
                              Gfx::Color color, bool thick) const
@@ -136,8 +125,7 @@ void ClockWidget::draw_hand(const UI::DrawContext& ctx,
 	draw_line(ctx, from, to, color, thick);
 }
 
-// ─── Ticks ───────────────────────────────────────────────────────────────────
-
+// Gambar garis-garis detik/menit (ticks)
 void ClockWidget::draw_ticks(const UI::DrawContext& ctx) const {
 	const int cx = CLOCK_CENTER_X;
 	const int cy = CLOCK_CENTER_Y;
@@ -154,8 +142,7 @@ void ClockWidget::draw_ticks(const UI::DrawContext& ctx) const {
 	}
 }
 
-// ─── Label angka ─────────────────────────────────────────────────────────────
-
+// Gambar angka penunjuk jam utama
 void ClockWidget::draw_hour_labels(const UI::DrawContext& ctx) const {
 	const int cx = CLOCK_CENTER_X;
 	const int cy = CLOCK_CENTER_Y;
@@ -175,8 +162,7 @@ void ClockWidget::draw_hour_labels(const UI::DrawContext& ctx) const {
 	}
 }
 
-// ─── Repaint ─────────────────────────────────────────────────────────────────
-
+// Logic menggambar (repaint) widget
 void ClockWidget::do_repaint(const UI::DrawContext& ctx) {
 	auto now = get_time();
 
@@ -184,17 +170,17 @@ void ClockWidget::do_repaint(const UI::DrawContext& ctx) {
 	const int cy = CLOCK_CENTER_Y;
 	const int r  = CLOCK_RADIUS;
 
-	// Background
+	// Background utama
 	ctx.fill({ 0, 0, CLOCK_WIDTH, CLOCK_HEIGHT }, COLOR_CLOCK_BG);
 
-	// Muka jam
+	// Frame dan muka jam
 	ctx.fill_ellipse({ cx - r,     cy - r,     r * 2,     r * 2     }, COLOR_CLOCK_FACE_RIM);
 	ctx.fill_ellipse({ cx - r + 2, cy - r + 2, r * 2 - 4, r * 2 - 4 }, COLOR_CLOCK_FACE);
 
 	draw_ticks(ctx);
 	draw_hour_labels(ctx);
 
-	// Sudut jarum (smooth)
+	// Hitung sudut jarum agar pergerakan terlihat halus (smooth)
 	float hour_angle   = ((float)(now.hour % 12) + (float)now.minute / 60.0f) / 12.0f * 2.0f * PI;
 	float minute_angle = ((float)now.minute       + (float)now.second / 60.0f) / 60.0f * 2.0f * PI;
 	float second_angle = (float)now.second / 60.0f * 2.0f * PI;
@@ -206,19 +192,19 @@ void ClockWidget::do_repaint(const UI::DrawContext& ctx) {
 	          hand_endpoint(cx, cy, second_angle,       r * 0.88f),
 	          COLOR_SECOND_HAND, false);
 
-	// Titik pusat
+	// Detail titik pusat jam
 	ctx.fill({ cx - 3, cy - 3, 7, 7 }, COLOR_CLOCK_CENTER);
 	ctx.fill({ cx - 2, cy - 2, 5, 5 }, COLOR_SECOND_HAND);
 	ctx.fill({ cx - 1, cy - 1, 3, 3 }, COLOR_CLOCK_CENTER);
 
-	// Teks jam HH:MM:SS
+	// Render teks waktu digital (HH:MM:SS)
 	char time_buf[10];
 	snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
 	ctx.draw_text(time_buf, { 0, cy * 2 + 7, CLOCK_WIDTH, 14 },
 	              UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
 	              UI::Theme::font(), COLOR_TEXT_TIME);
 
-	// Teks tanggal: "DD Mon YYYY"
+	// Render teks tanggal (DD Mon YYYY)
 	char date_buf[18];
 	const char* mon = (now.month >= 0 && now.month < 12) ? s_months[now.month] : "???";
 	snprintf(date_buf, sizeof(date_buf), "%d %s %d", now.day, mon, now.year);
