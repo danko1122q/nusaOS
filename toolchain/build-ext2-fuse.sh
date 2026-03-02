@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../scripts/nusaos.tcl"
+source "$DIR/../scripts/nusaos.sh"
 export PATH="/usr/local/opt/m4/bin:$PATH"
 if [[ "$(uname -s)" != "Darwin" ]]; then
 	fail "FUSE-ext2 is only needed on macOS."

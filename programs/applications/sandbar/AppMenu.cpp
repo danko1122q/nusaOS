@@ -23,23 +23,23 @@ AppMenu::AppMenu():
 	// === Daftar Aplikasi ===
 	auto apps = App::get_all_apps();
 	for(auto& app : apps) {
-		if(app.hidden())
-			continue;
-		
-		// Skip invalid apps
+		// FIX: Check for empty name first before any processing
 		if(app.name().empty())
+			continue;
+			
+		if(app.hidden())
 			continue;
 			
 		auto btn_layout = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 4);
 		
-		// FIX: Jangan pakai std::move(app) — app masih dipakai setelahnya
-		// untuk btn_label dan lambda capture, std::move merusak object app
-		// sehingga app.run() di lambda crash → Arc assertion → BSOD
+		// FIX: Don't use std::move(app) — app is still needed afterwards
+		// for btn_label and lambda capture, std::move corrupts the object
+		// causing app.run() in lambda to crash → Arc assertion → BSOD
 		auto icon = app.icon();
 		if(icon) {
 			btn_layout->add_child(UI::Image::make(icon, UI::Image::FIT, Gfx::Dimensions {16, 16}));
 		} else {
-			// Gunakan missing icon placeholder
+			// Use missing icon placeholder
 			btn_layout->add_child(UI::Image::make(LIBAPP_MISSING_ICON, UI::Image::FIT, Gfx::Dimensions {16, 16}));
 		}
 		
@@ -57,7 +57,7 @@ AppMenu::AppMenu():
 		m_layout->add_child(btn);
 	}
 
-	// === Tombol Reboot ===
+	// === Reboot Button ===
 	auto reboot_btn = UI::Button::make(UI::Label::make("Reboot"));
 	reboot_btn->set_sizing_mode(UI::PREFERRED);
 	reboot_btn->on_pressed = [this]{
@@ -67,7 +67,7 @@ AppMenu::AppMenu():
 	};
 	m_layout->add_child(reboot_btn);
 
-	// === Tombol Shutdown ===
+	// === Shutdown Button ===
 	auto shutdown_btn = UI::Button::make(UI::Label::make("Shutdown"));
 	shutdown_btn->set_sizing_mode(UI::PREFERRED);
 	shutdown_btn->on_pressed = [this]{

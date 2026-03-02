@@ -11,10 +11,13 @@ TimeModule::TimeModule() {
 }
 
 void TimeModule::do_repaint(const UI::DrawContext& ctx) {
-	char stringbuf[30];
+	// FIX: Increased buffer size for safety and use sizeof for bounds
+	char stringbuf[64];
 	time_t epoch = time(nullptr);
 	tm cur_time = *localtime(&epoch);
-	snprintf(stringbuf, 30, "%.2d:%.2d:%.2d\n%.2d/%.2d/%d",
+	
+	// FIX: Use sizeof(stringbuf) instead of hardcoded size
+	snprintf(stringbuf, sizeof(stringbuf), "%.2d:%.2d:%.2d\n%.2d/%.2d/%d",
 			cur_time.tm_hour,
 			cur_time.tm_min,
 			cur_time.tm_sec,

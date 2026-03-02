@@ -17,49 +17,6 @@ const char* ClockWidget::s_months[12] = {
 
 static constexpr float PI = 3.14159265358979323846f;
 
-// Kalender helper untuk bypass localtime() yang mungkin buggy di nusaOS
-#define LEAPYEAR(y) (((y) % 4 == 0) && (((y) % 100 != 0) || ((y) % 400 == 0)))
-
-static const int s_days_per_month[12] = {
-	31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-};
-
-static ClockWidget::ClockTime timestamp_to_time(time_t ts) {
-	// Jaga-jaga jika timestamp negatif (RTC belum diset atau CMOS invalid)
-	if (ts < 0) ts = 0;
-
-	// Pisahkan satuan waktu dasar
-	int second = ts % 60; ts /= 60;
-	int minute = ts % 60; ts /= 60;
-	int hour   = ts % 24; ts /= 24;
-	// ts sekarang berisi jumlah hari sejak 1 Jan 1970 (Epoch)
-
-	// Rekonstruksi tahun
-	int year = 1970;
-	while (true) {
-		int days_in_year = LEAPYEAR(year) ? 366 : 365;
-		if (ts < days_in_year)
-			break;
-		ts -= days_in_year;
-		year++;
-		// Batasi tahun agar tidak loop selamanya jika data korup
-		if (year > 2100) { year = 2026; ts = 0; break; }
-	}
-
-	// Rekonstruksi bulan (0-indexed seperti struktur tm)
-	int month = 0; 
-	for (int m = 0; m < 12; m++) {
-		int dim = s_days_per_month[m];
-		if (m == 1 && LEAPYEAR(year)) dim = 29; // Cek kabisat Februari
-		if (ts < dim) { month = m; break; }
-		ts -= dim;
-	}
-
-	int day = (int)ts + 1; // Jadikan 1-indexed
-
-	return { hour, minute, second, day, month, year };
-}
-
 // Constructor
 ClockWidget::ClockWidget() {
 	set_uses_alpha(false);
@@ -76,12 +33,19 @@ Gfx::Dimensions ClockWidget::preferred_size() {
 	return { CLOCK_WIDTH, CLOCK_HEIGHT };
 }
 
-// Ambil waktu sistem
+// FIXED: Gunakan localtime() seperti TimeModule untuk akurasi yang sama dengan Sandbar
 ClockWidget::ClockTime ClockWidget::get_time() {
-	time_t raw = time(nullptr);
-	// Gunakan parser manual karena localtime() nusaOS libc terkadang
-	// kena bug off-by-one pada nilai tm_mday.
-	return timestamp_to_time(raw);
+	time_t epoch = time(nullptr);
+	tm cur_time = *localtime(&epoch);
+	
+	return {
+		cur_time.tm_hour,
+		cur_time.tm_min,
+		cur_time.tm_sec,
+		cur_time.tm_mday,
+		cur_time.tm_mon,        // 0-11
+		cur_time.tm_year + 1900
+	};
 }
 
 // Kalkulasi geometri ujung jarum jam
@@ -197,17 +161,18 @@ void ClockWidget::do_repaint(const UI::DrawContext& ctx) {
 	ctx.fill({ cx - 2, cy - 2, 5, 5 }, COLOR_SECOND_HAND);
 	ctx.fill({ cx - 1, cy - 1, 3, 3 }, COLOR_CLOCK_CENTER);
 
-	// Render teks waktu digital (HH:MM:SS)
-	char time_buf[10];
-	snprintf(time_buf, sizeof(time_buf), "%02d:%02d:%02d", now.hour, now.minute, now.second);
+	// Render teks waktu digital (HH:MM:SS) - sama persis format dengan TimeModule
+	char time_buf[64];
+	snprintf(time_buf, sizeof(time_buf), "%.2d:%.2d:%.2d", 
+	         now.hour, now.minute, now.second);
 	ctx.draw_text(time_buf, { 0, cy * 2 + 7, CLOCK_WIDTH, 14 },
 	              UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
 	              UI::Theme::font(), COLOR_TEXT_TIME);
 
 	// Render teks tanggal (DD Mon YYYY)
-	char date_buf[18];
+	char date_buf[64];
 	const char* mon = (now.month >= 0 && now.month < 12) ? s_months[now.month] : "???";
-	snprintf(date_buf, sizeof(date_buf), "%d %s %d", now.day, mon, now.year);
+	snprintf(date_buf, sizeof(date_buf), "%.2d %s %d", now.day, mon, now.year);
 	ctx.draw_text(date_buf, { 0, cy * 2 + 22, CLOCK_WIDTH, 12 },
 	              UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
 	              UI::Theme::font(), COLOR_TEXT_DATE);

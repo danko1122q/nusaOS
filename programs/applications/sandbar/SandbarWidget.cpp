@@ -9,6 +9,7 @@
 #include <libui/widget/Cell.h>
 #include <libui/widget/Stack.h>
 #include <libui/widget/Image.h>
+#include <libui/widget/Label.h>  // FIX: Added missing include
 #include <libui/libui.h>
 
 using namespace UI;
