@@ -90,5 +90,4 @@ private:
 	static ClockTime get_time();
 
 	Duck::Ptr<UI::Timer> m_timer;
-	static const char* s_months[12];
 };

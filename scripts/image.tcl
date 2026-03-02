@@ -99,7 +99,7 @@ if {![info exists ::env(SUDO_GID)]} { set ::env(SUDO_GID) 0 }
 set SYSTEM          [string trim [exec uname -s]]
 set DU_COMMAND      du
 set IMAGE_NAME      nusaOS.img
-set IMAGE_EXTRASIZE 50000
+set IMAGE_EXTRASIZE 100000
 set SOURCE_DIR      $::env(SOURCE_DIR)
 
 if {$SYSTEM eq "Darwin"} {

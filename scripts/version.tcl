@@ -8,8 +8,8 @@ if {$argc < 1} {
 set OUTPUT [lindex $argv 0]
 
 set VERSION_MAJOR "0"
-set VERSION_MINOR "3"
-set VERSION_PATCH "2"
+set VERSION_MINOR "4"
+set VERSION_PATCH "0"
 set GIT_REVISION  [string trim [exec git rev-parse --short HEAD]]
 set DATE          [string trim [exec date]]
 

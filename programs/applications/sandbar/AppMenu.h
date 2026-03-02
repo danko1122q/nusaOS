@@ -5,6 +5,7 @@
 
 #include <libui/Window.h>
 #include <libui/widget/layout/BoxLayout.h>
+#include <string>
 
 class AppMenu: public Duck::Object {
 public:
@@ -15,6 +16,9 @@ public:
 	void toggle();
 
 	[[nodiscard]] Duck::Ptr<UI::Window> window();
+
+	static void add_to_desktop(const std::string& app_name);
+	static bool is_on_desktop(const std::string& app_name);
 
 private:
 	AppMenu();

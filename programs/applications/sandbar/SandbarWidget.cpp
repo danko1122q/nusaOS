@@ -21,15 +21,10 @@ SandbarWidget::SandbarWidget(Duck::Ptr<AppMenu> app_menu):
 {
 	add_child(Cell::make(m_layout));
 
-	// Icon bebek untuk tombol Apps - gunakan /nusa seperti aslinya
-	// Jika /nusa tidak ada, fallback ke missing icon
-	Duck::Ptr<UI::Image> nusa_icon;
-	auto test_img = UI::Image::make("/nusa");
-	if(test_img) {
-		nusa_icon = test_img;
-	} else {
+	// Use /nusa icon for the Apps button
+	Duck::Ptr<UI::Image> nusa_icon = UI::Image::make("/nusa");
+	if(!nusa_icon)
 		nusa_icon = UI::Image::make(LIBAPP_MISSING_ICON);
-	}
 	
 	m_nusa_button = UI::Button::make(UI::Stack::make(UI::Stack::HORIZONTAL, 4, nusa_icon, UI::Label::make("Apps ")));
 	m_nusa_button->set_sizing_mode(UI::PREFERRED);

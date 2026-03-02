@@ -10,11 +10,6 @@
 #include <ctime>
 #include <cstdlib>
 
-const char* ClockWidget::s_months[12] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
 static constexpr float PI = 3.14159265358979323846f;
 
 // Constructor
@@ -169,10 +164,10 @@ void ClockWidget::do_repaint(const UI::DrawContext& ctx) {
 	              UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
 	              UI::Theme::font(), COLOR_TEXT_TIME);
 
-	// Render teks tanggal (DD Mon YYYY)
+	// Render teks tanggal — format MM/DD/YYYY sama persis dengan TimeModule di sandbar
 	char date_buf[64];
-	const char* mon = (now.month >= 0 && now.month < 12) ? s_months[now.month] : "???";
-	snprintf(date_buf, sizeof(date_buf), "%.2d %s %d", now.day, mon, now.year);
+	snprintf(date_buf, sizeof(date_buf), "%.2d/%.2d/%d",
+	         now.month + 1, now.day, now.year);
 	ctx.draw_text(date_buf, { 0, cy * 2 + 22, CLOCK_WIDTH, 12 },
 	              UI::TextAlignment::CENTER, UI::TextAlignment::CENTER,
 	              UI::Theme::font(), COLOR_TEXT_DATE);
