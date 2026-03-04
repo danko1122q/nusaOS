@@ -14,7 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
 
-	Copyright (c) Byteduck 2016-2021. All rights reserved.
+	Copyright (c) 2026 danko1122q All rights reserved.
 */
 
 #pragma once
