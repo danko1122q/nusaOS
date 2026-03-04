@@ -160,17 +160,9 @@ AppMenu::AppMenu():
 	m_window->set_decorated(false);
 	m_window->set_resizable(false);
 
-	// System apps that should never appear in the app menu
-	static const std::vector<std::string> SYSTEM_APPS = {"sandbar", "desktop"};
-	auto is_system_app = [](const std::string& name) -> bool {
-		for(auto& s : SYSTEM_APPS)
-			if(name == s) return true;
-		return false;
-	};
-
 	auto apps = App::get_all_apps();
 	for(auto& app : apps) {
-		if(app.name().empty() || app.hidden() || is_system_app(app.name()))
+		if(app.name().empty() || app.hidden())
 			continue;
 
 		auto row = UI::BoxLayout::make(UI::BoxLayout::HORIZONTAL, 4);

@@ -75,22 +75,15 @@ void DesktopWidget::reload_icons() {
 	auto all_apps = App::get_all_apps();
 
 	if(!m_using_pins) {
-		// System apps that should never appear on the desktop
-		static const std::vector<std::string> SYSTEM_APPS = {"sandbar", "desktop"};
-		auto is_system_app = [](const std::string& name) -> bool {
-			for(auto& s : SYSTEM_APPS)
-				if(name == s) return true;
-			return false;
-		};
 		for(auto& app : all_apps) {
-			if(app.name().empty() || is_system_app(app.name())) continue;
+			if(app.name().empty() || app.hidden()) continue;
 			m_icons.push_back({app, {0, 0, 0, 0}});
 		}
 	} else {
 		auto pins = read_desktop_pins();
 		for(auto& pin_name : pins) {
 			for(auto& app : all_apps) {
-				if(app.name() == pin_name) {
+				if(app.name() == pin_name && !app.hidden()) {
 					m_icons.push_back({app, {0, 0, 0, 0}});
 					break;
 				}
