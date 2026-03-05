@@ -12,12 +12,12 @@ print name
 print "Compiler version:"
 print version
 
-if version == 3 then
+if version == 1 then
   print "Running on latest version"
 end
 
-if version != 1 then
-  print "This is not version 1"
+if version != 2 then
+  print "This is not version 2"
 end
 
 let count = 10
@@ -30,8 +30,8 @@ end
 print "Year:"
 print year
 
-if year == 2024 then
-  print "Built in 2024"
+if year == 2026 then
+  print "Built in 2026"
 end
 
 print "Done."
