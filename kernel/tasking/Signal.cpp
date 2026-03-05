@@ -58,21 +58,24 @@ Signal::SignalSeverity Signal::signal_severities[] = {
 		NOKILL, //0
 		KILL, //SIGHUP
 		KILL, //SIGINT
-		FATAL, //SIGQUIT
-		// FIX: Ubah SIGILL dari FATAL ke KILL — illegal instruction dari userspace
-		// seharusnya hanya mematikan proses, bukan seluruh sistem.
+		// SIGQUIT: Ctrl+\  dari user atau proses lain, cukup matikan proses
+		KILL, //SIGQUIT
+		// SIGILL: instruksi ilegal dari userspace, cukup matikan proses
 		KILL, //SIGILL
-		FATAL, //SIGTRAP
-		FATAL, //SIGABRT
-		FATAL, //SIGEMT
-		FATAL, //SIGFPE
+		// SIGTRAP: debugger trap, tidak ada handler → matikan proses
+		KILL, //SIGTRAP
+		// SIGABRT: abort() dari kode user, cukup matikan proses
+		KILL, //SIGABRT
+		KILL, //SIGEMT
+		// SIGFPE: div-by-zero atau floating point dari userspace, cukup matikan proses
+		KILL, //SIGFPE
 		KILL, //SIGKILL
-		FATAL, //SIGBUS
-		// FIX: Ubah SIGSEGV dari FATAL ke KILL — app crash karena null pointer atau
-		// bad memory access seharusnya hanya mematikan proses, bukan trigger BSOD.
-		// FATAL sebelumnya menyebabkan sistem crash meski fault berasal dari userspace.
+		// SIGBUS: bus error dari userspace (misalignment, dll.), cukup matikan proses
+		KILL, //SIGBUS
+		// SIGSEGV: null pointer / bad access dari userspace, cukup matikan proses
 		KILL, //SIGSEGV
-		FATAL, //SIGSYS
+		// SIGSYS: syscall tidak valid dari userspace, cukup matikan proses
+		KILL, //SIGSYS
 		NOKILL, //SIGPIPE
 		NOKILL, //SIGALRM
 		KILL, //SIGTERM
@@ -84,12 +87,13 @@ Signal::SignalSeverity Signal::signal_severities[] = {
 		NOKILL, //SIGTTIN
 		NOKILL, //SIGTTOU
 		NOKILL, //SIGIO
-		FATAL, //SIGXCPU
-		FATAL, //SIGXFSZ
+		// SIGXCPU/SIGXFSZ: batas resource terlampaui, cukup matikan proses
+		KILL, //SIGXCPU
+		KILL, //SIGXFSZ
 		NOKILL, //SIGVTALRM
 		NOKILL, //SIGPROF
 		NOKILL, //SIGWINCH
-		FATAL, //SIGLOST
+		KILL, //SIGLOST
 		NOKILL, //SIGUSR1
 		NOKILL, //SIGUSR2
 		NOKILL, //NSIG

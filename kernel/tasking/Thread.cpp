@@ -455,11 +455,27 @@ void Thread::handle_pagefault(PageFault fault) {
 	//Otherwise, try CoW and kill the process if it doesn't work
 #if defined(__i386__)
 	if(space->try_pagefault(fault).is_error()) {
-		if(fault.registers->interrupt_frame.eip > HIGHER_HALF) {
-			PANIC("SYSCALL_PAGEFAULT", "A page fault occurred in the kernel (pid: %d, tid: %d, ptr: 0x%x, ip: 0x%x).", _process->pid(), _tid, fault.address, fault.registers->interrupt_frame.eip);
+		const bool eip_in_kernel = fault.registers->interrupt_frame.eip >= HIGHER_HALF;
+		const bool addr_in_kernel = fault.address >= HIGHER_HALF;
+
+		// PANIC hanya jika EIP *dan* alamat yang di-fault sama-sama di kernel space.
+		// Itu berarti kode kernel sendiri yang mengakses alamat kernel yang tidak valid = bug kernel.
+		//
+		// Jika EIP di kernel tapi fault address di userspace: syscall menyentuh pointer user yang buruk.
+		// → Jangan PANIC, bunuh prosesnya saja.
+		//
+		// Jika EIP di userspace: crash biasa dari aplikasi.
+		// → Jangan PANIC, bunuh prosesnya saja.
+		if(eip_in_kernel && addr_in_kernel) {
+			PANIC("KERNEL_PAGEFAULT",
+				"Kernel code faulted on kernel address (pid: %d, tid: %d, fault_addr: 0x%x, eip: 0x%x).",
+				_process->pid(), _tid, fault.address, fault.registers->interrupt_frame.eip);
 		}
-		KLog::warn("Thread", "PID {} thread {} made illegal memory access at {#x} (eip: {#x})", _process->pid(), _tid,
-					fault.address, fault.registers->interrupt_frame.eip);
+
+		KLog::warn("Thread", "PID {} tid {} illegal memory access at {#x} (eip: {#x}, {})",
+				   _process->pid(), _tid, fault.address,
+				   fault.registers->interrupt_frame.eip,
+				   eip_in_kernel ? "kernel EIP - bad user ptr in syscall" : "user EIP");
 		_process->kill(SIGSEGV);
 	}
 #endif

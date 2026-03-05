@@ -108,13 +108,34 @@ namespace Interrupt {
 	}
 
 	void handle_fault(const char* err, const char* panic_msg, uint32_t sig, ISRRegisters* regs) {
-		if(!TaskManager::enabled() || TaskManager::current_thread()->is_kernel_mode() || TaskManager::is_preempting()) {
-			PANIC(err, "%s\nFault %d at 0x%x", panic_msg, regs->isr_num, regs->interrupt_frame.eip);
+		// current_thread() returns kstd::Arc<Thread>, use .get() for raw pointer checks
+		auto& thread_arc = TaskManager::current_thread();
+		Thread* thread = thread_arc.get();
+		// Escalate to PANIC only when we truly cannot recover:
+		// - TaskManager not running yet (early boot)
+		// - No current thread (scheduler not started)
+		// - Thread is a kernel thread (kernel bug)
+		// - Mid-preemption / context switch (unsafe to reschedule)
+		if (!TaskManager::enabled() || !thread || thread->is_kernel_mode() || TaskManager::is_preempting()) {
+			KLog::err("fault", "Kernel fault #{} at EIP={#x} ESP={#x} | enabled={} kernel_mode={} preempting={}",
+				regs->isr_num,
+				regs->interrupt_frame.eip,
+				regs->interrupt_frame.esp,
+				TaskManager::enabled(),
+				thread ? thread->is_kernel_mode() : true,
+				TaskManager::is_preempting());
+			PANIC(err, "%s\nFault %d at EIP=0x%x ESP=0x%x", panic_msg, regs->isr_num,
+				regs->interrupt_frame.eip, regs->interrupt_frame.esp);
 		} else {
+			// User-mode fault: kill the process, do NOT panic
+			KLog::warn("fault", "User fault #{} (sig {}) at EIP={#x} in PID {}",
+				regs->isr_num, sig,
+				regs->interrupt_frame.eip,
+				TaskManager::current_process()->pid());
 			TrapFrame frame { nullptr, TrapFrame::Fault, regs };
-			TaskManager::current_thread()->enter_trap_frame(&frame);
+			thread->enter_trap_frame(&frame);
 			TaskManager::current_process()->kill(sig);
-			TaskManager::current_thread()->exit_trap_frame();
+			thread->exit_trap_frame();
 		}
 	}
 
@@ -122,35 +143,39 @@ namespace Interrupt {
 		if(regs->isr_num < 32) {
 			switch(regs->isr_num) {
 				case 0:
-					handle_fault("DIVIDE_BY_ZERO", "Please don't do that.", SIGILL, regs);
+					// Division by zero → SIGFPE (correct POSIX signal)
+					handle_fault("DIVIDE_BY_ZERO", "Division by zero.", SIGFPE, regs);
 					break;
 
 				case 13: // GPF
-					handle_fault("GENERAL_PROTECTION_FAULT", "How did you manage to do that?", SIGILL, regs);
+					// General protection fault → SIGSEGV (more correct than SIGILL)
+					handle_fault("GENERAL_PROTECTION_FAULT", "General protection fault.", SIGSEGV, regs);
 					break;
 
 				case 14: // Page fault
 				{
 					size_t err_pos;
 					asm volatile("mov %%cr2, %0" : "=r"(err_pos));
+					// x86 page fault error code is a bitmask:
+					//   bit 0: 0=not-present,        1=protection violation
+					//   bit 1: 0=read,               1=write
+					//   bit 2: 0=kernel access,      1=user access
+					//   bit 3: 1=reserved bit set in PTE (always a hard fault)
+					//   bit 4: 1=instruction fetch (NX violation)
 					PageFault::Type type;
-					switch(regs->err_code) {
-						case FAULT_USER_READ:
-						case FAULT_USER_READ_GPF:
-						case FAULT_KERNEL_READ:
-						case FAULT_KERNEL_READ_GPF:
-							type = PageFault::Type::Read;
-							break;
-						case FAULT_USER_WRITE:
-						case FAULT_USER_WRITE_GPF:
-						case FAULT_KERNEL_WRITE:
-						case FAULT_KERNEL_WRITE_GPF:
-							type = PageFault::Type::Write;
-							break;
-						default:
-							type = PageFault::Type::Unknown;
+					if (regs->err_code & (1u << 3)) {
+						// Reserved bit in page table — always a kernel bug, escalate
+						type = PageFault::Type::Unknown;
+					} else if (regs->err_code & (1u << 1)) {
+						type = PageFault::Type::Write;
+					} else {
+						type = PageFault::Type::Read;
 					}
 					const PageFault fault { err_pos, regs, type };
+					// Only call page_fault_handler (which may PANIC) when:
+					// - mid-preemption (unsafe to reschedule), OR
+					// - reserved-bit violation (always a kernel bug), OR
+					// - no current thread (early boot)
 					if(TaskManager::is_preempting() || fault.type == PageFault::Type::Unknown || !TaskManager::current_thread()) {
 						MemoryManager::inst().page_fault_handler(regs);
 					} else {
