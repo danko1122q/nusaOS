@@ -27,14 +27,24 @@ InodeVMObject::InodeVMObject(kstd::string name, kstd::vector<PageIndex> physical
 {}
 
 ResultRet<bool> InodeVMObject::try_fault_in_page(size_t index) {
-	LOCK(m_page_lock);
-	if(index >= m_physical_pages.size())
-		return Result(ERANGE);
-	if(m_physical_pages[index])
-		return false;
+	// Check under lock, then release before touching the allocator.
+	// Holding VMObject::Page during MM.alloc_physical_page() causes a
+	// VMObject::Page -> PhysicalRegion lock ordering violation.
+	{
+		LOCK(m_page_lock);
+		if(index >= m_physical_pages.size())
+			return Result(ERANGE);
+		if(m_physical_pages[index])
+			return false;
+	}
 
-	auto new_page = TRY(MM.alloc_physical_page());
-	ssize_t nread;
+	// Allocate and read the page WITHOUT holding VMObject::Page.
+	auto new_page_res = MM.alloc_physical_page();
+	if(new_page_res.is_error())
+		return new_page_res.result();
+	auto new_page = new_page_res.value();
+
+	ssize_t nread = 0;
 	MM.with_quickmapped(new_page, [&](void* buf) {
 		nread = m_inode->read(index * PAGE_SIZE, PAGE_SIZE, KernelPointer<uint8_t>((uint8_t*) buf), nullptr);
 	});
@@ -42,8 +52,18 @@ ResultRet<bool> InodeVMObject::try_fault_in_page(size_t index) {
 		MM.free_physical_page(new_page);
 		return Result(-nread);
 	}
-	m_committed_pages++;
-	m_physical_pages[index] = new_page;
+
+	// Re-acquire to commit. Double-check in case another thread raced us.
+	{
+		LOCK(m_page_lock);
+		if(m_physical_pages[index]) {
+			// Another thread already faulted this page in.
+			MM.free_physical_page(new_page);
+			return false;
+		}
+		m_committed_pages++;
+		m_physical_pages[index] = new_page;
+	}
 
 	return true;
 }

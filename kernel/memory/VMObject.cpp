@@ -30,24 +30,40 @@ PhysicalPage& VMObject::physical_page(size_t index) const {
 
 Result VMObject::try_cow_page(PageIndex page) {
 	ASSERT(page < m_physical_pages.size());
-	LOCK(m_page_lock);
 
-	// If the page isn't CoW, don't proceed
-	if(!page_is_cow(page))
-		return Result(EINVAL);
+	// Check under lock first, but don't hold it during physical page allocation.
+	// Holding VMObject::Page while calling MM.alloc_physical_page() causes a
+	// lock ordering violation: VMObject::Page -> PhysicalRegion, which can
+	// deadlock against code that holds PhysicalRegion then acquires VMObject::Page.
+	PageIndex old_page_index;
+	{
+		LOCK(m_page_lock);
+		if(!page_is_cow(page))
+			return Result(EINVAL);
+		old_page_index = m_physical_pages[page];
+		ASSERT(old_page_index);
+	}
 
-	// Copy the page
-	auto& old_page = m_physical_pages[page];
-	ASSERT(old_page);
-	auto new_page = TRY(MM.alloc_physical_page());
-	MM.copy_page(old_page, new_page);
+	// Allocate and copy the new page WITHOUT holding VMObject::Page.
+	auto new_page_res = MM.alloc_physical_page();
+	if(new_page_res.is_error())
+		return new_page_res.result();
+	auto new_page = new_page_res.value();
+	MM.copy_page(old_page_index, new_page);
 
-	// Unref the old page and replace it with the new one
-	MM.get_physical_page(old_page).unref();
-	old_page = new_page;
-
-	// Mark the page not CoW
-	m_cow_pages.set(page, false);
+	// Re-acquire to commit the swap.
+	{
+		LOCK(m_page_lock);
+		// Double-check: another thread may have already resolved this CoW fault.
+		if(!page_is_cow(page)) {
+			MM.free_physical_page(new_page);
+			return Result(Result::Success);
+		}
+		auto& slot = m_physical_pages[page];
+		MM.get_physical_page(slot).unref();
+		slot = new_page;
+		m_cow_pages.set(page, false);
+	}
 
 	return Result(Result::Success);
 }

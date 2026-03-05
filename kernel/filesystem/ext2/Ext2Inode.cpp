@@ -206,6 +206,12 @@ ssize_t Ext2Inode::write(size_t start, size_t length, SafePointer<uint8_t> buf, 
 		block_index++;
 	}
 
+	// Update modification time and persist inode entry
+	// TODO: replace 0 with real timestamp when kernel provides one
+	raw.mtime = 0;
+	_dirty = true;
+	write_inode_entry();
+
 	return length;
 }
 
@@ -218,6 +224,12 @@ void Ext2Inode::iterate_entries(kstd::IterationFunc<const DirectoryEntry&> callb
 		while((i < ext2fs().block_size()) && (block * ext2fs().block_size() + i < _metadata.size)) {
 			auto* dir = (ext2_directory*)(buf + i);
 			if(dir->size == 0) break; // Guard against corrupt entries
+
+			// Skip null/free entries (inode=0 is the null terminator or deleted entry)
+			if(dir->inode == 0) {
+				i += dir->size;
+				continue;
+			}
 
 			size_t name_length = dir->name_length;
 			if(name_length > NAME_MAXLEN - 1)
@@ -241,15 +253,22 @@ ino_t Ext2Inode::find_id(const kstd::string& find_name) {
 	if(!metadata().is_directory()) return 0;
 	LOCK(lock);
 	ino_t ret = 0;
-	auto* buf = static_cast<uint8_t*>(kmalloc(ext2fs().block_size()));
-	for(size_t i = 0; i < num_blocks(); i++) {
-		uint32_t blk = get_block_pointer(i);
-		ext2fs().read_block(blk, buf);
+	uint8_t buf[ext2fs().block_size()];
+	size_t blk = 0;
+	// Use read() so we go through the same abstraction as iterate_entries,
+	// ensuring any cached/dirty blocks are seen correctly.
+	while(read(blk * ext2fs().block_size(), ext2fs().block_size(), KernelPointer<uint8_t>(buf), nullptr)) {
 		auto* dir = reinterpret_cast<ext2_directory*>(buf);
 		uint32_t add = 0;
 		char name_buf[NAME_MAXLEN + 1];
-		while(dir->inode != 0 && add < ext2fs().block_size()) {
+		while(add < ext2fs().block_size()) {
 			if(dir->size == 0) break;
+			// Skip free/null entries (inode=0) — same fix as iterate_entries
+			if(dir->inode == 0) {
+				add += dir->size;
+				dir = (ext2_directory*)((size_t)dir + dir->size);
+				continue;
+			}
 			size_t nl = min((size_t)dir->name_length, (size_t)NAME_MAXLEN);
 			memcpy(name_buf, &dir->type + 1, nl);
 			name_buf[nl] = '\0';
@@ -261,8 +280,8 @@ ino_t Ext2Inode::find_id(const kstd::string& find_name) {
 			dir = (ext2_directory*)((size_t)dir + dir->size);
 		}
 		if(ret) break;
+		blk++;
 	}
-	kfree(buf);
 	return ret;
 }
 

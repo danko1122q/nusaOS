@@ -154,7 +154,7 @@ ResultRet<kstd::Arc<Ext2Inode>> Ext2Filesystem::allocate_inode(mode_t mode, uid_
 	Ext2Inode::Raw raw;
 	raw.size = size;
 	raw.mode = mode;
-	raw.hard_links = IS_DIR(mode) ? 1 : 0;
+	raw.hard_links = 1; // Both files and dirs start with link count 1; add_entry will increment further
 	raw.uid = uid;
 	raw.gid = gid;
 	// TODO: times

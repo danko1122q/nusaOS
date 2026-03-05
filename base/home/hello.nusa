@@ -1,0 +1,37 @@
+let name = "NusaOS"
+let version = 3
+let year = 2024
+
+print "================================"
+print "Welcome to NusaLang v3.0"
+print "================================"
+
+print "OS Name:"
+print name
+
+print "Compiler version:"
+print version
+
+if version == 3 then
+  print "Running on latest version"
+end
+
+if version != 1 then
+  print "This is not version 1"
+end
+
+let count = 10
+sub count 10
+
+if count == 0 then
+  print "Count is zero"
+end
+
+print "Year:"
+print year
+
+if year == 2024 then
+  print "Built in 2024"
+end
+
+print "Done."

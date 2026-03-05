@@ -1,0 +1,16 @@
+MAKE_PROGRAM(nusa-build)
+TARGET_SOURCES(nusa-build PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/nusa_lexer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/nusa_compiler.cpp
+)
+TARGET_INCLUDE_DIRECTORIES(nusa-build PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+TARGET_LINK_LIBRARIES(nusa-build libnusa)
+
+MAKE_PROGRAM(nusa-run)
+TARGET_SOURCES(nusa-run PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/runtime.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/nusa_vm.cpp
+)
+TARGET_INCLUDE_DIRECTORIES(nusa-run PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+TARGET_LINK_LIBRARIES(nusa-run libnusa)

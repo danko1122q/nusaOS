@@ -105,16 +105,38 @@ ResultRet<kstd::Arc<VMObject>> AnonymousVMObject::clone() {
 }
 
 ResultRet<bool> AnonymousVMObject::try_fault_in_page(PageIndex page) {
-	LOCK(m_page_lock);
-	if (page > m_physical_pages.size())
-		return Result(EINVAL);
-	if (m_physical_pages[page])
-		return false;
-	m_physical_pages[page] = TRY(MM.alloc_physical_page());
-	m_num_committed_pages++;
-	MM.with_quickmapped(m_physical_pages[page], [](void* pagemem) {
+	// Check under lock first, but release before allocating a physical page.
+	// Holding VMObject::Page during MM.alloc_physical_page() creates a
+	// VMObject::Page -> PhysicalRegion ordering that can invert and deadlock.
+	{
+		LOCK(m_page_lock);
+		if (page > m_physical_pages.size())
+			return Result(EINVAL);
+		if (m_physical_pages[page])
+			return false;
+	}
+
+	// Allocate and zero the page WITHOUT holding VMObject::Page.
+	auto new_page_res = MM.alloc_physical_page();
+	if(new_page_res.is_error())
+		return new_page_res.result();
+	auto new_page = new_page_res.value();
+	MM.with_quickmapped(new_page, [](void* pagemem) {
 		memset(pagemem, 0, PAGE_SIZE);
 	});
+
+	// Re-acquire to commit. Double-check in case another thread raced us.
+	{
+		LOCK(m_page_lock);
+		if (m_physical_pages[page]) {
+			// Someone else already faulted this page in — free our copy.
+			MM.free_physical_page(new_page);
+			return false;
+		}
+		m_physical_pages[page] = new_page;
+		m_num_committed_pages++;
+	}
+
 	return true;
 }
 

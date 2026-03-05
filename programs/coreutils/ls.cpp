@@ -178,8 +178,11 @@ int main(int argc, char** argv) {
 		}
 
 		constexpr size_t padding = 2;
+		// Bug fix 1: widest_name can be 0 if visible_entries is empty → division by zero → SIGSEGV
+		if(visible_entries.empty())
+			return 0;
 		auto n_cols = std::max((int) winsz.ws_col / (int) (widest_name + padding), 1);
-		auto n_rows = ((int)visible_entries.size() + n_cols - 1) / n_cols;
+		auto n_rows = std::max(((int)visible_entries.size() + n_cols - 1) / n_cols, 1);
 
 		// FIX: Gunakan visible_entries (bukan entries yang masih ada hidden files)
 		std::vector<std::vector<Duck::DirectoryEntry>> cols;
@@ -192,13 +195,18 @@ int main(int argc, char** argv) {
 
 		for (auto row = 0; row < n_rows; row++) {
 			for(auto col = 0; col < n_cols; col++) {
+				// Bug fix 2: cols may have fewer vectors than n_cols if entries don't fill all columns
+				if(col >= (int)cols.size())
+					break;
 				auto& col_entries = cols[col];
 				if ((int)col_entries.size() <= row)
 					continue;
 				Duck::Stream::std_out << entry_name(col_entries[row]);
 				if (col != n_cols - 1) {
-					auto pad = padding + widest_name - col_entries[row].name().size();
-					for (auto i = 0; i < pad; i++)
+					// Bug fix 3: name().size() may exceed widest_name -> size_t underflow -> massive pad -> crash
+					size_t name_len = col_entries[row].name().size();
+					size_t pad = (name_len < widest_name) ? (padding + widest_name - name_len) : padding;
+					for (size_t i = 0; i < pad; i++)
 						Duck::Stream::std_out << ' ';
 				}
 			}
