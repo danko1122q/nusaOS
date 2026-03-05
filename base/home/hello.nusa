@@ -1,9 +1,9 @@
 let name = "NusaOS"
 let version = 3
-let year = 2024
+let year = 2026
 
 print "================================"
-print "Welcome to NusaLang v3.0"
+print "Welcome to NusaLang v1.0"
 print "================================"
 
 print "OS Name:"
