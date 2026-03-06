@@ -1,0 +1,48 @@
+// NSA v2.1 - function test
+
+func greet name
+    println "Hello, "
+    print name
+endfunc
+
+func add_nums a b -> result
+    let result = 0
+    add result a
+    add result b
+endfunc
+
+func max_of a b -> result
+    let bigger = false
+    copy result a
+    cmp bigger b > a
+    if bigger then
+        copy result b
+    end
+endfunc
+
+func factorial n -> result
+    let result = 1
+    loop while n != 0
+        mul result n
+        dec n
+    end
+endfunc
+
+// --- main ---
+let username = "NusaOS"
+call greet username
+
+let x = 10
+let y = 25
+call add_nums x y -> sum
+println "10 + 25 = "
+print sum
+
+call max_of x y -> biggest
+println "max(10,25) = "
+print biggest
+
+let n = 6
+call factorial n -> fact
+println "6! = "
+print fact

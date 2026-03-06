@@ -1,0 +1,122 @@
+// calc.nsa — Simple Calculator for NusaOS
+// NSA Language v2.1
+// Operations: + - * / %
+
+func do_add a b -> result
+    let result = 0
+    add result a
+    add result b
+endfunc
+
+func do_sub a b -> result
+    let result = 0
+    copy result a
+    sub result b
+endfunc
+
+func do_mul a b -> result
+    let result = 0
+    copy result a
+    mul result b
+endfunc
+
+func do_div a b -> result
+    let result = 0
+    copy result a
+    div result b
+endfunc
+
+func do_mod a b -> result
+    let result = 0
+    copy result a
+    mod result b
+endfunc
+
+// ── main ──────────────────────────────────────────────
+let running = 1
+let a = 0
+let b = 0
+let op = 0
+let answer = 0
+
+print "================================"
+print "    NSA Calculator v1.0"
+print "      on NusaOS  :)"
+print "================================"
+
+loop while running != 0
+
+    print ""
+    print "  1 = Add       ( + )"
+    print "  2 = Subtract  ( - )"
+    print "  3 = Multiply  ( * )"
+    print "  4 = Divide    ( / )"
+    print "  5 = Modulo    ( % )"
+    print "  0 = Exit"
+    print ""
+    println "Choose: "
+    input op
+
+    if op == 0 then
+        let running = 0
+    end
+
+    if op == 1 then
+        println "First number  : "
+        input a
+        println "Second number : "
+        input b
+        call do_add a b -> answer
+        println "= "
+        print answer
+        print "--------------------------------"
+    end
+
+    if op == 2 then
+        println "First number  : "
+        input a
+        println "Second number : "
+        input b
+        call do_sub a b -> answer
+        println "= "
+        print answer
+        print "--------------------------------"
+    end
+
+    if op == 3 then
+        println "First number  : "
+        input a
+        println "Second number : "
+        input b
+        call do_mul a b -> answer
+        println "= "
+        print answer
+        print "--------------------------------"
+    end
+
+    if op == 4 then
+        println "First number  : "
+        input a
+        println "Second number : "
+        input b
+        call do_div a b -> answer
+        println "= "
+        print answer
+        print "--------------------------------"
+    end
+
+    if op == 5 then
+        println "First number  : "
+        input a
+        println "Second number : "
+        input b
+        call do_mod a b -> answer
+        println "= "
+        print answer
+        print "--------------------------------"
+    end
+
+end
+
+print ""
+print "Goodbye! — NSA Calculator"
