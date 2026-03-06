@@ -127,7 +127,7 @@ Valid range: **-2,147,483,648** to **2,147,483,647** (signed 32-bit integer).
 ### String
 
 ```
-let name = "Dava"
+let name = "danko1122q"
 let message = "Welcome to NusaOS!"
 let empty = ""
 ```
