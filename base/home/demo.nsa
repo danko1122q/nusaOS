@@ -1,0 +1,83 @@
+// demo.nsa — NSA Language v2 demo
+
+// Variabel
+let name   = "NusaOS"
+let year   = 2026
+let flag   = true
+
+print "=== NSA Language v2 Demo ==="
+
+// String concat & len
+let greeting = "Hello from "
+concat greeting name
+print greeting
+
+let slen = 0
+len slen name
+println "Name length: "
+print slen
+
+// Arithmetic
+let x = 10
+let y = 3
+
+add x y          // x = 13
+print x
+
+mod x 5          // x = 3
+print x
+
+inc x            // x = 4
+dec x            // x = 3
+neg x            // x = -3
+neg x            // x = 3
+print x
+
+// Bool & logic
+let a = 5
+let b = 10
+cmp result a < b
+print result     // true
+
+not result
+print result     // false
+
+// if / else
+let score = 85
+
+if score >= 80 then
+    print "Grade: A"
+else
+    print "Grade: B or lower"
+end
+
+// loop N times
+let counter = 0
+loop 5 times
+    inc counter
+end
+println "Loop count: "
+print counter
+
+// loop while
+let n = 1
+loop while n < 6
+    println "  n = "
+    print n
+    inc n
+end
+
+// to_str / to_int
+let num   = 42
+let numstr = ""
+to_str numstr num
+concat numstr " is the answer"
+print numstr
+
+// input (uncomment when running interactively)
+// println "Enter your name: "
+// input username
+// println "Hello, "
+// print username
+
+print "=== Done ==="

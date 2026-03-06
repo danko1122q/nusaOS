@@ -1,0 +1,37 @@
+// greet.nsa — simple Q&A greeting program
+// Built with NSA Language v2 for NusaOS
+
+print "================================"
+print "     Welcome to NusaOS!        "
+print "================================"
+
+println "Enter your name: "
+let name = ""
+input name
+
+println "Enter your age: "
+let age = 0
+input age
+
+println "Where are you from: "
+let city = ""
+input city
+
+print "--------------------------------"
+let greeting = "Hello, "
+concat greeting name
+concat greeting "!"
+print greeting
+
+let info = "You are "
+let age_str = ""
+to_str age_str age
+concat info age_str
+concat info " years old, from "
+concat info city
+concat info "."
+print info
+
+print "This program was written in NSA"
+print "running natively on NusaOS."
+print "--------------------------------"

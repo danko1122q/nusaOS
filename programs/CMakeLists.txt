@@ -1,4 +1,4 @@
 ADD_SUBDIRECTORY(applications/)
 ADD_SUBDIRECTORY(coreutils/)
 ADD_SUBDIRECTORY(dsh/)
-ADD_SUBDIRECTORY(nusa-lang/)
+ADD_SUBDIRECTORY(nsa-lang/)
