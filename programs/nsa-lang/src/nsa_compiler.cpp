@@ -859,12 +859,78 @@ static void parse_line(CS& cs, const Toks& t) {
     cs.error("unknown statement '"+kw+"'");
 }
 
+/* ─────────────────────── Block comment stripper ─────────────────
+ * Replaces all block comment content with spaces so line numbers
+ * stay accurate. Unterminated block comments produce a compile error.
+ * Single-line (//) and hash (#) comments are handled by the lexer.
+ * ---------------------------------------------------------------- */
+static bool strip_block_comments(std::string& src, const char* filename) {
+    size_t i = 0, n = src.size();
+    int    start_line = 1;    // line where current block comment opened
+    int    cur_line   = 1;
+    bool   in_string  = false;
+    bool   errors     = false;
+
+    while (i < n) {
+        // Track line numbers
+        if (src[i] == '\n') { cur_line++; i++; continue; }
+
+        // Skip string literals so block-open inside "..." is not a comment
+        if (!in_string && src[i] == '"') {
+            in_string = true; i++; continue;
+        }
+        if (in_string) {
+            if (src[i] == '\\' && i+1 < n) { i += 2; continue; }
+            if (src[i] == '"')  { in_string = false; }
+            i++; continue;
+        }
+
+        // Skip // and # line comments so block-open inside them is ignored
+        if ((src[i]=='/' && i+1<n && src[i+1]=='/') || src[i]=='#') {
+            while (i < n && src[i] != '\n') i++;
+            continue;
+        }
+
+        // Block comment open: replace everything up to close with spaces
+        if (src[i]=='/' && i+1<n && src[i+1]=='*') {
+            start_line = cur_line;
+            src[i]=' '; src[i+1]=' '; i+=2;
+            bool closed = false;
+            while (i < n) {
+                if (src[i]=='\n') { cur_line++; i++; continue; }
+                if (src[i]=='*' && i+1<n && src[i+1]=='/') {
+                    src[i]=' '; src[i+1]=' '; i+=2;
+                    closed = true; break;
+                }
+                src[i]=' '; i++;
+            }
+            if (!closed) {
+                fprintf(stderr, "%s:%d: error: unterminated block comment\n",
+                        filename, start_line);
+                errors = true;
+            }
+            continue;
+        }
+
+        i++;
+    }
+    return !errors;
+}
+
 /* ─────────────────────── Public entry point ─────────────────────── */
 
 CompileResult compile(const std::string& source, const char* filename) {
     CompileResult result;
+
+    // Strip block comments first, preserving line numbers
+    std::string src = source;
+    if (!strip_block_comments(src, filename)) {
+        result.error_count = 1;
+        return result;
+    }
+
     CS cs; cs.filename=filename;
-    std::istringstream stream(source);
+    std::istringstream stream(src);
     std::string raw_line;
     while (std::getline(stream,raw_line)) {
         cs.line++;
