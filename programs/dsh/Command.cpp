@@ -22,7 +22,28 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cstring>
+#include <dirent.h>
 #include "Command.h"
+
+// Rekursif delete — sama seperti rm -rf
+static void remove_recursive(const std::string& path) {
+	DIR* dir = ::opendir(path.c_str());
+	if(dir) {
+		struct dirent* ent;
+		while((ent = ::readdir(dir)) != nullptr) {
+			if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+				continue;
+			std::string child = path;
+			if(child.back() != '/') child += '/';
+			child += ent->d_name;
+			remove_recursive(child);
+		}
+		::closedir(dir);
+		::rmdir(path.c_str());
+	} else {
+		::unlink(path.c_str());
+	}
+}
 
 Command::Command(std::string command): cmd(std::move(command)) {
 
@@ -133,14 +154,21 @@ bool Command::evaluate_builtin() {
 		return true;
 	} else if(cmd == "rm") {
 		if(args.empty()) {
-			fprintf(stderr, "rm: missing operand\nusage: rm <file> [file ...]\n");
+			fprintf(stderr, "rm: missing operand\nusage: rm [-r] <file> [file ...]\n");
 			return_status = EXIT_FAILURE;
 			return true;
 		}
+		bool recursive = false;
 		return_status = EXIT_SUCCESS;
-		for(const auto& path : args) {
-			if(unlink(path.c_str()) < 0) {
-				fprintf(stderr, "rm: cannot remove '%s': %s\n", path.c_str(), strerror(errno));
+		for(const auto& arg : args) {
+			if(arg == "-r" || arg == "-rf" || arg == "-fr" || arg == "-R") {
+				recursive = true;
+				continue;
+			}
+			if(recursive) {
+				remove_recursive(arg);
+			} else if(unlink(arg.c_str()) < 0) {
+				fprintf(stderr, "rm: cannot remove '%s': %s\n", arg.c_str(), strerror(errno));
 				return_status = EXIT_FAILURE;
 			}
 		}
@@ -153,9 +181,7 @@ bool Command::evaluate_builtin() {
 		}
 		return_status = EXIT_SUCCESS;
 		for(const auto& path : args) {
-			if(rmdir(path.c_str()) < 0) {
-				fprintf(stderr, "rmdir: failed to remove '%s': %s\n", path.c_str(), strerror(errno));
-				return_status = EXIT_FAILURE;
+			remove_recursive(path); {
 			}
 		}
 		return true;

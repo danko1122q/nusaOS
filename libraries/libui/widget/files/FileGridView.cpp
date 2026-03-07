@@ -7,6 +7,11 @@
 #include "../../libui.h"
 #include "../Cell.h"
 #include "../layout/FlexLayout.h"
+#include "../../Menu.h"
+#include <libapp/App.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <string.h>
 
 using namespace UI;
 
@@ -15,8 +20,15 @@ public:
 	WIDGET_DEF(FileView)
 protected:
 	bool on_mouse_button(Pond::MouseButtonEvent evt) override {
+		// Klik kiri - select / double-click open
 		if((evt.old_buttons & POND_MOUSE1) && !(evt.new_buttons & POND_MOUSE1)) {
-			dir_widget.lock()->clicked_entry(entry);
+			if(auto w = dir_widget.lock())
+				w->clicked_entry(entry);
+			return true;
+		}
+		// Klik kanan - context menu
+		if(!(evt.old_buttons & POND_MOUSE2) && (evt.new_buttons & POND_MOUSE2)) {
+			show_context_menu();
 			return true;
 		}
 		return false;
@@ -43,7 +55,6 @@ private:
 		auto ui_image = UI::Image::make(image);
 		ui_image->set_preferred_size({32, 32});
 		ui_image->set_sizing_mode(UI::PREFERRED);
-
 		add_child(ui_image);
 
 		auto label = UI::Label::make(entry.name());
@@ -54,6 +65,36 @@ private:
 
 	Duck::DirectoryEntry entry;
 	Duck::WeakPtr<FileGridView> dir_widget;
+
+	void show_context_menu() {
+		auto menu = UI::Menu::make();
+
+		Duck::DirectoryEntry entry_copy = entry;
+		Duck::WeakPtr<FileGridView> widget_copy = dir_widget;
+
+		// "Open" - selalu ada untuk file maupun folder
+		menu->add_item(UI::MenuItem::make("Open", [entry_copy, widget_copy]() mutable {
+			if(auto w = widget_copy.lock())
+				w->open_entry(entry_copy);
+		}));
+
+		menu->add_item(UI::MenuItem::Separator);
+
+		// Label berbeda: "Delete Folder" vs "Delete File"
+		if(entry.is_directory()) {
+			menu->add_item(UI::MenuItem::make("Delete Folder", [entry_copy, widget_copy]() mutable {
+				if(auto w = widget_copy.lock())
+					w->delete_entry(entry_copy, true);
+			}));
+		} else {
+			menu->add_item(UI::MenuItem::make("Delete File", [entry_copy, widget_copy]() mutable {
+				if(auto w = widget_copy.lock())
+					w->delete_entry(entry_copy, false);
+			}));
+		}
+
+		open_menu(menu);
+	}
 };
 
 FileGridView::FileGridView(const Duck::Path& path) {
@@ -112,6 +153,47 @@ void FileGridView::clicked_entry(Duck::DirectoryEntry entry) {
 	}
 }
 
+void FileGridView::open_entry(Duck::DirectoryEntry entry) {
+	if(entry.is_directory()) {
+		set_directory(entry.path());
+	} else {
+		// Lewat delegate supaya FileManager bisa membuka editor dengan benar
+		if(!delegate.expired())
+			delegate.lock()->fv_did_double_click(entry);
+		else
+			App::open(entry.path()); // fallback jika tidak ada delegate
+	}
+}
+
 Gfx::Dimensions FileGridView::minimum_size() {
 	return { 92, 92 };
+}
+
+// Rekursif delete: hapus semua isi direktori lalu direktorinya sendiri
+static void remove_recursive(const std::string& path) {
+	DIR* dir = ::opendir(path.c_str());
+	if(dir) {
+		struct dirent* ent;
+		while((ent = ::readdir(dir)) != nullptr) {
+			if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+				continue;
+			// Bangun path child pakai string biasa, hindari Duck::Path operator/
+			std::string child = path;
+			if(child.back() != '/')
+				child += '/';
+			child += ent->d_name;
+			remove_recursive(child);
+		}
+		::closedir(dir);
+		::rmdir(path.c_str());
+	} else {
+		::unlink(path.c_str());
+	}
+}
+
+void FileGridView::delete_entry(Duck::DirectoryEntry entry, bool is_directory) {
+	remove_recursive(entry.path().string());
+	// Refresh view setelah hapus
+	m_selected.clear();
+	set_directory(current_directory());
 }
