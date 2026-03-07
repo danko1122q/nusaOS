@@ -9,8 +9,12 @@
 static const char    NSA_MAGIC[6]       = {'\x7f', 'N', 'S', 'A', 0x02, 0x00};
 static const uint8_t NSA_MAX_VARS       = 200;
 static const size_t  NSA_MAX_STR_LEN    = 254;
-static const uint8_t NSA_MAX_LOCALS     = 64;    /* local slots per function frame */
-static const uint8_t NSA_MAX_CALL_DEPTH = 64;    /* maximum nested call depth      */
+static const uint8_t NSA_MAX_LOCALS     = 64;
+static const uint8_t NSA_MAX_CALL_DEPTH = 64;
+/* Arrays: each array occupies one var slot (the base-id).
+   Elements are stored in the NEXT (size) consecutive slots.
+   Max 16 elements per array, max 32 arrays per program.       */
+static const uint8_t NSA_MAX_ARRAY_SIZE = 64;
 static const char    NSA_EXT[]          = ".nsa";
 static const char    NSA_BIN_EXT[]      = ".nbin";
 
@@ -61,7 +65,15 @@ enum NsaOpcode : uint8_t {
     OP_STR_TO_INT   = 0x43,
     OP_INT_TO_STR   = 0x44,
 
-    /* Comparison → bool */
+    /* ── String comparison (new in v2.2) ─────────────────────────────────
+     * OP_SCMP_EQ/NE  dst_bool  str_a  str_b
+     * Compare two string variables with strcmp, store bool result.
+     * Only == and != are provided — ordering comparison of strings
+     * is not needed for typical scripting use.                          */
+    OP_SCMP_EQ      = 0x45,
+    OP_SCMP_NE      = 0x46,
+
+    /* Comparison → bool (integer) */
     OP_CMP_EQ       = 0x50,
     OP_CMP_NE       = 0x51,
     OP_CMP_LT       = 0x52,
@@ -91,24 +103,41 @@ enum NsaOpcode : uint8_t {
     OP_JMP_BACK_NZ      = 0x73,
     OP_JMP_BACK_Z       = 0x74,
 
-    /* ── Functions (new in v2.1) ─────────────────────────────────────────
+    /* Functions */
+    OP_CALL         = 0x80,
+    OP_RET          = 0x81,
+    OP_LOAD_ARG     = 0x82,
+    OP_STORE_RET    = 0x83,
+
+    /* ── Arrays (new in v2.2) ─────────────────────────────────────────────
      *
-     * Bytecode layout around a call:
+     * Layout in var table:
+     *   var[base_id]        = array descriptor: ival = element count
+     *   var[base_id+1]      = element 0
+     *   var[base_id+2]      = element 1
+     *   ...
+     *   var[base_id+size]   = element size-1
      *
-     *   [LOAD_ARG local_id global_id]  ...  (one per argument)
-     *   [CALL u16:abs_addr]
-     *   [STORE_RET global_id local_id]      (only if return value requested)
+     * All elements of one array share the same type (int, str, or bool).
+     * The compiler allocates base_id + size slots up front.
      *
-     * Inside a function body, variable IDs refer to LOCAL slots (0..63).
-     * Globals are never touched directly from inside a function.
+     * OP_ARR_GET  dst_var  base_id  idx_var
+     *   Load element[idx] of the array at base_id into dst_var.
      *
-     * CALL  pushes {ret_ip} onto the call stack and sets ip = abs_addr.
-     * RET   pops the call stack and restores ip.
-     * LOAD_ARG  copies globals → pending local frame BEFORE call_depth increases.
-     * STORE_RET copies locals → globals AFTER RET has decremented call_depth.
-     * -------------------------------------------------------------------- */
-    OP_CALL         = 0x80,   /* [u16 abs_addr]               jump to function        */
-    OP_RET          = 0x81,   /* (no operands)                return from function     */
-    OP_LOAD_ARG     = 0x82,   /* [u8 local_id][u8 global_id]  stage arg before CALL   */
-    OP_STORE_RET    = 0x83,   /* [u8 global_id][u8 local_id]  copy ret value to global*/
+     * OP_ARR_SET  base_id  idx_var  src_var
+     *   Store src_var into element[idx] of array at base_id.
+     *
+     * OP_ARR_SET_IMM  base_id  idx_var  type  value...
+     *   Store an immediate literal into element[idx].
+     *   type byte: 0x01=int(i32), 0x02=str(len+bytes), 0x03=bool(u8)
+     *
+     * OP_ARR_LEN  dst_int  base_id
+     *   Store the declared size of the array into dst_int.
+     *
+     * All opcodes perform bounds checking at runtime.
+     * ------------------------------------------------------------------ */
+    OP_ARR_GET      = 0x90,
+    OP_ARR_SET      = 0x91,
+    OP_ARR_SET_IMM  = 0x92,
+    OP_ARR_LEN      = 0x93,
 };

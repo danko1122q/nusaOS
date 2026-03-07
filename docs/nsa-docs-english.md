@@ -19,10 +19,11 @@ This guide is written for everyone, including people who have never programmed b
 9. [Conditionals — if / else](#9-conditionals--if--else)
 10. [Loops](#10-loops)
 11. [Functions](#11-functions)
-12. [Full Program Examples](#12-full-program-examples)
-13. [The .nbin File Format](#13-the-nbin-file-format)
-14. [Error Reference](#14-error-reference)
-15. [Keyword Reference](#15-keyword-reference)
+12. [Arrays](#12-arrays)
+13. [Full Program Examples](#13-full-program-examples)
+14. [The .nbin File Format](#14-the-nbin-file-format)
+15. [Error Reference](#15-error-reference)
+16. [Keyword Reference](#16-keyword-reference)
 
 ---
 
@@ -378,7 +379,9 @@ Arithmetic cannot be used on string or bool variables.
 
 ### cmp — compare two variables
 
-`cmp` compares two integer variables and stores the result as a bool.
+`cmp` compares two variables and stores the result as a bool. It works with both **integers** and **strings** — the type of the operands determines which comparison is used.
+
+**Integer comparison** — all six operators are available:
 
 ```
 cmp result a == b    // result = (a equals b)
@@ -399,6 +402,19 @@ let bigger = false
 cmp bigger b > a    // true, because 20 > 10
 print bigger        // prints: true
 ```
+
+**String comparison** — only `==` and `!=` are supported:
+
+```
+let s1 = "hello"
+let s2 = "world"
+let s3 = "hello"
+
+cmp eq s1 == s3    // true  — same text
+cmp ne s1 != s2    // true  — different text
+```
+
+The same `cmp` keyword works for both — NSA detects the type automatically. Mixing a string and an integer in the same `cmp` is an error.
 
 ### not — flip a value
 
@@ -462,9 +478,9 @@ print sentence
 You can also append one string variable to another:
 
 ```
-let first = "NusaOS"
-let second = " v2.1"
-concat first second          // first = "NusaOS v2.1"
+let first = "Hello"
+let second = ", NusaOS!"
+concat first second          // first = "Hello, NusaOS!"
 ```
 
 ### len — length of a string
@@ -851,7 +867,121 @@ print biggest      // 42
 
 ---
 
-## 12. Full Program Examples
+## 12. Arrays
+
+An array is an ordered list of values — all of the same type — stored under one name.
+
+### Declaring an array
+
+```
+arr int  scores 5    // integer array, 5 elements, initialized to 0
+arr str  names  3    // string array, 3 elements, initialized to ""
+arr bool flags  4    // bool array, 4 elements, initialized to false
+```
+
+Syntax: `arr <type> <name> <size>`
+
+- Type must be `int`, `str`, or `bool`
+- Size must be a positive integer literal, maximum **64**
+- Arrays are global — they cannot be declared inside a function
+
+### Setting elements — aset
+
+```
+arr int scores 5
+
+aset scores 0 100    // scores[0] = 100
+aset scores 1 85     // scores[1] = 85
+
+let i = 2
+let val = 92
+aset scores i val    // scores[2] = 92  — variable index and value
+```
+
+The index can be a variable or a literal. Literals are bounds-checked at compile time. Variables are bounds-checked at runtime.
+
+### Getting elements — aget
+
+```
+aget x scores 0      // x = scores[0]  — literal index
+
+let i = 1
+aget x scores i      // x = scores[1]  — variable index
+```
+
+The destination variable is declared automatically if it doesn't exist yet, with the element type of the array.
+
+### Getting the size — alen
+
+```
+alen n scores    // n = 5  (the declared size)
+```
+
+### Iterating over an array
+
+```
+arr int scores 5
+aset scores 0 100
+aset scores 1 85
+aset scores 2 92
+aset scores 3 78
+aset scores 4 95
+
+let i = 0
+loop while i < 5
+    aget val scores i
+    print val
+    inc i
+end
+```
+
+### Summing an array
+
+```
+let sum = 0
+let i = 0
+loop while i < 5
+    aget x scores i
+    add sum x
+    inc i
+end
+print sum    // 450
+```
+
+### Searching for a value in a string array
+
+```
+arr str fruits 3
+aset fruits 0 "apple"
+aset fruits 1 "banana"
+aset fruits 2 "cherry"
+
+let target = "banana"
+let found = false
+let i = 0
+loop while i < 3
+    aget item fruits i
+    cmp match item == target
+    if match then
+        let found = true
+    end
+    inc i
+end
+
+if found then
+    print "found it!"
+end
+```
+
+### Limits
+
+- Maximum element count per array: **64**
+- Maximum total variables (including array slots): **200**
+- Arrays are not supported inside functions
+
+---
+
+## 13. Full Program Examples
 
 ### Interactive calculator
 
@@ -895,7 +1025,7 @@ let op = 0
 let answer = 0
 
 print "================================"
-print "    NSA Calculator v1.0"
+print "    NSA Calculator"
 print "      on NusaOS  :)"
 print "================================"
 
@@ -1130,7 +1260,7 @@ print both    // true
 
 ---
 
-## 13. The .nbin File Format
+## 14. The .nbin File Format
 
 A `.nbin` file is the compiled bytecode output. You don't need to understand this to write NSA programs — it's only relevant if you're building tools that read `.nbin` files directly.
 
@@ -1147,7 +1277,7 @@ The magic bytes are intentionally different from NusaLang v1 (`\x7fNUSA\x01`). O
 
 ---
 
-## 14. Error Reference
+## 15. Error Reference
 
 ### Compile-time errors
 
@@ -1255,7 +1385,7 @@ Functions are calling other functions more than 64 levels deep.
 
 ---
 
-## 15. Keyword Reference
+## 16. Keyword Reference
 
 Every reserved word in NSA, grouped by purpose.
 
@@ -1294,7 +1424,7 @@ Every reserved word in NSA, grouped by purpose.
 | Keyword | What it does |
 |---------|-------------|
 | `not` | Flip a bool or int (0↔1, true↔false) |
-| `cmp` | Compare two integers → store result as bool |
+| `cmp` | Compare two integers or two strings → store result as bool |
 | `and` | Logical AND of two values |
 | `or` | Logical OR of two values |
 
@@ -1306,6 +1436,15 @@ Every reserved word in NSA, grouped by purpose.
 | `len` | Get the length of a string |
 | `to_str` | Convert an integer to its string form |
 | `to_int` | Parse a string as an integer |
+
+### Arrays
+
+| Keyword | What it does |
+|---------|-------------|
+| `arr` | Declare an array: `arr int scores 5` |
+| `aget` | Get an element: `aget dst array_name idx` |
+| `aset` | Set an element: `aset array_name idx value` |
+| `alen` | Get the declared size of an array: `alen n array_name` |
 
 ### Control flow
 
@@ -1330,30 +1469,15 @@ Every reserved word in NSA, grouped by purpose.
 
 ---
 
-## What's New in v2.1 vs v1
+## About Versions
 
-| Feature | v1 (NusaLang) | v2.1 (NSA) |
-|---------|---------------|------------|
-| CLI | `nusa-build` + `nusa-run` | `nsa build` / `nsa run` |
-| Bool type | — | `true` / `false` |
-| Comparison operators | `==` `!=` | All 6: `==` `!=` `<` `>` `<=` `>=` |
-| Modulo | — | `mod` |
-| inc / dec | — | ✓ |
-| neg / not | — | ✓ |
-| String concat | — | `concat` |
-| String length | — | `len` |
-| Type conversion | — | `to_str` `to_int` |
-| Comparison to bool | — | `cmp` |
-| Logical and / or | — | ✓ |
-| User input | — | `input` |
-| println (no newline) | — | ✓ |
-| Copy between variables | — | `copy` |
-| Nested loops | — | ✓ |
-| **Functions / procedures** | — | `func` / `call` / `return` |
-| **Local variable scope** | — | ✓ |
-| **Return values** | — | `->` syntax |
-| Loop iteration limit | 1,000,000 | 10,000,000 |
-| Runtime error offsets | — | ✓ |
+To see which version of NSA is installed on your system, run:
+
+```sh
+nsa version
+```
+
+The language is actively developed as part of the NusaOS project. This documentation covers all currently supported features — if a feature is listed here, it works in your installed version.
 
 ---
 

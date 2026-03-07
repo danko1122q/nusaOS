@@ -19,10 +19,11 @@ Panduan ini ditulis untuk semua orang, termasuk yang belum pernah coding sebelum
 9. [Percabangan — if / else](#9-percabangan--if--else)
 10. [Perulangan — loop](#10-perulangan--loop)
 11. [Fungsi](#11-fungsi)
-12. [Contoh Program Lengkap](#12-contoh-program-lengkap)
-13. [Format File .nbin](#13-format-file-nbin)
-14. [Referensi Error](#14-referensi-error)
-15. [Ringkasan Semua Keyword](#15-ringkasan-semua-keyword)
+12. [Array](#12-array)
+13. [Contoh Program Lengkap](#13-contoh-program-lengkap)
+14. [Format File .nbin](#14-format-file-nbin)
+15. [Referensi Error](#15-referensi-error)
+16. [Ringkasan Semua Keyword](#16-ringkasan-semua-keyword)
 
 ---
 
@@ -377,7 +378,9 @@ Operasi aritmetika tidak bisa dilakukan pada string atau bool.
 
 ### cmp — membandingkan dua variabel
 
-`cmp` membandingkan dua variabel integer dan menyimpan hasilnya sebagai bool.
+`cmp` membandingkan dua variabel dan menyimpan hasilnya sebagai bool. Berfungsi untuk **integer** maupun **string** — tipe operand menentukan jenis perbandingan yang digunakan.
+
+**Perbandingan integer** — semua enam operator tersedia:
 
 ```
 cmp hasil a == b    // hasil = (a sama dengan b?)
@@ -398,6 +401,19 @@ let lebih_besar = false
 cmp lebih_besar b > a    // true, karena 20 > 10
 print lebih_besar         // mencetak: true
 ```
+
+**Perbandingan string** — hanya `==` dan `!=` yang didukung:
+
+```
+let s1 = "halo"
+let s2 = "dunia"
+let s3 = "halo"
+
+cmp sama s1 == s3    // true  — teks sama
+cmp beda s1 != s2    // true  — teks berbeda
+```
+
+Keyword `cmp` yang sama berlaku untuk keduanya — NSA mendeteksi tipe secara otomatis. Mencampur string dan integer dalam satu `cmp` adalah error.
 
 ### not — membalik nilai
 
@@ -462,8 +478,9 @@ Bisa juga menggabungkan dua variabel string:
 
 ```
 let depan = "NusaOS"
-let belakang = " v1.0"
-concat depan belakang       // depan = "NusaOS v1.0"
+let depan = "Halo"
+let belakang = ", NusaOS!"
+concat depan belakang       // depan = "Halo, NusaOS!"
 ```
 
 ### len — panjang string
@@ -854,7 +871,123 @@ print terbesar          // 42
 
 ---
 
-## 12. Contoh Program Lengkap
+---
+
+## 12. Array
+
+Array adalah daftar nilai yang tersimpan berurutan di bawah satu nama — semua elemennya bertipe sama.
+
+### Deklarasi array
+
+```
+arr int  skor   5    // array integer, 5 elemen, inisialisasi ke 0
+arr str  nama   3    // array string, 3 elemen, inisialisasi ke ""
+arr bool bendera 4   // array bool, 4 elemen, inisialisasi ke false
+```
+
+Sintaks: `arr <tipe> <n> <ukuran>`
+
+- Tipe harus `int`, `str`, atau `bool`
+- Ukuran harus bilangan bulat positif, maksimal **64**
+- Array bersifat global — tidak bisa dideklarasikan di dalam fungsi
+
+### Mengisi elemen — aset
+
+```
+arr int skor 5
+
+aset skor 0 100    // skor[0] = 100
+aset skor 1 85     // skor[1] = 85
+
+let i = 2
+let val = 92
+aset skor i val    // skor[2] = 92  — indeks dan nilai dari variabel
+```
+
+Indeks bisa berupa variabel atau literal. Literal dicek batas di compile time. Variabel dicek batas di runtime.
+
+### Membaca elemen — aget
+
+```
+aget x skor 0      // x = skor[0]  — indeks literal
+
+let i = 1
+aget x skor i      // x = skor[1]  — indeks dari variabel
+```
+
+Variabel tujuan dibuat otomatis jika belum ada, dengan tipe elemen array tersebut.
+
+### Mendapatkan ukuran — alen
+
+```
+alen n skor    // n = 5  (ukuran yang dideklarasikan)
+```
+
+### Iterasi array
+
+```
+arr int skor 5
+aset skor 0 100
+aset skor 1 85
+aset skor 2 92
+aset skor 3 78
+aset skor 4 95
+
+let i = 0
+loop while i < 5
+    aget val skor i
+    print val
+    inc i
+end
+```
+
+### Menjumlahkan semua elemen
+
+```
+let total = 0
+let i = 0
+loop while i < 5
+    aget x skor i
+    add total x
+    inc i
+end
+print total    // 450
+```
+
+### Mencari nilai dalam array string
+
+```
+arr str buah 3
+aset buah 0 "apel"
+aset buah 1 "pisang"
+aset buah 2 "ceri"
+
+let target = "pisang"
+let ditemukan = false
+let i = 0
+loop while i < 3
+    aget item buah i
+    cmp cocok item == target
+    if cocok then
+        let ditemukan = true
+    end
+    inc i
+end
+
+if ditemukan then
+    print "pisang ditemukan!"
+end
+```
+
+### Batasan
+
+- Maksimal elemen per array: **64**
+- Maksimal total variabel (termasuk slot array): **200**
+- Array tidak didukung di dalam fungsi
+
+---
+
+## 13. Contoh Program Lengkap
 
 ### Kalkulator interaktif
 
@@ -1077,7 +1210,7 @@ print hasil
 
 ---
 
-## 13. Format File .nbin
+## 14. Format File .nbin
 
 File `.nbin` adalah bytecode hasil kompilasi. Strukturnya:
 
@@ -1096,7 +1229,7 @@ Kamu tidak perlu memahami format ini untuk menulis program NSA. Ini hanya releva
 
 ---
 
-## 14. Referensi Error
+## 15. Referensi Error
 
 ### Error saat kompilasi (nsa build)
 
@@ -1169,7 +1302,7 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 
 ---
 
-## 15. Ringkasan Semua Keyword
+## 16. Ringkasan Semua Keyword
 
 | Keyword | Fungsi |
 |---------|--------|
@@ -1187,13 +1320,17 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 | `dec` | Kurang 1 |
 | `neg` | Negasi (balik tanda) |
 | `not` | Balik bool/int (0↔1) |
-| `cmp` | Bandingkan dua integer → bool |
+| `cmp` | Bandingkan dua integer atau dua string → bool |
 | `and` | Logika DAN |
 | `or` | Logika ATAU |
 | `concat` | Gabungkan string |
 | `len` | Panjang string |
 | `to_str` | Integer ke string |
 | `to_int` | String ke integer |
+| `arr` | Deklarasi array: `arr int skor 5` |
+| `aget` | Ambil elemen: `aget dst nama_array idx` |
+| `aset` | Isi elemen: `aset nama_array idx nilai` |
+| `alen` | Ukuran array: `alen n nama_array` |
 | `if` | Mulai percabangan |
 | `then` | Penanda kondisi if |
 | `else` | Cabang alternatif |
@@ -1210,30 +1347,15 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 
 ---
 
-## Apa yang Baru di v2.1 dibanding v1
+## Tentang Versi
 
-| Fitur | v1 (NusaLang) | v2.1 (NSA) |
-|-------|---------------|------------|
-| CLI | `nusa-build` + `nusa-run` | `nsa build` / `nsa run` |
-| Tipe bool | — | `true` / `false` |
-| Operator perbandingan | `==` `!=` | Semua 6: `==` `!=` `<` `>` `<=` `>=` |
-| Modulo | — | `mod` |
-| inc / dec | — | ✓ |
-| neg / not | — | ✓ |
-| String concat | — | `concat` |
-| Panjang string | — | `len` |
-| Konversi tipe | — | `to_str` `to_int` |
-| Perbandingan ke bool | — | `cmp` |
-| Logika and/or | — | ✓ |
-| Input dari pengguna | — | `input` |
-| println tanpa newline | — | ✓ |
-| Copy antar variabel | — | `copy` |
-| Loop bersarang | — | ✓ |
-| **Fungsi/procedure** | — | `func` / `call` / `return` |
-| **Local scope** | — | ✓ variabel lokal per fungsi |
-| **Return value** | — | `->` syntax |
-| Batas iterasi loop | 1.000.000 | 10.000.000 |
-| Offset error di runtime | — | ✓ |
+Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:
+
+```sh
+nsa version
+```
+
+Bahasa ini terus dikembangkan sebagai bagian dari proyek NusaOS. Dokumentasi ini mencakup semua fitur yang saat ini didukung — jika suatu fitur tercantum di sini, berarti fitur tersebut berfungsi di versi yang terpasang.
 
 ---
 

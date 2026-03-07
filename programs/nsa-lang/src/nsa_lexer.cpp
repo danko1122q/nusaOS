@@ -24,8 +24,10 @@ static const std::set<std::string> KEYWORDS = {
     "loop", "while", "times",
     "and", "or", "cmp",
     "true", "false",
-    /* function keywords */
-    "func", "endfunc", "return", "call"
+    /* functions */
+    "func", "endfunc", "return", "call",
+    /* arrays */
+    "arr", "aget", "aset", "alen",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }
@@ -82,7 +84,7 @@ bool tokenize(const std::string& line, std::vector<Token>& out, std::string& err
             continue;
         }
 
-        /* Two-char operators: == != <= >= && || -> */
+        /* Two-char operators */
         if (i+1 < n) {
             std::string two = line.substr(i,2);
             if (two=="=="||two=="!="||two=="<="||two==">="||two=="&&"||two=="||"||two=="->") {
