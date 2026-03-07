@@ -424,7 +424,7 @@ Result Ext2Inode::truncate(off_t length) {
 		_metadata.size = (size_t)length;
 		write_to_disk();
 	} else if(new_num_blocks < num_blocks()) {
-		// Shrink: free excess blocks
+		// Shrink: free excess data blocks
 		for(size_t i = num_blocks(); i > new_num_blocks; i--)
 			ext2fs().free_block(get_block_pointer(i - 1));
 		block_pointers.resize(new_num_blocks);
@@ -433,6 +433,17 @@ Result Ext2Inode::truncate(off_t length) {
 		for(size_t i = pointer_blocks.size(); i > new_num_ptr_blocks; i--)
 			ext2fs().free_block(pointer_blocks[i - 1]);
 		pointer_blocks.resize(new_num_ptr_blocks);
+
+		// Clear raw indirect pointer fields for levels that are no longer needed.
+		// This prevents write_block_pointers() from reusing the now-freed blocks
+		// on the next expansion, which caused the double-free warning.
+		const size_t N = ext2fs().block_pointers_per_block;
+		if(new_num_blocks <= 12)
+			raw.s_pointer = 0;
+		if(new_num_blocks <= 12 + N)
+			raw.d_pointer = 0;
+		if(new_num_blocks <= 12 + N + N * N)
+			raw.t_pointer = 0;
 
 		// Zero out unused portion of the last block
 		if(length % ext2fs().block_size() && new_num_blocks > 0)

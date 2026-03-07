@@ -131,6 +131,34 @@ bool Command::evaluate_builtin() {
 		printf("\033[2J");
 		fflush(stdout);
 		return true;
+	} else if(cmd == "rm") {
+		if(args.empty()) {
+			fprintf(stderr, "rm: missing operand\nusage: rm <file> [file ...]\n");
+			return_status = EXIT_FAILURE;
+			return true;
+		}
+		return_status = EXIT_SUCCESS;
+		for(const auto& path : args) {
+			if(unlink(path.c_str()) < 0) {
+				fprintf(stderr, "rm: cannot remove '%s': %s\n", path.c_str(), strerror(errno));
+				return_status = EXIT_FAILURE;
+			}
+		}
+		return true;
+	} else if(cmd == "rmdir") {
+		if(args.empty()) {
+			fprintf(stderr, "rmdir: missing operand\nusage: rmdir <dir> [dir ...]\n");
+			return_status = EXIT_FAILURE;
+			return true;
+		}
+		return_status = EXIT_SUCCESS;
+		for(const auto& path : args) {
+			if(rmdir(path.c_str()) < 0) {
+				fprintf(stderr, "rmdir: failed to remove '%s': %s\n", path.c_str(), strerror(errno));
+				return_status = EXIT_FAILURE;
+			}
+		}
+		return true;
 	}
 	return false;
 }
