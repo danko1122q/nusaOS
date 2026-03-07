@@ -1478,6 +1478,138 @@ Every reserved word in NSA, grouped by purpose.
 
 ---
 
+---
+
+## 17. Module System (.nss files)
+
+NSA v2.4 introduces the **NSS Module System** — a way to split reusable code into
+separate `.nss` (NSA Shared Source) files that can be imported by any `.nsa` program.
+
+### What is a .nss file?
+
+A `.nss` file is a self-contained module that exports **global constants** and
+**functions**. Think of it as a `.h` and `.c` file combined into one, but with
+automatic dead-code elimination (tree-shaking): only the symbols your program
+actually uses are included in the final `.nbin`.
+
+### Writing a .nss module
+
+```nss
+// math.nss — basic math module
+
+global int  PI_X100  = 314      // exported integer constant
+global str  APP_NAME = "nusa"   // exported string constant
+global bool DEBUG    = false    // exported bool constant
+
+// exported function — same syntax as in .nsa
+func max a b -> result
+    let result = b
+    cmp is_greater a > b
+    if is_greater then
+        copy result a
+    end
+endfunc
+
+func abs n -> result
+    let result = n
+    cmp is_negative n < 0
+    if is_negative then
+        neg result
+    end
+endfunc
+```
+
+**Rules for .nss files:**
+- Top-level statements may only be `global` declarations or `func`/`endfunc` blocks.
+- Function names must not clash with NSA keywords (`add`, `sub`, `mul`, etc.).
+  Use a prefix such as `math_add` to avoid conflicts.
+- All globals and functions are automatically exported — there is no `export` keyword.
+
+### Importing a module
+
+Place the `.nss` file in the same directory as your `.nsa` source, then add an
+`import` statement at the top of your program:
+
+```nsa
+import "math"          // loads math.nss from the same directory
+import "libs/strings"  // sub-paths are supported
+```
+
+The compiler searches for the module file in:
+1. The directory of the `.nsa` source file.
+2. Any extra directories passed via `--nss-path <dir[:dir...]>`.
+
+### Using imported symbols
+
+```nsa
+import "math"
+import "strutil"
+
+// Read a module global into a local variable first
+let sep    = strutil.SEPARATOR
+let pi_val = math.PI_X100
+
+// Call an imported function
+call math.max x y -> largest
+call math.abs neg_num -> pos_num
+```
+
+> **Note:** Module globals must be copied into a local variable with `let` before
+> they can be passed to other statements. Direct use in `print`, `add`, etc. is
+> not yet supported.
+
+### Tree-shaking (dead-code elimination)
+
+The compiler automatically removes any module function or global that is never
+referenced by your program. This keeps `.nbin` files small even when importing
+large modules.
+
+```nsa
+import "math"   // math.nss exports 6 functions
+
+call math.max x y -> r   // only max() is used
+
+// Result: only max() bytecode is linked into the .nbin.
+// The other 5 functions are silently dropped.
+```
+
+### Validating a module
+
+```sh
+nsa build-nss math.nss
+```
+
+Output example:
+```
+nsa build-nss: OK  module 'math.nss'  6 function(s)  3 global(s)
+  func  abs       (1 param(s) → return)
+  func  math_add  (2 param(s) → return)
+  func  max       (2 param(s) → return)
+  ...
+  global int  PI_X100
+  global int  VERSION
+```
+
+### Keyword conflicts
+
+The following NSA keywords **cannot** be used as function names inside a `.nss`
+file: `add`, `sub`, `mul`, `div`, `mod`, `inc`, `dec`, `neg`, `not`, `len`,
+`concat`, `copy`, `input`, `print`, `println`, `if`, `else`, `end`, `loop`,
+`while`, `times`, `func`, `endfunc`, `return`, `call`, `and`, `or`, `cmp`,
+`let`, `arr`, `aget`, `aset`, `alen`, `to_int`, `to_str`.
+
+Use a descriptive prefix instead — e.g. `math_add`, `str_len`, `vec_mul`.
+
+### Supported statements inside .nss functions
+
+All statements that work in a `.nsa` function body are also supported inside
+`.nss` functions: `let`, `copy`, `print`, `println`, `add`, `sub`, `mul`,
+`div`, `mod`, `inc`, `dec`, `neg`, `not`, `cmp`, `and`, `or`, `if`/`else`/`end`,
+`loop`, `concat`, `len`, `to_str`, `to_int`, `return`, and `call` (intra-module).
+
+---
+
+
 ## About Versions
 
 To see which version of NSA is installed on your system, run:

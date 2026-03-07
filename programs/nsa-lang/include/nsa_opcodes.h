@@ -7,16 +7,19 @@
 
 /* ── Magic & limits ───────────────────────────────────────────────────── */
 static const char    NSA_MAGIC[6]       = {'\x7f', 'N', 'S', 'A', 0x02, 0x00};
+/* NSS module magic — same version byte so the toolchain can validate it  */
+static const char    NSS_MAGIC[6]       = {'\x7f', 'N', 'S', 'S', 0x01, 0x00};
 static const uint8_t NSA_MAX_VARS       = 200;
 static const size_t  NSA_MAX_STR_LEN    = 254;
 static const uint8_t NSA_MAX_LOCALS     = 64;
 static const uint8_t NSA_MAX_CALL_DEPTH = 64;
 /* Arrays: each array occupies one var slot (the base-id).
    Elements are stored in the NEXT (size) consecutive slots.
-   Max 16 elements per array, max 32 arrays per program.       */
+   Max 64 elements per array, max 32 arrays per program.       */
 static const uint8_t NSA_MAX_ARRAY_SIZE = 64;
 static const char    NSA_EXT[]          = ".nsa";
 static const char    NSA_BIN_EXT[]      = ".nbin";
+static const char    NSS_EXT[]          = ".nss";
 
 /* ── Opcode table ─────────────────────────────────────────────────────── */
 enum NsaOpcode : uint8_t {
@@ -65,11 +68,9 @@ enum NsaOpcode : uint8_t {
     OP_STR_TO_INT   = 0x43,
     OP_INT_TO_STR   = 0x44,
 
-    /* ── String comparison (new in v2.2) ─────────────────────────────────
+    /* ── String comparison ───────────────────────────────────────────────
      * OP_SCMP_EQ/NE  dst_bool  str_a  str_b
-     * Compare two string variables with strcmp, store bool result.
-     * Only == and != are provided — ordering comparison of strings
-     * is not needed for typical scripting use.                          */
+     * Compare two string variables with strcmp, store bool result.     */
     OP_SCMP_EQ      = 0x45,
     OP_SCMP_NE      = 0x46,
 
@@ -109,35 +110,40 @@ enum NsaOpcode : uint8_t {
     OP_LOAD_ARG     = 0x82,
     OP_STORE_RET    = 0x83,
 
-    /* ── Arrays (new in v2.2) ─────────────────────────────────────────────
+    /* ── Arrays ──────────────────────────────────────────────────────────
      *
      * Layout in var table:
      *   var[base_id]        = array descriptor: ival = element count
      *   var[base_id+1]      = element 0
-     *   var[base_id+2]      = element 1
      *   ...
      *   var[base_id+size]   = element size-1
      *
-     * All elements of one array share the same type (int, str, or bool).
-     * The compiler allocates base_id + size slots up front.
-     *
      * OP_ARR_GET  dst_var  base_id  idx_var
-     *   Load element[idx] of the array at base_id into dst_var.
-     *
      * OP_ARR_SET  base_id  idx_var  src_var
-     *   Store src_var into element[idx] of array at base_id.
-     *
      * OP_ARR_SET_IMM  base_id  idx_var  type  value...
-     *   Store an immediate literal into element[idx].
      *   type byte: 0x01=int(i32), 0x02=str(len+bytes), 0x03=bool(u8)
-     *
      * OP_ARR_LEN  dst_int  base_id
-     *   Store the declared size of the array into dst_int.
-     *
-     * All opcodes perform bounds checking at runtime.
      * ------------------------------------------------------------------ */
     OP_ARR_GET      = 0x90,
     OP_ARR_SET      = 0x91,
     OP_ARR_SET_IMM  = 0x92,
     OP_ARR_LEN      = 0x93,
+
+    /* ── Global variables (NSS modules) ──────────────────────────────────
+     * These opcodes access the global var table directly even inside
+     * a function, enabling module-level global variables that persist.
+     *
+     * OP_GSET_INT   gid  i32     — set global[gid] = int literal
+     * OP_GSET_STR   gid  len+bytes
+     * OP_GSET_BOOL  gid  u8
+     * OP_GCOPY      dst_gid  src_gid   — copy between globals
+     * OP_GLOAD      local_id  gid      — load global → current local/global
+     * OP_GSTORE     gid  local_id      — store local/global → global
+     * ------------------------------------------------------------------ */
+    OP_GSET_INT     = 0xA0,
+    OP_GSET_STR     = 0xA1,
+    OP_GSET_BOOL    = 0xA2,
+    OP_GCOPY        = 0xA3,
+    OP_GLOAD        = 0xA4,
+    OP_GSTORE       = 0xA5,
 };

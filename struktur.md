@@ -12,6 +12,10 @@
 │   │   └── pond.conf
 │   ├── home
 │   │   ├── calc.nsa
+│   │   ├── demo
+│   │   │   ├── demo_import.nsa
+│   │   │   ├── math.nss
+│   │   │   └── strutil.nss
 │   │   ├── demo.nsa
 │   │   ├── greet.nsa
 │   │   ├── student_grades.nsa
@@ -1223,6 +1227,7 @@
 │       ├── SoundServer.cpp
 │       └── SoundServer.h
 ├── structure.md
+├── struktur.md
 └── toolchain
     ├── binutils-2.41.patch
     ├── build-ext2-fuse.sh
@@ -1233,4 +1238,4 @@
     ├── gen-patches.sh
     └── toolchain-common.sh
 
-158 directories, 1075 files
+159 directories, 1079 files

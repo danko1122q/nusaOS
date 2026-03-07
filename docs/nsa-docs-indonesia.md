@@ -1356,6 +1356,139 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 
 ---
 
+---
+
+## 17. Sistem Modul (.nss)
+
+NSA v2.4 memperkenalkan **NSS Module System** — cara memisahkan kode yang dapat
+digunakan ulang ke dalam file `.nss` (NSA Shared Source) yang bisa diimpor oleh
+program `.nsa` manapun.
+
+### Apa itu file .nss?
+
+File `.nss` adalah modul mandiri yang mengekspor **konstanta global** dan
+**fungsi**. Anggap saja seperti gabungan file `.h` dan `.c` dalam satu file,
+namun dengan eliminasi kode yang tidak dipakai secara otomatis (tree-shaking):
+hanya simbol yang benar-benar digunakan program yang akan masuk ke `.nbin` akhir.
+
+### Membuat file .nss
+
+```nss
+// math.nss — modul matematika dasar
+
+global int  PI_X100  = 314      // konstanta integer yang diekspor
+global str  APP_NAME = "nusa"   // konstanta string yang diekspor
+global bool DEBUG    = false    // konstanta bool yang diekspor
+
+// fungsi yang diekspor — sintaks sama seperti di .nsa
+func max a b -> result
+    let result = b
+    cmp is_greater a > b
+    if is_greater then
+        copy result a
+    end
+endfunc
+
+func abs n -> result
+    let result = n
+    cmp is_negative n < 0
+    if is_negative then
+        neg result
+    end
+endfunc
+```
+
+**Aturan file .nss:**
+- Pernyataan di tingkat atas hanya boleh berupa deklarasi `global` atau blok `func`/`endfunc`.
+- Nama fungsi tidak boleh sama dengan keyword NSA (`add`, `sub`, `mul`, dll).
+  Gunakan awalan seperti `math_add` untuk menghindari konflik.
+- Semua global dan fungsi otomatis diekspor — tidak ada keyword `export`.
+
+### Mengimpor modul
+
+Letakkan file `.nss` di direktori yang sama dengan source `.nsa`, lalu tambahkan
+pernyataan `import` di awal program:
+
+```nsa
+import "math"          // memuat math.nss dari direktori yang sama
+import "libs/strings"  // sub-path juga didukung
+```
+
+Compiler mencari file modul di:
+1. Direktori file `.nsa` source.
+2. Direktori tambahan yang diberikan melalui `--nss-path <dir[:dir...]>`.
+
+### Menggunakan simbol yang diimpor
+
+```nsa
+import "math"
+import "strutil"
+
+// Salin global modul ke variabel lokal terlebih dahulu
+let sep    = strutil.SEPARATOR
+let pi_val = math.PI_X100
+
+// Panggil fungsi yang diimpor
+call math.max x y -> largest
+call math.abs neg_num -> pos_num
+```
+
+> **Catatan:** Global modul harus disalin ke variabel lokal dengan `let` sebelum
+> bisa digunakan di pernyataan lain. Penggunaan langsung di `print`, `add`, dll.
+> belum didukung.
+
+### Tree-shaking (eliminasi kode mati)
+
+Compiler secara otomatis membuang fungsi atau global modul yang tidak pernah
+direferensikan oleh program. Ini menjaga ukuran `.nbin` tetap kecil meskipun
+mengimpor modul yang besar.
+
+```nsa
+import "math"   // math.nss mengekspor 6 fungsi
+
+call math.max x y -> r   // hanya max() yang digunakan
+
+// Hasil: hanya bytecode max() yang dimasukkan ke .nbin.
+// 5 fungsi lainnya dibuang secara otomatis.
+```
+
+### Memvalidasi modul
+
+```sh
+nsa build-nss math.nss
+```
+
+Contoh output:
+```
+nsa build-nss: OK  module 'math.nss'  6 function(s)  3 global(s)
+  func  abs       (1 param(s) → return)
+  func  math_add  (2 param(s) → return)
+  func  max       (2 param(s) → return)
+  ...
+  global int  PI_X100
+  global int  VERSION
+```
+
+### Konflik keyword
+
+Keyword NSA berikut **tidak bisa** digunakan sebagai nama fungsi di dalam file `.nss`:
+`add`, `sub`, `mul`, `div`, `mod`, `inc`, `dec`, `neg`, `not`, `len`,
+`concat`, `copy`, `input`, `print`, `println`, `if`, `else`, `end`, `loop`,
+`while`, `times`, `func`, `endfunc`, `return`, `call`, `and`, `or`, `cmp`,
+`let`, `arr`, `aget`, `aset`, `alen`, `to_int`, `to_str`.
+
+Gunakan awalan deskriptif — misalnya `math_add`, `str_len`, `vec_mul`.
+
+### Pernyataan yang didukung di dalam fungsi .nss
+
+Semua pernyataan yang berjalan di body fungsi `.nsa` juga didukung di dalam
+fungsi `.nss`: `let`, `copy`, `print`, `println`, `add`, `sub`, `mul`,
+`div`, `mod`, `inc`, `dec`, `neg`, `not`, `cmp`, `and`, `or`, `if`/`else`/`end`,
+`loop`, `concat`, `len`, `to_str`, `to_int`, `return`, dan `call` (dalam modul).
+
+---
+
+
 ## Tentang Versi
 
 Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:

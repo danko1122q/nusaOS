@@ -9,8 +9,8 @@
 #include <errno.h>
 #include <vector>
 
-#include "nusa_vm.h"
-#include "nusa_opcodes.h"
+#include "nsa_vm.h"
+#include "nsa_opcodes.h"
 
 static bool read_exact(int fd, void* buf, size_t n) {
     size_t total = 0;
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
         close(fd);
         return 1;
     }
-    if (memcmp(header, NUSA_MAGIC, 6) != 0) {
+    if (memcmp(header, NSA_MAGIC, 6) != 0) {
         fprintf(stderr, "nusa-run: '%s': not a valid .nbin file\n", path);
         close(fd);
         return 1;
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     uint8_t  sym_count = (uint8_t)header[6];
     uint16_t bc_size   = (uint8_t)header[7] | ((uint16_t)(uint8_t)header[8] << 8);
 
-    if (sym_count > NUSA_MAX_VARS) {
+    if (sym_count > NSA_MAX_VARS) {
         fprintf(stderr, "nusa-run: '%s': corrupt header\n", path);
         close(fd);
         return 1;

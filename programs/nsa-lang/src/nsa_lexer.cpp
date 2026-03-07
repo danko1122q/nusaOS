@@ -116,10 +116,16 @@ bool tokenize(const std::string& line, std::vector<Token>& out, std::string& err
             continue;
         }
 
-        /* Identifiers / keywords */
+        /* Identifiers / keywords — allow one embedded dot for module.symbol */
         if (isalpha((unsigned char)line[i])||line[i]=='_') {
             size_t start=i;
             while (i<n && (isalnum((unsigned char)line[i])||line[i]=='_')) i++;
+            /* Allow module.symbol — consume dot + tail if present */
+            if (i<n && line[i]=='.' && i+1<n &&
+                (isalpha((unsigned char)line[i+1])||line[i+1]=='_')) {
+                i++; /* consume dot */
+                while (i<n && (isalnum((unsigned char)line[i])||line[i]=='_')) i++;
+            }
             std::string word=line.substr(start,i-start);
             if (word=="true")  { Token t; t.kind=TK_BOOL; t.text="true";  t.ival=1; out.push_back(t); }
             else if (word=="false") { Token t; t.kind=TK_BOOL; t.text="false"; t.ival=0; out.push_back(t); }

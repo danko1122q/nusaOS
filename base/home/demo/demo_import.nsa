@@ -1,0 +1,99 @@
+// demo_import.nsa — demo of the .nss import system for nusaOS NSA v2.4
+// Place math.nss and strutil.nss in the same directory as this file.
+// Build and run:
+//   nsa build demo_import.nsa
+//   nsa run   demo_import.nbin
+
+import "math"
+import "strutil"
+
+// Copy module globals into local variables before use
+let sep    = strutil.SEPARATOR
+let pi_val = math.PI_X100
+let e_val  = math.E_X100
+let ver    = math.VERSION
+
+// ── Header ───────────────────────────────────────────────────────────
+print sep
+print "  Demo NSA Import System"
+print "  nusaOS NSA v2.4"
+print sep
+
+// ── Module constants ──────────────────────────────────────────────────
+println "PI x100  = "
+print pi_val
+println "E  x100  = "
+print e_val
+println "Math ver = "
+print ver
+
+print sep
+
+// ── max and min ───────────────────────────────────────────────────────
+let x = 42
+let y = 17
+
+call math.max x y -> largest
+call math.min x y -> smallest
+
+println "x        = "
+print x
+println "y        = "
+print y
+println "max(x,y) = "
+print largest
+println "min(x,y) = "
+print smallest
+
+print sep
+
+// ── Arithmetic ────────────────────────────────────────────────────────
+call math.math_add x y -> sum_xy
+call math.math_sub x y -> dif_xy
+call math.math_mul x y -> mul_xy
+
+println "x + y = "
+print sum_xy
+println "x - y = "
+print dif_xy
+println "x * y = "
+print mul_xy
+
+print sep
+
+// ── Absolute value ────────────────────────────────────────────────────
+let neg_num = 0
+sub neg_num 99
+
+call math.abs neg_num -> pos_num
+
+println "value   = "
+print neg_num
+println "abs()   = "
+print pos_num
+
+print sep
+
+// ── User input ────────────────────────────────────────────────────────
+// Declare as int first so that input reads an integer (not a string)
+let a = 0
+let b = 0
+
+print "Enter first number  : "
+input a
+print "Enter second number : "
+input b
+
+call math.math_add a b -> total
+call math.math_mul a b -> product
+call math.max      a b -> bigger
+
+println "a + b = "
+print total
+println "a * b = "
+print product
+println "max   = "
+print bigger
+
+print sep
+print "Done!"

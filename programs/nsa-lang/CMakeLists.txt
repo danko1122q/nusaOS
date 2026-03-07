@@ -10,7 +10,7 @@ add_library(libnsa STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/nsa_vm.cpp
 )
 target_include_directories(libnsa PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set_target_properties(libnsa PROPERTIES PREFIX "")  # output: libnsa.a not liblibnsa.a
+set_target_properties(libnsa PROPERTIES PREFIX "")
 
 add_executable(nsa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
