@@ -89,16 +89,25 @@ Selamat, program pertama berhasil.
 - Huruf kecil dan besar dibedakan — `Print` bukan keyword, yang benar adalah `print`
 
 ### Komentar
-
-Baris yang diawali `//` atau `#` adalah komentar — tidak dieksekusi.
-
+NSA mendukung tiga gaya komentar:
 ```
-// ini komentar gaya C
-# ini juga komentar
-
+// komentar satu baris gaya C
+# komentar satu baris gaya hash
 print "baris ini dijalankan"
 # print "baris ini tidak dijalankan"
+
+/* komentar blok satu baris */
+
+/*
+   komentar blok
+   bisa span beberapa baris
+   tidak dieksekusi
+*/
+
+let x = 10  /* komentar inline di tengah baris */
 ```
+
+> **Catatan:** Komentar blok `/* */` tidak bisa di-nested. Teks `/* ... */` di dalam string literal tidak dianggap komentar.
 
 ---
 

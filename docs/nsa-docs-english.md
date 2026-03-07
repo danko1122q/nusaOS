@@ -89,16 +89,25 @@ That's it — your first program works.
 - Case matters — `Print` is not a keyword, `print` is
 
 ### Comments
-
-Lines starting with `//` or `#` are comments. They are ignored by the compiler.
-
+NSA supports three comment styles:
 ```
-// this is a C-style comment
-# this is also a comment
-
+// single-line comment (C-style)
+# single-line comment (hash-style)
 print "this line runs"
 # print "this line does not run"
+
+/* block comment on one line */
+
+/*
+   block comment spanning
+   multiple lines —
+   none of this is executed
+*/
+
+let x = 10  /* inline block comment */
 ```
+
+> **Note:** Block comments `/* */` cannot be nested. The text `/* ... */` inside a string literal is not treated as a comment.
 
 ---
 
