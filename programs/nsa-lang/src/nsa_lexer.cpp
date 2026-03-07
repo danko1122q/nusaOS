@@ -28,6 +28,12 @@ static const std::set<std::string> KEYWORDS = {
     "func", "endfunc", "return", "call",
     /* arrays */
     "arr", "aget", "aset", "alen",
+    /* string indexing (v2.5) */
+    "sget", "sset", "ssub",
+    /* file I/O (v2.5) */
+    "fopen", "fclose", "fread", "fwrite", "fexists",
+    /* float (v2.5) */
+    "itof", "ftoi", "ftos",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }
@@ -100,7 +106,7 @@ bool tokenize(const std::string& line, std::vector<Token>& out, std::string& err
             out.push_back(t); i++; continue;
         }
 
-        /* Integer literals */
+        /* Numeric literals — integer or float */
         if (isdigit((unsigned char)line[i]) ||
             ((line[i]=='-'||line[i]=='+') && i+1<n && isdigit((unsigned char)line[i+1]) &&
              (out.empty()||out.back().kind==TK_OP)))
@@ -108,11 +114,28 @@ bool tokenize(const std::string& line, std::vector<Token>& out, std::string& err
             size_t start=i;
             if (line[i]=='-'||line[i]=='+') i++;
             while (i<n && isdigit((unsigned char)line[i])) i++;
-            std::string num=line.substr(start,i-start);
-            errno=0; char* end; long v=strtol(num.c_str(),&end,10);
-            if (errno||*end) { error_out="invalid integer: "+num; return false; }
-            if (v>2147483647L||v<(-2147483647L-1)) { error_out="integer out of range: "+num; return false; }
-            Token t; t.kind=TK_INT; t.text=num; t.ival=(int32_t)v; out.push_back(t);
+            /* float: optional fractional part */
+            bool is_float = (i<n && line[i]=='.' && i+1<n && isdigit((unsigned char)line[i+1]));
+            if (is_float) {
+                i++; /* consume dot */
+                while (i<n && isdigit((unsigned char)line[i])) i++;
+                /* optional exponent */
+                if (i<n && (line[i]=='e'||line[i]=='E')) {
+                    i++;
+                    if (i<n && (line[i]=='+'||line[i]=='-')) i++;
+                    while (i<n && isdigit((unsigned char)line[i])) i++;
+                }
+                std::string num=line.substr(start,i-start);
+                errno=0; char* endp; double dv=strtod(num.c_str(),&endp);
+                if (errno||*endp) { error_out="invalid float: "+num; return false; }
+                Token t; t.kind=TK_FLOAT; t.text=num; t.ival=0; t.dval=dv; out.push_back(t);
+            } else {
+                std::string num=line.substr(start,i-start);
+                errno=0; char* end; long v=strtol(num.c_str(),&end,10);
+                if (errno||*end) { error_out="invalid integer: "+num; return false; }
+                if (v>2147483647L||v<(-2147483647L-1)) { error_out="integer out of range: "+num; return false; }
+                Token t; t.kind=TK_INT; t.text=num; t.ival=(int32_t)v; out.push_back(t);
+            }
             continue;
         }
 

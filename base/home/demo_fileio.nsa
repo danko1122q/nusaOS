@@ -1,0 +1,80 @@
+// demo_fileio.nsa — File read/write demo for NSA v2.5
+// Run: nsa build demo_fileio.nsa && nsa run demo_fileio.nbin
+
+print "=== NSA v2.5 - File I/O Demo ==="
+
+// ── 1. Write new file ─────────────────────────────────────────────
+let path    = "/home/notes.txt"
+let content = "Hello from nusaOS!\nThis is the second line.\nDone.\n"
+
+print ""
+print "1. Writing file /home/notes.txt ..."
+fopen  f path "w"
+fwrite f content
+fclose f
+print "   Successfully written."
+
+// ── 2. Check if file exists ───────────────────────────────────────
+print ""
+print "2. Checking file existence ..."
+fexists exists path
+if exists then
+    print "   File EXISTS."
+end
+
+// ── 3. Read file content ──────────────────────────────────────────
+print ""
+print "3. Reading file content ..."
+fopen  g path "r"
+fread  data g
+fclose g
+print "   File content:"
+print data
+
+// ── 4. Append new line ────────────────────────────────────────────
+print "4. Appending line ..."
+let extra = "Extra line from NSA!\n"
+fopen  h path "a"
+fwrite h extra
+fclose h
+print "   Successfully appended."
+
+// ── 5. Re-read after append ───────────────────────────────────────
+print ""
+print "5. File content after append:"
+fopen  i path "r"
+fread  result i
+fclose i
+print result
+
+// ── 6. Save numeric result to file ────────────────────────────────
+print "6. Saving calculation result to file ..."
+let pathnum = "/home/result.txt"
+let x = 10
+let y = 25
+add x y
+to_str num_str x
+let line = "Result 10 + 25 = "
+concat line num_str
+concat line "\n"
+
+fopen  j pathnum "w"
+fwrite j line
+fclose j
+
+fopen  k pathnum "r"
+fread  check k
+fclose k
+print check
+
+// ── 7. Check non-existent file ────────────────────────────────────
+print "7. Checking non-existent file ..."
+let missing = "/home/empty.txt"
+fexists ck missing
+not ck
+if ck then
+    print "   File not found (correct)."
+end
+
+print ""
+print "=== Demo finished ==="

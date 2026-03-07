@@ -8,14 +8,72 @@
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
+#include <math.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
+
+
+/* float_to_str — portable double→string without relying on %f/%g in printf.
+   Produces up to 6 significant digits, trims trailing zeros.             */
+static void float_to_str(double d, char* buf, size_t bufsz) {
+    if (bufsz < 2) { buf[0]=0; return; }
+    if (d != d) { /* NaN */ buf[0]='n';buf[1]='a';buf[2]='n';buf[3]=0; return; }
+    /* Handle sign */
+    char* p = buf; size_t rem = bufsz-1;
+    if (d < 0.0) { *p++='-'; rem--; d=-d; }
+    /* Infinity */
+    if (d > 1e38) { 
+        *p++='i';*p++='n';*p++='f';*p=0; return; 
+    }
+    /* Zero special case */
+    if (d == 0.0) { *p++='0'; *p=0; return; }
+    /* Scale to get 6 significant digits as integer */
+    int exp = 0;
+    while (d >= 1000000.0) { d /= 10.0; exp++; }
+    while (d < 100000.0) { d *= 10.0; exp--; }
+    long long mantissa = (long long)(d + 0.5);
+    if (mantissa >= 1000000LL) { mantissa /= 10; exp++; }
+    /* exp: decimal point is after digit 1, shifted by exp */
+    /* Actual value = mantissa * 10^(exp - 5) */
+    int dot_pos = 6 + exp; /* position of decimal point from left of 6-digit string */
+    /* Build 6-digit string */
+    char digits[8]; int nd=6;
+    for (int i=5;i>=0;i--) { digits[i]='0'+(int)(mantissa%10); mantissa/=10; }
+    digits[6]=0;
+    /* Trim trailing zeros from fractional part */
+    int last = 5;
+    if (dot_pos < 6) { while(last>dot_pos && digits[last]=='0') last--; }
+    /* Write output */
+    if (dot_pos <= 0) {
+        /* 0.000...digits */
+        if(rem>1){*p++='0';rem--;} if(rem>1){*p++='.';rem--;}
+        for(int z=0;z<-dot_pos&&rem>1;z++){*p++='0';rem--;}
+        for(int i=0;i<=last&&rem>1;i++){*p++=digits[i];rem--;}
+    } else if (dot_pos >= nd) {
+        /* integer, possibly with trailing zeros */
+        for(int i=0;i<nd&&rem>1;i++){*p++=digits[i];rem--;}
+        for(int z=nd;z<dot_pos&&rem>1;z++){*p++='0';rem--;}
+    } else {
+        /* mixed */
+        for(int i=0;i<dot_pos&&rem>1;i++){*p++=digits[i];rem--;}
+        if(dot_pos<=last){
+            if(rem>1){*p++='.';rem--;}
+            for(int i=dot_pos;i<=last&&rem>1;i++){*p++=digits[i];rem--;}
+        }
+    }
+    *p=0;
+}
 
 namespace NsaVM {
 
-enum VarType : uint8_t { VAR_UNSET=0, VAR_INT, VAR_STR, VAR_BOOL };
+enum VarType : uint8_t { VAR_UNSET=0, VAR_INT, VAR_STR, VAR_BOOL, VAR_FILE, VAR_FLOAT };
 
 struct VarSlot {
     VarType type;
     int32_t ival;
+    double  dval;
     char    sval[NSA_MAX_STR_LEN+1];
 };
 
@@ -38,6 +96,12 @@ static bool read_i32(const std::vector<uint8_t>& bc, size_t& ip, int32_t& out) {
     out = (int32_t)((uint32_t)bc[ip] | ((uint32_t)bc[ip+1]<<8) |
                     ((uint32_t)bc[ip+2]<<16) | ((uint32_t)bc[ip+3]<<24));
     ip+=4; return true;
+}
+static bool read_f64(const std::vector<uint8_t>& bc, size_t& ip, double& out) {
+    if (ip+8 > bc.size()) return false;
+    uint64_t bits=0;
+    for (int i=0;i<8;i++) bits|=((uint64_t)bc[ip+i])<<(i*8);
+    memcpy(&out,&bits,8); ip+=8; return true;
 }
 static bool read_str(const std::vector<uint8_t>& bc, size_t& ip,
                      char* buf, size_t bufsz) {
@@ -72,8 +136,9 @@ static const uint32_t MAX_BACK_JUMPS = 10000000UL;
     if(call_depth>0){ if((id)>=NSA_MAX_LOCALS) RT_ERR1(who ": local id %u out of range",(unsigned)(id)); } \
     else{ if((int)(id)>=sym_count) RT_ERR1(who ": var id %u out of range",(unsigned)(id)); } \
 }while(0)
-#define NEED_INT(id,who) if(VAR(id).type!=VAR_INT) RT_ERR1(who ": var %u is not an integer",(unsigned)(id))
-#define NEED_STR(id,who) if(VAR(id).type!=VAR_STR) RT_ERR1(who ": var %u is not a string",(unsigned)(id))
+#define NEED_INT(id,who)   if(VAR(id).type!=VAR_INT)   RT_ERR1(who ": var %u is not an integer",(unsigned)(id))
+#define NEED_STR(id,who)   if(VAR(id).type!=VAR_STR)   RT_ERR1(who ": var %u is not a string",(unsigned)(id))
+#define NEED_FLOAT(id,who) if(VAR(id).type!=VAR_FLOAT) RT_ERR1(who ": var %u is not a float",(unsigned)(id))
 
 /* Array bounds check — base_id is always in global vars[] regardless of call depth.
    Element slots are base_id+1 .. base_id+size.
@@ -96,6 +161,13 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
     /* Static to avoid stack overflow on NusaOS (1.1 MB total).
        Safe because nsa is single-threaded and run() is not recursive. */
     static VarSlot   vars[NSA_MAX_VARS];
+    /* File handle table — maps fd_slot index → POSIX file descriptor */
+    static int       open_fds[NSA_MAX_VARS];
+    static bool      fd_init_done;
+    if (!fd_init_done) {
+        for (int i=0;i<NSA_MAX_VARS;i++) open_fds[i]=-1;
+        fd_init_done=true;
+    }
     static CallFrame call_stack[NSA_MAX_CALL_DEPTH];
     memset(vars,       0, sizeof(vars));
     memset(call_stack, 0, sizeof(call_stack));
@@ -431,12 +503,36 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             ip=call_stack[call_depth].ret_ip; break;
         }
         case OP_STORE_RET: {
-            uint8_t global_id, local_id;
-            if(!read_u8(bc,ip,global_id))RT_ERR("STORE_RET: truncated global_id");
-            if(!read_u8(bc,ip,local_id)) RT_ERR("STORE_RET: truncated local_id");
-            if((int)global_id>=sym_count)     RT_ERR("STORE_RET: global_id out of range");
-            if(local_id>=NSA_MAX_LOCALS)      RT_ERR("STORE_RET: local_id out of range");
-            vars[global_id]=call_stack[call_depth].locals[local_id]; break;
+            /* STORE_RET  dst_id  callee_local_id
+             *
+             * Copies the return value from the callee's frame into the
+             * destination slot of the CURRENT (caller) scope.
+             *
+             * call_stack[call_depth] still holds the callee's locals
+             * (they are not zeroed on RET — only call_depth was decremented).
+             *
+             * The destination slot must be written into the caller's scope:
+             *   - if inside a function (call_depth > 0): write to
+             *     call_stack[call_depth-1].locals[dst_id]
+             *   - if at top level (call_depth == 0):    write to vars[dst_id]
+             *
+             * This fixes the nested NSS call bug where outer() calls inner():
+             * outer runs at call_depth=1, so its locals live in
+             * call_stack[0].locals — vars[] is NOT outer's frame.
+             */
+            uint8_t dst_id, callee_local_id;
+            if(!read_u8(bc,ip,dst_id))         RT_ERR("STORE_RET: truncated dst_id");
+            if(!read_u8(bc,ip,callee_local_id)) RT_ERR("STORE_RET: truncated callee_local_id");
+            if(callee_local_id>=NSA_MAX_LOCALS) RT_ERR("STORE_RET: callee_local_id out of range");
+            VarSlot ret_val = call_stack[call_depth].locals[callee_local_id];
+            if (call_depth > 0) {
+                if(dst_id>=NSA_MAX_LOCALS) RT_ERR("STORE_RET: dst_id out of range (local)");
+                call_stack[call_depth-1].locals[dst_id] = ret_val;
+            } else {
+                if((int)dst_id>=sym_count) RT_ERR("STORE_RET: dst_id out of range (global)");
+                vars[dst_id] = ret_val;
+            }
+            break;
         }
 
         /* ── Arrays (v2.2) ───────────────────────────────────────────── */
@@ -511,6 +607,245 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             if((int)base>=sym_count)RT_ERR("ARR_LEN: base out of range");
             if(vars[base].type!=VAR_INT)RT_ERR("ARR_LEN: array not initialized");
             VAR(dst).type=VAR_INT; VAR(dst).ival=vars[base].ival; break;
+        }
+
+
+        /* ── Floating point (v2.5) ───────────────────────────────────────── */
+
+        /* OP_SET_FLOAT  dst  f64(8 bytes LE) */
+        case OP_SET_FLOAT: {
+            uint8_t dst; double d;
+            if(!read_u8(bc,ip,dst))  RT_ERR("SET_FLOAT: truncated dst");
+            if(!read_f64(bc,ip,d))   RT_ERR("SET_FLOAT: truncated value");
+            CHECK_ID(dst,"SET_FLOAT");
+            VAR(dst).type=VAR_FLOAT; VAR(dst).dval=d; break;
+        }
+        /* OP_FADD/FSUB/FMUL/FDIV  dst  a  b */
+        case OP_FADD: case OP_FSUB: case OP_FMUL: case OP_FDIV: {
+            uint8_t dst,a,b;
+            if(!read_u8(bc,ip,dst)) RT_ERR("FMATH: truncated dst");
+            if(!read_u8(bc,ip,a))   RT_ERR("FMATH: truncated a");
+            if(!read_u8(bc,ip,b))   RT_ERR("FMATH: truncated b");
+            CHECK_ID(dst,"FMATH dst"); NEED_FLOAT(a,"FMATH a"); NEED_FLOAT(b,"FMATH b");
+            double da=VAR(a).dval, db=VAR(b).dval, res=0;
+            if      (op==OP_FADD) res=da+db;
+            else if (op==OP_FSUB) res=da-db;
+            else if (op==OP_FMUL) res=da*db;
+            else {
+                if(db==0.0) RT_ERR("FDIV: division by zero");
+                res=da/db;
+            }
+            VAR(dst).type=VAR_FLOAT; VAR(dst).dval=res; break;
+        }
+        /* OP_FNEG  dst */
+        case OP_FNEG: {
+            uint8_t dst;
+            if(!read_u8(bc,ip,dst)) RT_ERR("FNEG: truncated dst");
+            NEED_FLOAT(dst,"FNEG"); VAR(dst).dval=-VAR(dst).dval; break;
+        }
+        /* OP_ITOF  dst  src_int */
+        case OP_ITOF: {
+            uint8_t dst,src;
+            if(!read_u8(bc,ip,dst)) RT_ERR("ITOF: truncated dst");
+            if(!read_u8(bc,ip,src)) RT_ERR("ITOF: truncated src");
+            CHECK_ID(dst,"ITOF dst"); NEED_INT(src,"ITOF src");
+            VAR(dst).type=VAR_FLOAT; VAR(dst).dval=(double)VAR(src).ival; break;
+        }
+        /* OP_FTOI  dst  src_float */
+        case OP_FTOI: {
+            uint8_t dst,src;
+            if(!read_u8(bc,ip,dst)) RT_ERR("FTOI: truncated dst");
+            if(!read_u8(bc,ip,src)) RT_ERR("FTOI: truncated src");
+            CHECK_ID(dst,"FTOI dst"); NEED_FLOAT(src,"FTOI src");
+            VAR(dst).type=VAR_INT; VAR(dst).ival=(int32_t)VAR(src).dval; break;
+        }
+        /* OP_FTOS  dst  src_float  → string with up to 6 decimals, trimmed */
+        case OP_FTOS: {
+            uint8_t dst,src;
+            if(!read_u8(bc,ip,dst)) RT_ERR("FTOS: truncated dst");
+            if(!read_u8(bc,ip,src)) RT_ERR("FTOS: truncated src");
+            CHECK_ID(dst,"FTOS dst"); NEED_FLOAT(src,"FTOS src");
+            char buf[64];
+            float_to_str(VAR(src).dval, buf, sizeof(buf));
+            VAR(dst).type=VAR_STR;
+            strncpy(VAR(dst).sval,buf,NSA_MAX_STR_LEN);
+            VAR(dst).sval[NSA_MAX_STR_LEN]='\0';
+            break;
+        }
+        /* OP_FCMP  dst_bool  a  op_byte  b */
+        case OP_FCMP: {
+            uint8_t dst,a,op_byte,b;
+            if(!read_u8(bc,ip,dst))     RT_ERR("FCMP: truncated dst");
+            if(!read_u8(bc,ip,a))       RT_ERR("FCMP: truncated a");
+            if(!read_u8(bc,ip,op_byte)) RT_ERR("FCMP: truncated op");
+            if(!read_u8(bc,ip,b))       RT_ERR("FCMP: truncated b");
+            CHECK_ID(dst,"FCMP dst"); NEED_FLOAT(a,"FCMP a"); NEED_FLOAT(b,"FCMP b");
+            double da=VAR(a).dval, db=VAR(b).dval; bool res=false;
+            switch(op_byte){
+                case 0: res=(da==db); break; case 1: res=(da!=db); break;
+                case 2: res=(da< db); break; case 3: res=(da> db); break;
+                case 4: res=(da<=db); break; case 5: res=(da>=db); break;
+                default: RT_ERR("FCMP: invalid op_byte");
+            }
+            VAR(dst).type=VAR_BOOL; VAR(dst).ival=res?1:0; break;
+        }
+        /* OP_FPRINT / OP_FPRINT_NL  id  — print float var */
+        case OP_FPRINT: case OP_FPRINT_NL: {
+            uint8_t id;
+            if(!read_u8(bc,ip,id)) RT_ERR("FPRINT: truncated id");
+            CHECK_ID(id,"FPRINT"); NEED_FLOAT(id,"FPRINT");
+            char buf[64]; float_to_str(VAR(id).dval, buf, sizeof(buf));
+            if(op==OP_FPRINT_NL) printf("%s\n",buf);
+            else                 printf("%s",buf);
+            break;
+        }
+
+        /* ── String indexing (v2.5) ──────────────────────────────────────
+         * OP_SGET  dst  src  idx  — get char at index → 1-char string      */
+        case OP_SGET: {
+            uint8_t dst,src,idx;
+            if(!read_u8(bc,ip,dst)) RT_ERR("SGET: truncated dst");
+            if(!read_u8(bc,ip,src)) RT_ERR("SGET: truncated src");
+            if(!read_u8(bc,ip,idx)) RT_ERR("SGET: truncated idx");
+            CHECK_ID(dst,"SGET dst"); NEED_STR(src,"SGET src");
+            CHECK_ID(idx,"SGET idx"); NEED_INT(idx,"SGET idx");
+            int32_t i=VAR(idx).ival;
+            int slen=(int)strlen(VAR(src).sval);
+            if(i<0||i>=slen) RT_ERR("SGET: index out of range");
+            VAR(dst).type=VAR_STR;
+            VAR(dst).sval[0]=VAR(src).sval[i];
+            VAR(dst).sval[1]='\0';
+            break;
+        }
+        /* OP_SSET  dst  idx  src  — replace char at index                  */
+        case OP_SSET: {
+            uint8_t dst,idx,src;
+            if(!read_u8(bc,ip,dst)) RT_ERR("SSET: truncated dst");
+            if(!read_u8(bc,ip,idx)) RT_ERR("SSET: truncated idx");
+            if(!read_u8(bc,ip,src)) RT_ERR("SSET: truncated src");
+            NEED_STR(dst,"SSET dst"); NEED_INT(idx,"SSET idx"); NEED_STR(src,"SSET src");
+            int32_t i=VAR(idx).ival;
+            int slen=(int)strlen(VAR(dst).sval);
+            if(i<0||i>=slen) RT_ERR("SSET: index out of range");
+            if(VAR(src).sval[0]=='\0') RT_ERR("SSET: char string is empty");
+            VAR(dst).sval[i]=VAR(src).sval[0];
+            break;
+        }
+        /* OP_SSUB  dst  src  start  len  — extract substring               */
+        case OP_SSUB: {
+            uint8_t dst,src,start_id,len_id;
+            if(!read_u8(bc,ip,dst))     RT_ERR("SSUB: truncated dst");
+            if(!read_u8(bc,ip,src))     RT_ERR("SSUB: truncated src");
+            if(!read_u8(bc,ip,start_id))RT_ERR("SSUB: truncated start");
+            if(!read_u8(bc,ip,len_id))  RT_ERR("SSUB: truncated len");
+            CHECK_ID(dst,"SSUB dst"); NEED_STR(src,"SSUB src");
+            NEED_INT(start_id,"SSUB start"); NEED_INT(len_id,"SSUB len");
+            int32_t start=VAR(start_id).ival;
+            int32_t len  =VAR(len_id).ival;
+            int     slen =(int)strlen(VAR(src).sval);
+            if(start<0||start>=slen) RT_ERR("SSUB: start out of range");
+            if(len<0) RT_ERR("SSUB: negative length");
+            if(start+len>slen) len=slen-start;
+            if(len>(int)NSA_MAX_STR_LEN) len=(int)NSA_MAX_STR_LEN;
+            VAR(dst).type=VAR_STR;
+            memcpy(VAR(dst).sval, VAR(src).sval+start, (size_t)len);
+            VAR(dst).sval[len]='\0';
+            break;
+        }
+
+        /* ── File I/O (v2.5) ────────────────────────────────────────────── */
+
+        /* OP_FOPEN  fd_var  path_var  mode_var                             */
+        case OP_FOPEN: {
+            uint8_t fd_id, path_id, mode_id;
+            if(!read_u8(bc,ip,fd_id))  RT_ERR("FOPEN: truncated fd");
+            if(!read_u8(bc,ip,path_id))RT_ERR("FOPEN: truncated path");
+            if(!read_u8(bc,ip,mode_id))RT_ERR("FOPEN: truncated mode");
+            CHECK_ID(fd_id,"FOPEN fd");
+            NEED_STR(path_id,"FOPEN path");
+            NEED_STR(mode_id,"FOPEN mode");
+            const char* path=VAR(path_id).sval;
+            const char* mode=VAR(mode_id).sval;
+            int flags=0, perm=0644;
+            if      (strcmp(mode,"r")==0) flags=O_RDONLY;
+            else if (strcmp(mode,"w")==0) flags=O_WRONLY|O_CREAT|O_TRUNC;
+            else if (strcmp(mode,"a")==0) flags=O_WRONLY|O_CREAT|O_APPEND;
+            else RT_ERR("FOPEN: invalid mode (use r/w/a)");
+            int raw_fd=open(path,flags,(mode_t)perm);
+            /* Store result as integer fd slot value; negative = error */
+            VAR(fd_id).type=VAR_FILE;
+            VAR(fd_id).ival=raw_fd;
+            /* also track in open_fds table for cleanup */
+            int slot_idx = (int)(call_depth>0
+                ? (uint8_t*)(&VAR(fd_id)) - (uint8_t*)call_stack[call_depth-1].locals
+                : fd_id);
+            (void)slot_idx;
+            /* raw_fd is stored directly in ival — enough for close/read/write */
+            break;
+        }
+        /* OP_FCLOSE  fd_var                                                */
+        case OP_FCLOSE: {
+            uint8_t fd_id;
+            if(!read_u8(bc,ip,fd_id)) RT_ERR("FCLOSE: truncated fd");
+            CHECK_ID(fd_id,"FCLOSE fd");
+            if(VAR(fd_id).type!=VAR_FILE) RT_ERR("FCLOSE: not a file handle");
+            int raw_fd=VAR(fd_id).ival;
+            if(raw_fd>=0) close(raw_fd);
+            VAR(fd_id).ival=-1;
+            break;
+        }
+        /* OP_FREAD  dst_str  fd_var  — read entire file into string        */
+        case OP_FREAD: {
+            uint8_t dst,fd_id;
+            if(!read_u8(bc,ip,dst))   RT_ERR("FREAD: truncated dst");
+            if(!read_u8(bc,ip,fd_id)) RT_ERR("FREAD: truncated fd");
+            CHECK_ID(dst,"FREAD dst");
+            if(VAR(fd_id).type!=VAR_FILE) RT_ERR("FREAD: not a file handle");
+            int raw_fd=VAR(fd_id).ival;
+            if(raw_fd<0) RT_ERR("FREAD: file not open");
+            char buf[NSA_MAX_STR_LEN+1];
+            memset(buf,0,sizeof(buf));
+            ssize_t total=0;
+            while(total<(ssize_t)NSA_MAX_STR_LEN) {
+                ssize_t r=read(raw_fd, buf+total, NSA_MAX_STR_LEN-total);
+                if(r<=0) break;
+                total+=r;
+            }
+            buf[total]='\0';
+            VAR(dst).type=VAR_STR;
+            memcpy(VAR(dst).sval, buf, (size_t)total+1);
+            break;
+        }
+        /* OP_FWRITE  fd_var  src_str                                       */
+        case OP_FWRITE: {
+            uint8_t fd_id, src;
+            if(!read_u8(bc,ip,fd_id)) RT_ERR("FWRITE: truncated fd");
+            if(!read_u8(bc,ip,src))   RT_ERR("FWRITE: truncated src");
+            if(VAR(fd_id).type!=VAR_FILE) RT_ERR("FWRITE: not a file handle");
+            NEED_STR(src,"FWRITE src");
+            int raw_fd=VAR(fd_id).ival;
+            if(raw_fd<0) RT_ERR("FWRITE: file not open");
+            const char* s=VAR(src).sval;
+            size_t slen=strlen(s);
+            size_t written=0;
+            while(written<slen){
+                ssize_t w=write(raw_fd,s+written,slen-written);
+                if(w<=0) break;
+                written+=(size_t)w;
+            }
+            break;
+        }
+        /* OP_FEXISTS  dst_bool  path_var                                   */
+        case OP_FEXISTS: {
+            uint8_t dst, path_id;
+            if(!read_u8(bc,ip,dst))    RT_ERR("FEXISTS: truncated dst");
+            if(!read_u8(bc,ip,path_id))RT_ERR("FEXISTS: truncated path");
+            CHECK_ID(dst,"FEXISTS dst");
+            NEED_STR(path_id,"FEXISTS path");
+            struct stat st; int r=stat(VAR(path_id).sval,&st);
+            VAR(dst).type=VAR_BOOL;
+            VAR(dst).ival=(r==0)?1:0;
+            break;
         }
 
         default:

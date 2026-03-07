@@ -11,6 +11,7 @@ namespace NsaLexer {
 enum TokenKind {
     TK_IDENT,       /* keyword or identifier              */
     TK_INT,         /* 42, -7                             */
+    TK_FLOAT,       /* 3.14, -1.5e10                      */
     TK_STRING,      /* "hello\n"  (already unescaped)     */
     TK_BOOL,        /* true / false                       */
     TK_OP,          /* = + - * / % == != < > <= >= && ||  */
@@ -21,6 +22,8 @@ struct Token {
     TokenKind   kind;
     std::string text;
     int32_t     ival;   /* TK_INT: parsed value; TK_BOOL: 0/1 */
+    double      dval;   /* TK_FLOAT: parsed value             */
+    Token() : kind(TK_EOF), ival(0), dval(0.0) {}
 };
 
 bool tokenize(const std::string& line, std::vector<Token>& out, std::string& error_out);

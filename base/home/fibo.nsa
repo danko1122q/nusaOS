@@ -1,0 +1,44 @@
+// fibo.nsa — Fibonacci sequence in NSA lang
+// Build: nsa build fibo.nsa && nsa run fibo.nbin
+
+print "==========================="
+print " Fibonacci Sequence — NSA"
+print "==========================="
+print "How many numbers? (max 40): "
+
+let n = 0
+input n
+
+if n < 1 then
+    let n = 1
+end
+if n > 40 then
+    let n = 40
+end
+
+print "==========================="
+
+let a       = 0
+let b       = 1
+let i       = 0
+let temp    = 0
+let running = true
+
+cmp running i < n
+loop while running
+    println "F("
+    println i
+    println ") = "
+    print a
+
+    copy temp b
+    add  temp a
+    copy a b
+    copy b temp
+
+    inc i
+    cmp running i < n
+end
+
+print "==========================="
+print "Done!"

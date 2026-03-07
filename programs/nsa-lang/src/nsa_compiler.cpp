@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <map>
 #include <set>
@@ -118,6 +119,10 @@ struct CS {
     void emit_i32(int32_t v)     {
         bytecode.push_back(v&0xFF); bytecode.push_back((v>>8)&0xFF);
         bytecode.push_back((v>>16)&0xFF); bytecode.push_back((v>>24)&0xFF);
+    }
+    void emit_f64(double d) {
+        uint64_t bits; memcpy(&bits,&d,8);
+        for (int i=0;i<8;i++) bytecode.push_back((uint8_t)(bits>>(i*8)));
     }
     void patch_u16(size_t pos, uint16_t v) {
         bytecode[pos]=(v&0xFF); bytecode[pos+1]=((v>>8)&0xFF);
@@ -336,6 +341,10 @@ struct NssCS {
         bytecode.push_back(v&0xFF); bytecode.push_back((v>>8)&0xFF);
         bytecode.push_back((v>>16)&0xFF); bytecode.push_back((v>>24)&0xFF);
     }
+    void emit_f64(double d) {
+        uint64_t bits; memcpy(&bits,&d,8);
+        for (int i=0;i<8;i++) bytecode.push_back((uint8_t)(bits>>(i*8)));
+    }
     void patch_u16(size_t pos, uint16_t v) {
         bytecode[pos]=(v&0xFF); bytecode[pos+1]=((v>>8)&0xFF);
     }
@@ -483,6 +492,21 @@ static void parse_let(CS& cs, const Toks& t) {
         uint8_t id; if (!cs.intern(name,SYM_INT,id)) return;
         cs.emit(OP_SET_INT); cs.emit(id); cs.emit_i32(val.ival); return;
     }
+    if (val.kind==TK::TK_FLOAT) {
+        uint8_t id; if (!cs.intern(name,SYM_FLOAT,id)) return;
+        cs.emit(OP_SET_FLOAT); cs.emit(id); cs.emit_f64(val.dval); return;
+    }
+    /* let x = -3.14  →  tokens: [-, TK_FLOAT(3.14)] */
+    if (val.kind==TK::TK_OP && val.text=="-" && t.size()>=5 && t[4].kind==TK::TK_FLOAT) {
+        uint8_t id; if (!cs.intern(name,SYM_FLOAT,id)) return;
+        cs.emit(OP_SET_FLOAT); cs.emit(id); cs.emit_f64(-t[4].dval); return;
+    }
+    /* let x = -42  →  tokens: [-, TK_INT(42)] — already handled by signed int in lexer
+       but if somehow split: */
+    if (val.kind==TK::TK_OP && val.text=="-" && t.size()>=5 && t[4].kind==TK::TK_INT) {
+        uint8_t id; if (!cs.intern(name,SYM_INT,id)) return;
+        cs.emit(OP_SET_INT); cs.emit(id); cs.emit_i32(-t[4].ival); return;
+    }
     if (val.kind==TK::TK_IDENT && !NsaLexer::is_keyword(val.text)) {
         /* Check for qualified name: module.var */
         size_t dot = val.text.find('.');
@@ -520,8 +544,19 @@ static void parse_print(CS& cs, const Toks& t, bool nl) {
         cs.emit(sop); emit_str_lit(cs.bytecode,arg.text); return;
     }
     if (arg.kind==TK::TK_IDENT && !NsaLexer::is_keyword(arg.text)) {
-        uint8_t id; if (!cs.lookup(arg.text,id)) return;
+        uint8_t id; SymType st; if (!cs.lookup(arg.text,id,&st)) return;
+        if (st==SYM_FLOAT) {
+            NsaOpcode fop = nl ? OP_FPRINT_NL : OP_FPRINT;
+            cs.emit(fop); cs.emit(id); return;
+        }
         cs.emit(vop); cs.emit(id); return;
+    }
+    if (arg.kind==TK::TK_FLOAT) {
+        /* print float literal — store in temp first */
+        uint8_t tmp; if (!cs.alloc_temp(tmp)) return;
+        cs.emit(OP_SET_FLOAT); cs.emit(tmp); cs.emit_f64(arg.dval);
+        NsaOpcode fop = nl ? OP_FPRINT_NL : OP_FPRINT;
+        cs.emit(fop); cs.emit(tmp); return;
     }
     cs.error("expected string literal or variable after 'print'");
 }
@@ -631,6 +666,204 @@ static void parse_to_str(CS& cs, const Toks& t) {
     cs.emit(OP_INT_TO_STR); cs.emit(dst); cs.emit(src);
 }
 
+/* ── Float arithmetic (v2.5) ──────────────────────────────────────── */
+
+/* Helper: resolve operand that may be float var or float literal */
+static bool resolve_float_op(CS& cs, const Tok& tok, uint8_t& out_id) {
+    if (tok.kind==TK::TK_FLOAT) {
+        /* allocate a temp float slot */
+        if (!cs.alloc_temp(out_id)) return false;
+        cs.emit(OP_SET_FLOAT); cs.emit(out_id); cs.emit_f64(tok.dval);
+        return true;
+    }
+    if (tok.kind==TK::TK_INT) {
+        /* auto-promote int literal to float temp */
+        if (!cs.alloc_temp(out_id)) return false;
+        cs.emit(OP_SET_FLOAT); cs.emit(out_id); cs.emit_f64((double)tok.ival);
+        return true;
+    }
+    SymType st;
+    if (!cs.lookup(tok.text, out_id, &st)) return false;
+    if (st==SYM_INT) {
+        /* auto-promote int var to float temp */
+        uint8_t tmp; if (!cs.alloc_temp(tmp)) return false;
+        cs.emit(OP_ITOF); cs.emit(tmp); cs.emit(out_id);
+        out_id=tmp;
+    } else if (st!=SYM_FLOAT) {
+        cs.error("float operation: expected float/int operand, got '"+tok.text+"'");
+        return false;
+    }
+    return true;
+}
+
+/* fadd/fsub/fmul/fdiv  dst  a  b */
+static void parse_fmath(CS& cs, const Toks& t, NsaOpcode op) {
+    if (t.size()<4) { cs.error("expected: fadd/fsub/fmul/fdiv <dst> <a> <b>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_FLOAT,dst)) return;
+    uint8_t va; if (!resolve_float_op(cs,t[2],va)) return;
+    uint8_t vb; if (!resolve_float_op(cs,t[3],vb)) return;
+    cs.emit(op); cs.emit(dst); cs.emit(va); cs.emit(vb);
+}
+
+/* fneg dst */
+static void parse_fneg(CS& cs, const Toks& t) {
+    if (t.size()<2) { cs.error("expected: fneg <var>"); return; }
+    uint8_t id; SymType st; if (!cs.lookup(t[1].text,id,&st)) return;
+    if (st!=SYM_FLOAT) { cs.error("fneg: not a float variable"); return; }
+    cs.emit(OP_FNEG); cs.emit(id);
+}
+
+/* itof dst src_int  — int variable → float variable */
+static void parse_itof(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: itof <dst_float> <src_int>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_FLOAT,dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+    if (st!=SYM_INT) { cs.error("itof: source must be integer"); return; }
+    cs.emit(OP_ITOF); cs.emit(dst); cs.emit(src);
+}
+
+/* ftoi dst src_float  — float → int (truncate) */
+static void parse_ftoi(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: ftoi <dst_int> <src_float>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_INT,dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+    if (st!=SYM_FLOAT) { cs.error("ftoi: source must be float"); return; }
+    cs.emit(OP_FTOI); cs.emit(dst); cs.emit(src);
+}
+
+/* ftos dst src_float  — float → string */
+static void parse_ftos(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: ftos <dst_str> <src_float>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_STR,dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+    if (st!=SYM_FLOAT) { cs.error("ftos: source must be float"); return; }
+    cs.emit(OP_FTOS); cs.emit(dst); cs.emit(src);
+}
+
+/* fcmp dst  a  op  b  — float comparison → bool */
+static void parse_fcmp(CS& cs, const Toks& t) {
+    if (t.size()<5) { cs.error("expected: fcmp <bool_dst> <a> <op> <b>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_BOOL,dst)) return;
+    uint8_t va; if (!resolve_float_op(cs,t[2],va)) return;
+    if (t[3].kind!=TK::TK_OP) { cs.error("fcmp: expected comparison operator"); return; }
+    const std::string& op=t[3].text;
+    uint8_t vb; if (!resolve_float_op(cs,t[4],vb)) return;
+    uint8_t op_byte;
+    if      (op=="==") op_byte=0; else if(op=="!=") op_byte=1;
+    else if (op=="<")  op_byte=2; else if(op==">")  op_byte=3;
+    else if (op=="<=") op_byte=4; else if(op==">=") op_byte=5;
+    else { cs.error("fcmp: unknown operator '"+op+"'"); return; }
+    cs.emit(OP_FCMP); cs.emit(dst); cs.emit(va); cs.emit(op_byte); cs.emit(vb);
+}
+
+/* ── String indexing (v2.5) ───────────────────────────────────────── */
+
+/* sget dst_str src_str idx_var  — get char at index, store as 1-char string */
+static void parse_sget(CS& cs, const Toks& t) {
+    if (t.size()<4) { cs.error("expected: sget <dst> <str> <idx>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_STR,dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+    if (st!=SYM_STR) { cs.error("sget: '"+t[2].text+"' is not a string"); return; }
+    uint8_t idx; SymType it; if (!cs.lookup(t[3].text,idx,&it)) return;
+    if (it!=SYM_INT) { cs.error("sget: index must be integer"); return; }
+    cs.emit(OP_SGET); cs.emit(dst); cs.emit(src); cs.emit(idx);
+}
+
+/* sset dst_str idx_var char_str  — replace char at index with first char of char_str */
+static void parse_sset(CS& cs, const Toks& t) {
+    if (t.size()<4) { cs.error("expected: sset <str> <idx> <char_str>"); return; }
+    uint8_t dst; SymType dt; if (!cs.lookup(t[1].text,dst,&dt)) return;
+    if (dt!=SYM_STR) { cs.error("sset: '"+t[1].text+"' is not a string"); return; }
+    uint8_t idx; SymType it; if (!cs.lookup(t[2].text,idx,&it)) return;
+    if (it!=SYM_INT) { cs.error("sset: index must be integer"); return; }
+    uint8_t src; SymType st; if (!cs.lookup(t[3].text,src,&st)) return;
+    if (st!=SYM_STR) { cs.error("sset: char source must be string"); return; }
+    cs.emit(OP_SSET); cs.emit(dst); cs.emit(idx); cs.emit(src);
+}
+
+/* ssub dst_str src_str start_var len_var  — extract substring */
+static void parse_ssub(CS& cs, const Toks& t) {
+    if (t.size()<5) { cs.error("expected: ssub <dst> <src> <start> <len>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_STR,dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+    if (st!=SYM_STR) { cs.error("ssub: '"+t[2].text+"' is not a string"); return; }
+    uint8_t start; SymType stt; if (!cs.lookup(t[3].text,start,&stt)) return;
+    if (stt!=SYM_INT) { cs.error("ssub: start must be integer"); return; }
+    uint8_t len; SymType lt; if (!cs.lookup(t[4].text,len,&lt)) return;
+    if (lt!=SYM_INT) { cs.error("ssub: len must be integer"); return; }
+    cs.emit(OP_SSUB); cs.emit(dst); cs.emit(src); cs.emit(start); cs.emit(len);
+}
+
+/* ── File I/O (v2.5) ───────────────────────────────────────────────── */
+
+/* fopen fd_var path mode_str
+ *   mode_str may be a string variable or a string literal "r"/"w"/"a" */
+static void parse_fopen(CS& cs, const Toks& t) {
+    if (t.size()<4) { cs.error("expected: fopen <fd> <path> <mode>"); return; }
+    uint8_t fd;   if (!cs.intern(t[1].text,SYM_FILE,fd)) return;
+    uint8_t path; SymType pt; if (!cs.lookup(t[2].text,path,&pt)) return;
+    if (pt!=SYM_STR) { cs.error("fopen: path must be a string variable"); return; }
+    /* mode can be a variable or a literal */
+    if (t[3].kind==TK::TK_STRING) {
+        /* inline literal — store in a temp string var */
+        uint8_t tmp; cs.intern("__fopen_mode__",SYM_STR,tmp);
+        cs.emit(OP_SET_STR); cs.emit(tmp); emit_str_lit(cs.bytecode,t[3].text);
+        cs.emit(OP_FOPEN); cs.emit(fd); cs.emit(path); cs.emit(tmp);
+    } else {
+        uint8_t mode; SymType mt; if (!cs.lookup(t[3].text,mode,&mt)) return;
+        if (mt!=SYM_STR) { cs.error("fopen: mode must be a string"); return; }
+        cs.emit(OP_FOPEN); cs.emit(fd); cs.emit(path); cs.emit(mode);
+    }
+}
+
+/* fclose fd_var */
+static void parse_fclose(CS& cs, const Toks& t) {
+    if (t.size()<2) { cs.error("expected: fclose <fd>"); return; }
+    uint8_t fd; SymType ft; if (!cs.lookup(t[1].text,fd,&ft)) return;
+    if (ft!=SYM_FILE) { cs.error("fclose: '"+t[1].text+"' is not a file handle"); return; }
+    cs.emit(OP_FCLOSE); cs.emit(fd);
+}
+
+/* fread dst_str fd_var */
+static void parse_fread(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: fread <dst_str> <fd>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_STR,dst)) return;
+    uint8_t fd;  SymType ft; if (!cs.lookup(t[2].text,fd,&ft)) return;
+    if (ft!=SYM_FILE) { cs.error("fread: '"+t[2].text+"' is not a file handle"); return; }
+    cs.emit(OP_FREAD); cs.emit(dst); cs.emit(fd);
+}
+
+/* fwrite fd_var src_str */
+static void parse_fwrite(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: fwrite <fd> <str>"); return; }
+    uint8_t fd; SymType ft; if (!cs.lookup(t[1].text,fd,&ft)) return;
+    if (ft!=SYM_FILE) { cs.error("fwrite: '"+t[1].text+"' is not a file handle"); return; }
+    if (t[2].kind==TK::TK_STRING) {
+        uint8_t tmp; cs.intern("__fwrite_tmp__",SYM_STR,tmp);
+        cs.emit(OP_SET_STR); cs.emit(tmp); emit_str_lit(cs.bytecode,t[2].text);
+        cs.emit(OP_FWRITE); cs.emit(fd); cs.emit(tmp);
+    } else {
+        uint8_t src; SymType st; if (!cs.lookup(t[2].text,src,&st)) return;
+        if (st!=SYM_STR) { cs.error("fwrite: source must be a string"); return; }
+        cs.emit(OP_FWRITE); cs.emit(fd); cs.emit(src);
+    }
+}
+
+/* fexists dst_bool path_var_or_literal */
+static void parse_fexists(CS& cs, const Toks& t) {
+    if (t.size()<3) { cs.error("expected: fexists <bool_dst> <path>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text,SYM_BOOL,dst)) return;
+    if (t[2].kind==TK::TK_STRING) {
+        uint8_t tmp; cs.intern("__fexists_tmp__",SYM_STR,tmp);
+        cs.emit(OP_SET_STR); cs.emit(tmp); emit_str_lit(cs.bytecode,t[2].text);
+        cs.emit(OP_FEXISTS); cs.emit(dst); cs.emit(tmp);
+    } else {
+        uint8_t path; SymType pt; if (!cs.lookup(t[2].text,path,&pt)) return;
+        if (pt!=SYM_STR) { cs.error("fexists: path must be a string"); return; }
+        cs.emit(OP_FEXISTS); cs.emit(dst); cs.emit(path);
+    }
+}
+
 /* ── cmp ──────────────────────────────────────────────────────────── */
 static void parse_cmp(CS& cs, const Toks& t) {
     if (t.size()<5) { cs.error("expected: cmp <bool_var> <a> <op> <b>"); return; }
@@ -676,7 +909,7 @@ static bool emit_condition_jump(CS& cs, const Toks& t,
             cs.error("expected variable in condition"); return false;
         }
         uint8_t id; if (!cs.lookup(t[cs_].text,id)) return false;
-        cs.emit(invert?OP_JMP_IF_FALSE:OP_JMP_IF_TRUE);
+        cs.emit(invert?OP_JMP_IF_TRUE:OP_JMP_IF_FALSE);
         cs.emit(id); blk.fwd_patch_pos=cs.here(); cs.emit_u16(0); return true;
     }
     if (ce_-cs_==3) {
@@ -1100,32 +1333,68 @@ static void parse_import(CS& cs, const Toks& t) {
  *  only the reachable function bytecode from each module.
  * ═══════════════════════════════════════════════════════════════════ */
 
-/* Returns offset where func was appended in cs.bytecode */
+/* Returns offset where func was appended in cs.bytecode.
+ *
+ * Intra-module OP_CALL fix:
+ * When a NSS function calls a sibling function, the OP_CALL address
+ * stored in mod.init_code is relative to that init_code buffer.
+ * After we copy the bytecode into the main program (at a different
+ * offset), those addresses become stale.  We record every OP_CALL
+ * found in the copied body as a pending call_patch so link_imports
+ * can fix them up once all sibling functions have been appended.
+ */
 static size_t append_func_bytecode(CS& cs,
                                    const NssModule& mod,
                                    const FuncDef& fd,
                                    const std::map<uint8_t,uint8_t>& /*slot_map*/) {
-    /*
-     * Copy the function body verbatim from mod.init_code.
-     * NSS function bodies use only LOCAL slot ids (0=first param, etc.)
-     * resolved through the call-frame at runtime — no global slot remapping.
-     */
-
     const std::vector<uint8_t>& src = mod.init_code;
     if (fd.addr >= src.size()) return cs.here();
 
-    /* Wrap function body: emit JMP_FWD first */
+    /* Wrap function body with a forward jump so execution skips over it */
     cs.emit(OP_JMP_FWD);
     size_t patch = cs.here(); cs.emit_u16(0);
     size_t func_start = cs.here();
 
-    /* Copy bytes verbatim from fd.addr until OP_RET.
-     * NSS functions use only local slot ids — no remapping needed. */
+    /* Copy bytes from fd.addr until OP_RET.
+     * When we encounter OP_CALL, record a pending patch so we can fix
+     * the callee address once all sibling functions are placed. */
     size_t ip = fd.addr;
     while (ip < src.size()) {
         uint8_t b = src[ip++];
         cs.emit(b);
         if ((NsaOpcode)b == OP_RET) break;
+
+        if ((NsaOpcode)b == OP_CALL && ip + 1 < src.size()) {
+            /* Read the old (init_code-relative) address */
+            uint16_t old_addr = (uint16_t)src[ip] | ((uint16_t)src[ip+1] << 8);
+            ip += 2;
+
+            /* Find which module function lives at that address */
+            std::string callee_qname;
+            for (auto& fkv : mod.funcs) {
+                if ((uint16_t)fkv.second.addr == old_addr) {
+                    /* Build the qualified name — we need the module name.
+                     * Search cs.imports to find which module this is. */
+                    for (auto& imp_kv : cs.imports) {
+                        if (&imp_kv.second.mod == &mod) {
+                            callee_qname = imp_kv.first + "." + fkv.first;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (!callee_qname.empty()) {
+                /* Emit placeholder and register patch site */
+                cs.call_patches.push_back({cs.here(), callee_qname});
+                cs.emit_u16(0);
+            } else {
+                /* Unknown target — copy raw bytes and hope for the best */
+                cs.emit((uint8_t)(old_addr & 0xFF));
+                cs.emit((uint8_t)(old_addr >> 8));
+            }
+        }
     }
 
     size_t func_end = cs.here();
@@ -1133,25 +1402,138 @@ static size_t append_func_bytecode(CS& cs,
     return func_start;
 }
 
+/* ── Scan NSS function bytecode for intra-module OP_CALL references ─
+ *
+ * When funcA inside a module calls funcB (also in the same module),
+ * the main program never references funcB directly — so it would be
+ * silently dropped by the tree-shaker unless we scan for it here.
+ *
+ * We walk the raw bytecode of every already-reachable function and
+ * collect any OP_CALL targets that resolve to sibling functions in
+ * the same module.  Those siblings are added to used_funcs and the
+ * process repeats until the reachable set stops growing (fixed-point).
+ * ──────────────────────────────────────────────────────────────────── */
+static void collect_transitive_calls(CS& cs) {
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto& imp_kv : cs.imports) {
+            const std::string& mod_name = imp_kv.first;
+            ImportedModule&    im       = imp_kv.second;
+            const std::vector<uint8_t>& bc = im.mod.init_code;
+
+            for (auto& fkv : im.mod.funcs) {
+                std::string qname = mod_name + "." + fkv.first;
+                if (!cs.used_funcs.count(qname)) continue; /* not yet reachable */
+
+                const FuncDef& fd = fkv.second;
+                if (fd.addr >= bc.size()) continue;
+
+                /* Scan this function's bytecode for OP_CALL instructions */
+                size_t ip = fd.addr;
+                while (ip < bc.size()) {
+                    uint8_t op = bc[ip++];
+                    if ((NsaOpcode)op == OP_RET) break;
+
+                    if ((NsaOpcode)op == OP_CALL && ip+1 < bc.size()) {
+                        /* OP_CALL is followed by a 2-byte address.
+                         * Match that address against sibling func addrs. */
+                        uint16_t target = (uint16_t)bc[ip] | ((uint16_t)bc[ip+1]<<8);
+                        ip += 2;
+                        for (auto& sfkv : im.mod.funcs) {
+                            if ((uint16_t)sfkv.second.addr == target) {
+                                std::string sq = mod_name + "." + sfkv.first;
+                                if (!cs.used_funcs.count(sq)) {
+                                    cs.used_funcs.insert(sq);
+                                    changed = true;
+                                }
+                            }
+                        }
+                        continue; /* already consumed 2 bytes */
+                    }
+
+                    /* Skip operand bytes for all other opcodes so we don't
+                     * misinterpret data as an opcode on the next iteration. */
+                    switch ((NsaOpcode)op) {
+                        /* 0-operand */
+                        case OP_NOP: case OP_HALT: case OP_RET: break;
+                        /* 1-operand (var id) */
+                        case OP_PRINT_VAR: case OP_PRINT_VAR_NL:
+                        case OP_INPUT_INT: case OP_INPUT_STR:
+                        case OP_INC: case OP_DEC: case OP_NOT: case OP_NEG:
+                        case OP_ARR_LEN:
+                            ip += 1; break;
+                        /* 2-operand */
+                        case OP_COPY: case OP_CONCAT: case OP_LEN:
+                        case OP_STR_TO_INT: case OP_INT_TO_STR:
+                        case OP_SCMP_EQ: case OP_SCMP_NE:
+                        case OP_LOAD_ARG: case OP_STORE_RET:
+                        case OP_GCOPY: case OP_GLOAD: case OP_GSTORE:
+                        case OP_ARR_GET: case OP_ARR_SET:
+                            ip += 2; break;
+                        /* 3-operand (cmp, logic, arith-var) */
+                        case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
+                        case OP_CMP_GT: case OP_CMP_LE: case OP_CMP_GE:
+                        case OP_AND: case OP_OR:
+                        case OP_ADD_VAR: case OP_SUB_VAR: case OP_MUL_VAR:
+                        case OP_DIV_VAR: case OP_MOD_VAR:
+                            ip += 3; break;
+                        /* var + i32 */
+                        case OP_ADD_IMM: case OP_SUB_IMM: case OP_MUL_IMM:
+                        case OP_DIV_IMM: case OP_MOD_IMM:
+                        case OP_SET_INT: case OP_GSET_INT:
+                            ip += 5; break;
+                        /* var + u16 (jump) */
+                        case OP_JMP_FWD: case OP_JMP_BACK:
+                            ip += 2; break;
+                        case OP_JMP_IF_TRUE: case OP_JMP_IF_FALSE:
+                        case OP_JMP_BACK_TRUE: case OP_JMP_BACK_FALSE:
+                        case OP_JMP_BACK_NZ: case OP_JMP_BACK_Z:
+                            ip += 3; break;
+                        case OP_JMP_IF_EQ: case OP_JMP_IF_NE: case OP_JMP_IF_LT:
+                        case OP_JMP_IF_GT: case OP_JMP_IF_LE: case OP_JMP_IF_GE:
+                            ip += 3; break;
+                        /* SET_STR / GSET_STR / CONCAT_LIT / PRINT_STR:
+                         * var + length-prefixed string — skip conservatively */
+                        case OP_SET_STR: case OP_GSET_STR:
+                        case OP_CONCAT_LIT: case OP_PRINT_STR: case OP_PRINT_STR_NL:
+                            ip += 1; /* skip var id */
+                            if (ip < bc.size()) {
+                                uint8_t slen = bc[ip++];
+                                ip += slen;
+                            }
+                            break;
+                        case OP_SET_BOOL: case OP_GSET_BOOL:
+                            ip += 2; break;
+                        default:
+                            ip += 1; break; /* unknown — skip one byte safely */
+                    }
+                }
+            }
+        }
+    }
+}
+
 /* ── Link imported modules (tree-shake then append) ──────────────── */
 static void link_imports(CS& cs) {
     if (cs.imports.empty()) return;
 
-    /* Walk imports, include only used funcs */
+    /* Step 1: expand used_funcs transitively — catch intra-module calls
+     * (funcA calls funcB inside same module; main only calls funcA directly) */
+    collect_transitive_calls(cs);
+
+    /* Step 2: append bytecode for every reachable function */
     for (auto& imp_kv : cs.imports) {
         const std::string& mod_name = imp_kv.first;
         ImportedModule&    im       = imp_kv.second;
 
         for (auto& fkv : im.mod.funcs) {
             std::string qname = mod_name + "." + fkv.first;
-            if (!cs.used_funcs.count(qname)) continue; /* not used → skip */
+            if (!cs.used_funcs.count(qname)) continue; /* unreachable → skip */
 
             const FuncDef& mfd = fkv.second;
 
             /* Ensure all global slots referenced by this func are mapped */
-            /* (They will have been mapped already during parse_call if
-             * any global was accessed via module.var syntax.  For funcs
-             * that use internal module globals, we map them now.)       */
             for (auto& gkv : im.mod.globals) {
                 const GlobalDef& gd = gkv.second;
                 if (im.slot_map.find(gd.slot)==im.slot_map.end()) {
@@ -1163,16 +1545,14 @@ static void link_imports(CS& cs) {
                 }
             }
 
-            /* Append this function's bytecode with remapped slots */
+            /* Append bytecode and record the new address */
             size_t new_addr = append_func_bytecode(cs, im.mod, mfd, im.slot_map);
 
-            /* Patch all call sites that reference this function */
+            /* Patch call sites */
             for (auto& p : cs.call_patches) {
-                if (p.second==qname) {
+                if (p.second==qname)
                     cs.patch_u16(p.first,(uint16_t)new_addr);
-                }
             }
-            /* Update funcs table addr so forward calls also work */
             if (cs.funcs.count(qname))
                 cs.funcs[qname].addr = new_addr;
         }
@@ -1212,6 +1592,26 @@ static void parse_line(CS& cs, const Toks& t) {
     if (kw=="return")  { parse_return(cs,t);              return; }
     if (kw=="call")    { parse_call(cs,t);                return; }
     if (kw=="arr")     { parse_arr(cs,t);                 return; }
+    /* string indexing (v2.5) */
+    if (kw=="sget")    { parse_sget(cs,t);               return; }
+    if (kw=="sset")    { parse_sset(cs,t);               return; }
+    if (kw=="ssub")    { parse_ssub(cs,t);               return; }
+    /* file I/O (v2.5) */
+    if (kw=="fopen")   { parse_fopen(cs,t);              return; }
+    if (kw=="fclose")  { parse_fclose(cs,t);             return; }
+    if (kw=="fread")   { parse_fread(cs,t);              return; }
+    if (kw=="fwrite")  { parse_fwrite(cs,t);             return; }
+    if (kw=="fexists") { parse_fexists(cs,t);            return; }
+    /* float arithmetic (v2.5) */
+    if (kw=="fadd")    { parse_fmath(cs,t,OP_FADD);      return; }
+    if (kw=="fsub")    { parse_fmath(cs,t,OP_FSUB);      return; }
+    if (kw=="fmul")    { parse_fmath(cs,t,OP_FMUL);      return; }
+    if (kw=="fdiv")    { parse_fmath(cs,t,OP_FDIV);      return; }
+    if (kw=="fneg")    { parse_fneg(cs,t);               return; }
+    if (kw=="itof")    { parse_itof(cs,t);               return; }
+    if (kw=="ftoi")    { parse_ftoi(cs,t);               return; }
+    if (kw=="ftos")    { parse_ftos(cs,t);               return; }
+    if (kw=="fcmp")    { parse_fcmp(cs,t);               return; }
     if (kw=="aget")    { parse_aget(cs,t);                return; }
     if (kw=="aset")    { parse_aset(cs,t);                return; }
     if (kw=="alen")    { parse_alen(cs,t);                return; }

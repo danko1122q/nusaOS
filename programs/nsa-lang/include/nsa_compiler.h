@@ -10,7 +10,7 @@
 namespace NsaCompiler {
 
 /* ── Symbol types (shared between compiler and NSS loader) ───────────── */
-enum SymType { SYM_INT, SYM_STR, SYM_BOOL, SYM_ARRAY };
+enum SymType { SYM_INT, SYM_STR, SYM_BOOL, SYM_ARRAY, SYM_FILE, SYM_FLOAT };
 
 /* ── Parameter / return info for exported functions ──────────────────── */
 struct ParamDef { std::string name; SymType type; };

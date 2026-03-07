@@ -146,4 +146,65 @@ enum NsaOpcode : uint8_t {
     OP_GCOPY        = 0xA3,
     OP_GLOAD        = 0xA4,
     OP_GSTORE       = 0xA5,
+
+    /* ── String indexing (v2.5) ──────────────────────────────────────────
+     * OP_SGET  dst_str  src_str  idx_var   — get char at index → 1-char string
+     * OP_SSET  dst_str  idx_var  src_str   — set char at index from 1-char string
+     * OP_SSUB  dst_str  src_str  start_var  len_var  — substring
+     * ------------------------------------------------------------------ */
+    OP_SGET         = 0xB0,
+    OP_SSET         = 0xB1,
+    OP_SSUB         = 0xB2,
+
+    /* ── File I/O (v2.5) ─────────────────────────────────────────────────
+     * OP_FOPEN   fd_var  path_var  mode_var
+     *   Opens a file. mode_var must be a string: "r", "w", or "a".
+     *   Stores an integer file descriptor in fd_var (negative = error).
+     *
+     * OP_FCLOSE  fd_var
+     *   Closes the file descriptor stored in fd_var.
+     *
+     * OP_FREAD   dst_str  fd_var
+     *   Reads the entire remaining file content into dst_str.
+     *
+     * OP_FWRITE  fd_var  src_str
+     *   Writes the string stored in src_str to the file.
+     *
+     * OP_FEXISTS dst_bool  path_var
+     *   Sets dst_bool = true if the path exists, false otherwise.
+     * ------------------------------------------------------------------ */
+    OP_FOPEN        = 0xB8,
+    OP_FCLOSE       = 0xB9,
+    OP_FREAD        = 0xBA,
+    OP_FWRITE       = 0xBB,
+    OP_FEXISTS      = 0xBC,
+
+    /* ── Floating point (v2.5) ───────────────────────────────────────────
+     * Variables declared with 'let x = 3.14' get type SYM_FLOAT.
+     * Float vars store their value in the dval field of VarSlot.
+     *
+     * OP_SET_FLOAT  dst  f64(8 bytes LE)  — load float literal
+     * OP_FADD       dst  a  b
+     * OP_FSUB       dst  a  b
+     * OP_FMUL       dst  a  b
+     * OP_FDIV       dst  a  b
+     * OP_FNEG       dst               — negate float
+     * OP_ITOF       dst  src_int      — int → float
+     * OP_FTOI       dst  src_float    — float → int (truncate)
+     * OP_FTOS       dst  src_float    — float → str  (6 decimal places)
+     * OP_FCMP       dst_bool  a  op_byte  b
+     *   op_byte: 0=EQ 1=NE 2=LT 3=GT 4=LE 5=GE
+     * ------------------------------------------------------------------ */
+    OP_SET_FLOAT    = 0xC0,
+    OP_FADD         = 0xC1,
+    OP_FSUB         = 0xC2,
+    OP_FMUL         = 0xC3,
+    OP_FDIV         = 0xC4,
+    OP_FNEG         = 0xC5,
+    OP_ITOF         = 0xC6,
+    OP_FTOI         = 0xC7,
+    OP_FTOS         = 0xC8,
+    OP_FCMP         = 0xC9,
+    OP_FPRINT       = 0xCA,
+    OP_FPRINT_NL    = 0xCB,
 };
