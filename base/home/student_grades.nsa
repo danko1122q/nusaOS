@@ -1,0 +1,183 @@
+// ================================================================
+// student_grades.nsa — Student Grade Tracker
+// Features: string array, int array, functions, input, loop, cmp
+// ================================================================
+
+// ── Average calculator ───────────────────────────────────────────
+func average count total -> result
+    let result = 0
+    copy result total
+    div result count
+endfunc
+
+// ── Find higher of two values ────────────────────────────────────
+func max_of a b -> result
+    let higher = false
+    copy result a
+    cmp higher b > a
+    if higher then
+        copy result b
+    end
+endfunc
+
+// ── Find lower of two values ─────────────────────────────────────
+func min_of a b -> result
+    let lower = false
+    copy result a
+    cmp lower b < a
+    if lower then
+        copy result b
+    end
+endfunc
+
+// ── Letter grade: 1=A 2=B 3=C 4=D 0=F ───────────────────────────
+func get_grade score -> result
+    let result = 0
+    if score >= 90 then
+        let result = 1
+    end
+    if score >= 80 then
+        if score < 90 then
+            let result = 2
+        end
+    end
+    if score >= 70 then
+        if score < 80 then
+            let result = 3
+        end
+    end
+    if score >= 60 then
+        if score < 70 then
+            let result = 4
+        end
+    end
+endfunc
+
+// ── Student data ─────────────────────────────────────────────────
+arr str  names  5
+arr int  scores 5
+
+// ── Header ───────────────────────────────────────────────────────
+print "================================"
+print "     STUDENT GRADE TRACKER"
+print "         NusaOS / NSA"
+print "================================"
+print ""
+
+// ── Input ────────────────────────────────────────────────────────
+print "Enter data for 5 students:"
+print "--------------------------------"
+
+let i = 0
+loop while i < 5
+    println "Student "
+    println i
+    println ": name  = "
+    input nm
+    aset names i nm
+
+    println "           score = "
+    let sc = 0
+    input sc
+    aset scores i sc
+
+    inc i
+end
+
+// ── Calculate statistics ─────────────────────────────────────────
+let total   = 0
+let idx_max = 0
+let idx_min = 0
+
+aget high scores 0
+aget low  scores 0
+
+let j = 0
+loop while j < 5
+    aget v scores j
+    add total v
+
+    call max_of high v -> high
+    call min_of low  v -> low
+
+    aget vmax scores idx_max
+    cmp is_max v > vmax
+    if is_max then
+        copy idx_max j
+    end
+
+    aget vmin scores idx_min
+    cmp is_min v < vmin
+    if is_min then
+        copy idx_min j
+    end
+
+    inc j
+end
+
+let count = 5
+call average count total -> avg
+
+// ── Print report ─────────────────────────────────────────────────
+print ""
+print "================================"
+print "          GRADE REPORT"
+print "================================"
+print ""
+
+let k = 0
+loop while k < 5
+    aget nm_k  names  k
+    aget sc_k  scores k
+    call get_grade sc_k -> grd
+
+    println "  "
+    println nm_k
+    println " : "
+    println sc_k
+    println "  ("
+
+    if grd == 1 then
+        println "A"
+    end
+    if grd == 2 then
+        println "B"
+    end
+    if grd == 3 then
+        println "C"
+    end
+    if grd == 4 then
+        println "D"
+    end
+    if grd == 0 then
+        println "F"
+    end
+
+    if sc_k >= 70 then
+        print ")  PASS"
+    else
+        print ")  FAIL"
+    end
+
+    inc k
+end
+
+print ""
+print "--------------------------------"
+
+println "Highest score : "
+println high
+println "  -> "
+aget nm_high names idx_max
+print nm_high
+
+println "Lowest score  : "
+println low
+println "  -> "
+aget nm_low names idx_min
+print nm_low
+
+println "Class average : "
+print avg
+
+print "================================"
