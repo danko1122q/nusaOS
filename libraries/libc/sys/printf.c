@@ -327,8 +327,124 @@ int common_printf(char* s, size_t n, const char* format, va_list arg) {
 				len++;
 				break;
 
+			case 'G':
+				uppercase = true;
+			case 'g': // %g/%G: use %e if exp < -4 or exp >= precision, else %f
+			{
+				double val = (double) va_arg(arg, double);
+				int gprec = (precision >= 0) ? precision : 6;
+				if (gprec == 0) gprec = 1;
+
+				// Compute exponent
+				int gexp = 0;
+				double absval = val < 0.0 ? -val : val;
+				if (absval != 0.0) {
+					double tmp = absval;
+					while (tmp >= 10.0) { tmp /= 10.0; gexp++; }
+					while (tmp < 1.0)  { tmp *= 10.0; gexp--; }
+				}
+
+				// %g rule: use scientific if exp < -4 or exp >= precision
+				if (gexp < -4 || gexp >= gprec)
+					goto do_exp_g;
+
+				// Use %f style (precision = significant digits, not decimal places)
+				{
+					int dec_places = gprec - gexp - 1;
+					if (dec_places < 0) dec_places = 0;
+
+					if (val < 0.0) { *buf++ = '-'; len++; val = -val; }
+					else if (force_sign) { *buf++ = '+'; len++; }
+
+					dec_str((unsigned int)val, &buf, arg_width, n, &len, zero_pad ? '0' : ' ');
+					if (dec_places > 0 && len < n) {
+						*buf++ = '.'; len++;
+						double frac = val - (double)(unsigned int)val;
+						for (int d = 0; d < dec_places && len < n; d++) {
+							frac *= 10.0;
+							*buf++ = "0123456789"[(int)frac % 10];
+							len++;
+						}
+					}
+				}
+				break;
+
+			do_exp_g:
+				// Use %e style
+				;
+				// fallthrough to shared %e logic with already-computed gexp
+				double eval = val;
+				if (eval < 0.0) { *buf++ = '-'; len++; eval = -eval; }
+				else if (force_sign) { *buf++ = '+'; len++; }
+
+				// Normalize mantissa
+				double mant = eval;
+				int eexp = gexp;
+				if (eval != 0.0) {
+					while (mant >= 10.0) { mant /= 10.0; }
+					while (mant < 1.0 && mant > 0.0) { mant *= 10.0; }
+				}
+
+				// Print mantissa integer part (always 1 digit)
+				dec_str((unsigned int)mant, &buf, 0, n, &len, ' ');
+				// Print mantissa decimal part
+				int eprec = (precision >= 0) ? precision : 6;
+				if (eprec > 0 && len < n) {
+					*buf++ = '.'; len++;
+					double efrac = mant - (double)(unsigned int)mant;
+					for (int d = 0; d < eprec - 1 && len < n; d++) {
+						efrac *= 10.0;
+						*buf++ = "0123456789"[(int)efrac % 10];
+						len++;
+					}
+				}
+				// Print exponent
+				if (len < n) { *buf++ = uppercase ? 'E' : 'e'; len++; }
+				if (len < n) { *buf++ = eexp < 0 ? '-' : '+'; len++; eexp = eexp < 0 ? -eexp : eexp; }
+				// Exponent at least 2 digits
+				if (eexp < 10 && len < n) { *buf++ = '0'; len++; }
+				dec_str((unsigned int)eexp, &buf, 0, n, &len, ' ');
+				break;
+			}
+
+			case 'E':
+				uppercase = true;
+			case 'e': // Scientific notation
+			{
+				double val = (double) va_arg(arg, double);
+				if (val < 0.0) { *buf++ = '-'; len++; val = -val; }
+				else if (force_sign) { *buf++ = '+'; len++; }
+				else if (space_no_sign) { *buf++ = ' '; len++; }
+
+				// Compute exponent
+				int eexp = 0;
+				double mant = val;
+				if (val != 0.0) {
+					while (mant >= 10.0) { mant /= 10.0; eexp++; }
+					while (mant < 1.0)   { mant *= 10.0; eexp--; }
+				}
+
+				// Print mantissa
+				dec_str((unsigned int)mant, &buf, arg_width, n, &len, zero_pad ? '0' : ' ');
+				int eprec = (precision >= 0) ? precision : 6;
+				if (eprec > 0 && len < n) {
+					*buf++ = '.'; len++;
+					double efrac = mant - (double)(unsigned int)mant;
+					for (int d = 0; d < eprec && len < n; d++) {
+						efrac *= 10.0;
+						*buf++ = "0123456789"[(int)efrac % 10];
+						len++;
+					}
+				}
+				// Exponent
+				if (len < n) { *buf++ = uppercase ? 'E' : 'e'; len++; }
+				if (len < n) { *buf++ = eexp < 0 ? '-' : '+'; len++; eexp = eexp < 0 ? -eexp : eexp; }
+				if (eexp < 10 && len < n) { *buf++ = '0'; len++; }
+				dec_str((unsigned int)eexp, &buf, 0, n, &len, ' ');
+				break;
+			}
+
 			default:
-				//TODO: e, E, g, G, n
 				*buf++ = *p;
 				len++;
 				break;
