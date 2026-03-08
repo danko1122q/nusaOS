@@ -36,6 +36,8 @@ static const std::set<std::string> KEYWORDS = {
     "itof", "ftoi", "ftos",
     /* syscall (v2.5) */
     "syscall", "sysbuf", "bufwrite", "bufread", "addrof",
+    /* process (v2.5.1) */
+    "fork", "exec", "waitpid", "exit",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }

@@ -1,19 +1,19 @@
 /*
     This file is part of nusaOS.
-    
+
     nusaOS is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-    
+
     nusaOS is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with nusaOS.  If not, see <https://www.gnu.org/licenses/>.
-    
+
     Copyright (c) Byteduck 2016-2020. All rights reserved.
 */
 
@@ -35,6 +35,7 @@ public:
 
 	static kstd::Arc<WaitBlocker> make(kstd::Arc<Thread>& thread, pid_t wait_for, int options);
 	static void notify_all(Process* proc, Reason reason, int status);
+	static void notify_all_reap(Process* proc);
 
 	bool is_ready() override;
 
@@ -43,29 +44,41 @@ public:
 	int status();
 
 private:
+	/*
+	 * Notification stores pid/pgid/ppid instead of a raw Process* to avoid
+	 * a dangling pointer.  When a blocker is created after the child has
+	 * already exited, we look the process up by pid; if it has been reaped
+	 * the notification is discarded (the caller will get ECHILD).
+	 */
 	struct Notification {
-		Process* process;
+		pid_t  pid;
+		pid_t  pgid;
+		pid_t  ppid;
 		Reason reason;
-		int status;
+		int    status;
+		/* Keep a raw pointer ONLY while the process is still alive (before
+		   reap).  It is set to nullptr in notify_all_cleanup() once the
+		   process is reaped. */
+		Process* process;
 	};
 
 	WaitBlocker(kstd::Arc<Thread>& thread, pid_t wait_for, int options);
 
-	bool notify(Process* proc, Reason reason, int status);
+	bool notify(Process* proc, pid_t proc_pid, pid_t proc_pgid, pid_t proc_ppid,
+	            Reason reason, int status);
 
 	static kstd::vector<kstd::Weak<WaitBlocker>> blockers;
-	static kstd::vector<Notification> unhandled_notifications;
-	static Mutex lock;
+	static kstd::vector<Notification>            unhandled_notifications;
+	static Mutex                                 lock;
 
-	Atomic<bool> _ready = false;
-	int _err = 0;
-	int _status;
-	Reason _reason;
-	Process* _waited_process = nullptr;
-	pid_t _wait_pid;
-	pid_t _wait_pgid = -1;
-	int _options;
-	pid_t _ppid;
+	Atomic<bool> _ready         = false;
+	int          _err           = 0;
+	int          _status        = 0;
+	Reason       _reason        = Exited;
+	Process*     _waited_process = nullptr;
+	pid_t        _wait_pid;
+	pid_t        _wait_pgid     = -1;
+	int          _options;
+	pid_t        _ppid;
 	kstd::Arc<Thread> _thread;
 };
-

@@ -219,6 +219,26 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
 
     while (ip < bc.size()) {
         uint8_t op = bc[ip++];
+
+/* SC_ARG: decode syscall-style argument (flags byte + data).
+ * flags: 0x00=var_id(1B)  0x01=i32_imm(4B)  0x02=literal_zero
+ * Available to all opcodes in this switch.                     */
+#define SC_ARG(out_val, label) do { \
+    uint8_t _fl; \
+    if (!read_u8(bc,ip,_fl)) RT_ERR(label ": truncated flags"); \
+    if (_fl == 0x02) { (out_val) = 0; } \
+    else if (_fl == 0x01) { \
+        int32_t _v; \
+        if (!read_i32(bc,ip,_v)) RT_ERR(label ": truncated imm"); \
+        (out_val) = (int)_v; \
+    } else { \
+        uint8_t _id; \
+        if (!read_u8(bc,ip,_id)) RT_ERR(label ": truncated var id"); \
+        CHECK_ID(_id, label); \
+        (out_val) = (int)VAR(_id).ival; \
+    } \
+} while(0)
+
         switch ((NsaOpcode)op) {
 
         case OP_NOP:  break;
@@ -887,6 +907,172 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
         }
 
 
+
+        /* ════════════════════════════════════════════════════════════════
+         * PROCESS CONTROL  (v2.5.1)
+         * ════════════════════════════════════════════════════════════════ */
+
+        /* ── OP_FORK  dst ───────────────────────────────────────────────
+         *
+         * Calls SYS_FORK (= 2).
+         * Parent: dst = child PID  (> 0)
+         * Child:  dst = 0
+         * Error:  dst = negative errno
+         *
+         * Typical pattern:
+         *   fork pid
+         *   let is_child = false
+         *   cmp is_child pid == 0
+         *   if is_child then
+         *     // child code
+         *     exit 0
+         *   end
+         *   // parent code
+         *   waitpid ret pid
+         * ────────────────────────────────────────────────────────────── */
+        case OP_FORK: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("FORK: truncated dst");
+            CHECK_ID(dst,"FORK dst");
+            /* Save fork() return value to a stack-local variable BEFORE
+             * writing to the heap (VAR array).  After fork(), child and
+             * parent share CoW pages.  If the child writes VAR(dst)=0
+             * before the CoW fault fires for the parent, the parent would
+             * read 0 too.  A local (stack) variable is per-process and
+             * is not subject to this race. */
+            volatile int fork_ret = nsa_syscall(2, 0, 0, 0); /* SYS_FORK = 2 */
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = fork_ret;
+            break;
+        }
+
+        /* ── OP_EXEC  dst  path_id  argc  arg0_id ... argN_id ──────────
+         *
+         * Calls SYS_EXECVE (= 6).
+         * Builds a char* argv[] array on the C stack and passes it to
+         * the kernel.  envp is passed as NULL (kernel inherits parent env).
+         *
+         * On success: the calling process image is replaced — never returns.
+         * On failure: dst = -errno (negative), VM continues.
+         *
+         * Note: after a successful exec in the child, the VM loop in the
+         * child process is gone — the new program takes over completely.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_EXEC: {
+            uint8_t dst, path_id, argc;
+            if (!read_u8(bc,ip,dst))     RT_ERR("EXEC: truncated dst");
+            if (!read_u8(bc,ip,path_id)) RT_ERR("EXEC: truncated path");
+            if (!read_u8(bc,ip,argc))    RT_ERR("EXEC: truncated argc");
+            CHECK_ID(dst,     "EXEC dst");
+            CHECK_ID(path_id, "EXEC path");
+            NEED_STR(path_id, "EXEC path");
+            if (argc > 16) RT_ERR("EXEC: too many arguments (max 16)");
+
+            /* Read arg var ids */
+            uint8_t arg_ids[16];
+            for (int ai = 0; ai < (int)argc; ai++) {
+                if (!read_u8(bc,ip,arg_ids[ai])) RT_ERR("EXEC: truncated arg id");
+                CHECK_ID(arg_ids[ai],"EXEC arg");
+                NEED_STR(arg_ids[ai],"EXEC arg");
+            }
+
+            /* Build argv + copy strings onto heap so they remain valid
+             * after the kernel replaces our process image.
+             *
+             * Layout in one malloc block:
+             *   [char* argv[argc+1]]          ← pointer array
+             *   [char  arg0\0 arg1\0 ... ]    ← string data
+             *
+             * Total size = (argc+1)*sizeof(char*) + sum(strlen(arg)+1)
+             */
+            size_t ptr_block  = (size_t)(argc + 1) * sizeof(char*);
+            size_t str_total  = 0;
+            for (int ai = 0; ai < (int)argc; ai++)
+                str_total += strlen(VAR(arg_ids[ai]).sval) + 1;
+
+            char* exec_buf = (char*)malloc(ptr_block + str_total);
+            if (!exec_buf) RT_ERR("EXEC: out of memory for argv");
+
+            char** argv_arr  = (char**)exec_buf;
+            char*  str_area  = exec_buf + ptr_block;
+
+            for (int ai = 0; ai < (int)argc; ai++) {
+                const char* s = VAR(arg_ids[ai]).sval;
+                size_t slen   = strlen(s) + 1;
+                memcpy(str_area, s, slen);
+                argv_arr[ai] = str_area;
+                str_area    += slen;
+            }
+            argv_arr[argc] = nullptr;
+
+            /* Path also copied to heap */
+            const char* src_path = VAR(path_id).sval;
+            size_t path_len = strlen(src_path) + 1;
+            char* exec_path = (char*)malloc(path_len);
+            if (!exec_path) { free(exec_buf); RT_ERR("EXEC: out of memory for path"); }
+            memcpy(exec_path, src_path, path_len);
+
+            /* SYS_EXECVE = 6: execve(path, argv, envp=NULL)
+             * On success: never returns — kernel replaces process image.
+             * exec_buf and exec_path are intentionally NOT freed on success
+             * because the process image is replaced entirely.
+             * On failure: free and store errno.                           */
+            int ret = nsa_syscall(6, (int)(uintptr_t)exec_path,
+                                     (int)(uintptr_t)argv_arr,
+                                     0);
+            /* Only reaches here on failure */
+            free(exec_buf);
+            free(exec_path);
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = ret; /* negative errno */
+            break;
+        }
+
+        /* ── OP_WAITPID  dst  pid_id  [opts] ───────────────────────────
+         *
+         * Calls SYS_WAITPID (= 20): waitpid(pid, &status, opts).
+         * dst = returned child PID on success, or -errno on error.
+         * The exit status is discarded; use OP_SYSCALL with a sysbuf
+         * int if you need the actual exit code.
+         *
+         * opts: 0 = block until child done (default)
+         *       1 = WNOHANG (return immediately if no child exited)
+         * ────────────────────────────────────────────────────────────── */
+        case OP_WAITPID: {
+            uint8_t dst, pid_id;
+            if (!read_u8(bc,ip,dst))    RT_ERR("WAITPID: truncated dst");
+            if (!read_u8(bc,ip,pid_id)) RT_ERR("WAITPID: truncated pid");
+            CHECK_ID(dst,    "WAITPID dst");
+            CHECK_ID(pid_id, "WAITPID pid");
+
+            int opts; SC_ARG(opts,"WAITPID opts");
+
+            int status = 0; /* we discard but need a valid address */
+            int pid_val = (int)VAR(pid_id).ival;
+
+            /* SYS_WAITPID = 20: waitpid(pid, &status, opts) */
+            int ret = nsa_syscall(20, pid_val,
+                                      (int)(uintptr_t)&status,
+                                      opts);
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = ret;
+            break;
+        }
+
+        /* ── OP_EXIT  [code] ────────────────────────────────────────────
+         *
+         * Calls SYS_EXIT (= 1). Never returns.
+         * Use in child after exec failure, or to exit the NSA program
+         * with a specific exit code.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_EXIT: {
+            int code; SC_ARG(code,"EXIT code");
+            /* SYS_EXIT = 1 */
+            nsa_syscall(1, code, 0, 0);
+            /* should never reach here, but silence compiler */
+            return 0;
+        }
+
         /* ════════════════════════════════════════════════════════════════
          * SYSCALL INTERFACE  (v2.5)
          * ════════════════════════════════════════════════════════════════
@@ -900,21 +1086,6 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
          *
          * read_sc_arg() decodes one argument, returns false on error.
          * ────────────────────────────────────────────────────────────── */
-#define SC_ARG(out_val, label) do { \
-    uint8_t _fl; \
-    if (!read_u8(bc,ip,_fl)) RT_ERR(label ": truncated flags"); \
-    if (_fl == 0x02) { (out_val) = 0; } \
-    else if (_fl == 0x01) { \
-        int32_t _v; \
-        if (!read_i32(bc,ip,_v)) RT_ERR(label ": truncated imm"); \
-        (out_val) = (int)_v; \
-    } else { \
-        uint8_t _id; \
-        if (!read_u8(bc,ip,_id)) RT_ERR(label ": truncated var id"); \
-        CHECK_ID(_id, label); \
-        (out_val) = (int)VAR(_id).ival; \
-    } \
-} while(0)
 
         /* ── OP_SYSCALL  dst  [num]  [a]  [b]  [c] ────────────────────
          *
@@ -1074,13 +1245,13 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             VAR(dst).ival = (int32_t)(uintptr_t)VAR(src).sval;
             break;
         }
-#undef SC_ARG
 
         default:
             RT_ERR2("unknown opcode 0x%02X at offset %zu",(unsigned)op,ip-1);
         }
     }
 
+#undef SC_ARG
 #undef RT_ERR
 #undef RT_ERR1
 #undef RT_ERR2

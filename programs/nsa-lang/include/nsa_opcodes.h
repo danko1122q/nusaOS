@@ -240,4 +240,33 @@ enum NsaOpcode : uint8_t {
     OP_SYSBUF_WRITE = 0xD2,
     OP_SYSBUF_READ  = 0xD3,
     OP_ADDR_OF      = 0xD4,
+
+    /* ── fork / exec / waitpid (v2.5.1) ─────────────────────────────────
+     *
+     * OP_FORK  dst_int
+     *   Calls SYS_FORK. In parent: dst = child PID (>0).
+     *   In child:  dst = 0.
+     *   On error:  dst = -1.
+     *
+     * OP_EXEC  dst_int  path_str  arg0_str [arg1_str ... argN_str]
+     *   Encoding: opcode  dst  path_id  argc(u8)  [arg_id ...]
+     *   Builds a char* argv[] array on the stack, then calls SYS_EXECVE.
+     *   argv[0] = arg0, ..., argv[argc-1] = argN, argv[argc] = NULL.
+     *   envp = NULL (inherit from parent via kernel default).
+     *   On success: never returns (child process replaced).
+     *   On failure: dst = -errno.
+     *   Max 16 arguments.
+     *
+     * OP_WAITPID  dst_int  pid_var  opts_var_or_imm
+     *   Calls SYS_WAITPID(pid, &status, opts).
+     *   dst = return value (child pid or -errno).
+     *   Status is discarded (use OP_SYSCALL directly if you need it).
+     *
+     * OP_EXIT  code_var_or_imm
+     *   Calls SYS_EXIT. Never returns.
+     * ------------------------------------------------------------------ */
+    OP_FORK         = 0xD5,
+    OP_EXEC         = 0xD6,
+    OP_WAITPID      = 0xD7,
+    OP_EXIT         = 0xD8,
 };

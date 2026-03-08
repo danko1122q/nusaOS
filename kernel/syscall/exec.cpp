@@ -19,7 +19,9 @@ int Process::exec(const kstd::string& filename, ProcessArgs* args) {
 		//Properly set new process's PID, blocker, and stdout/in/err
 		new_proc->_user = _user;
 		new_proc->_pgid = _pgid;
-		new_proc->_sid = _sid;
+		new_proc->_sid  = _sid;
+		new_proc->_tty  = _tty;   // inherit TTY for job control / SIGINT etc.
+		new_proc->_name = _name;  // keep name consistent until new image starts
 		if (_kernel_mode) {
 			//Kernel processes have no file descriptors, so we need to initialize them
 			auto ttydesc = kstd::make_shared<FileDescriptor>(VirtualTTY::current_tty());

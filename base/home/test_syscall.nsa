@@ -1,0 +1,6 @@
+let pid = 0
+syscall pid 13 0 0 0
+let pids = ""
+to_str pids pid
+print "getpid="
+print pids

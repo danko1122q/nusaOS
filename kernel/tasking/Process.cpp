@@ -352,6 +352,12 @@ void Process::alert_thread_died(kstd::Arc<Thread> thread) {
 
 	// If all threads are dead, we are ready to die.
 	if(_threads.size() == 0) {
+		// Notify any waiting waitpid() callers FIRST, while 'this' is still
+		// fully valid. This must happen before the process is set to ZOMBIE
+		// or reaped so that WaitBlocker can safely store the pointer.
+		if(_pid != -1)
+			WaitBlocker::notify_all(this, WaitBlocker::Exited, _exit_status);
+
 		auto parent = TaskManager::process_for_pid(_ppid);
 		if (!parent.is_error() && parent.value() != this) {
 			parent.value()->kill(SIGCHLD);
@@ -391,6 +397,11 @@ void Process::remove_thread(const kstd::Arc<Thread>& thread) {
 }
 
 void Process::reap() {
+	// Null out any pending WaitBlocker notifications that still point to
+	// 'this' so that WaitBlocker::make() can safely prune stale entries
+	// and not dereference a freed Process pointer.
+	WaitBlocker::notify_all_reap(this);
+
 	bool exp = false;
 	if (!_ready_to_destroy.compare_exchange_strong(exp, true, MemoryOrder::Acquire)) {
 		// We reaped after all threads died delete ourselves.
