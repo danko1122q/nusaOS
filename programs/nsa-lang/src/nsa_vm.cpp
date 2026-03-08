@@ -1264,4 +1264,5 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
     return 0;
 }
 
+
 } // namespace NsaVM
