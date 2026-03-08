@@ -1,0 +1,21 @@
+# nusaOS Authors and Contributors
+
+This document lists the individuals who have contributed to the nusaOS 
+operating system. nusaOS is an evolved project that builds upon the 
+foundation of its predecessor, duckOS.
+
+## Original Author (duckOS)
+* byteduck - Lead Developer of the original duckOS base.
+    GitHub: https://github.com/byteduck
+
+## Current Lead Maintainer (nusaOS)
+* Danko / Dava (@danko1122q) - Lead Developer responsible for the 
+    transformation, feature expansion, and ongoing evolution into nusaOS.
+    GitHub: https://github.com/danko1122q
+
+## Contributors
+* The open-source community members who have submitted pull requests 
+    and bug reports.
+
+-------------------------------------------------------------------------
+nusaOS is licensed under the GNU General Public License v3.0 (GPL-3.0).
