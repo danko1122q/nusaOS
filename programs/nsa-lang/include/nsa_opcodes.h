@@ -207,4 +207,37 @@ enum NsaOpcode : uint8_t {
     OP_FCMP         = 0xC9,
     OP_FPRINT       = 0xCA,
     OP_FPRINT_NL    = 0xCB,
+
+    /* ── Syscall interface (v2.5) ────────────────────────────────────────
+     *
+     * OP_SYSCALL  dst_int  num_var_or_imm  a  b  c
+     *   Calls int 0x80 on i386 nusaOS.
+     *   eax = syscall number (from var or immediate)
+     *   ebx = arg1 (var), ecx = arg2 (var), edx = arg3 (var)
+     *   Result stored in dst_int (signed).
+     *
+     *   Encoding: opcode  dst  flags  num  a  b  c
+     *     flags byte: bit0 = num is immediate i32 (4 extra bytes follow)
+     *                 otherwise num is a var id (1 byte)
+     *
+     * OP_SYSBUF_ALLOC  buf_var  size_int
+     *   Allocates a fixed buffer in VM heap for passing pointers to syscalls.
+     *   Returns the integer address of the buffer in buf_var (SYM_INT).
+     *
+     * OP_SYSBUF_WRITE  buf_var  offset_int  src_str
+     *   Writes string into buffer at offset.
+     *
+     * OP_SYSBUF_READ   dst_str  buf_var  offset_int  len_int
+     *   Reads bytes from buffer into string variable.
+     *
+     * OP_ADDR_OF  dst_int  src_var
+     *   Stores the address of src_var's sval (string buffer) in dst_int.
+     *   Useful for passing string pointers directly to syscalls.
+     *
+     * ------------------------------------------------------------------ */
+    OP_SYSCALL      = 0xD0,
+    OP_SYSBUF_ALLOC = 0xD1,
+    OP_SYSBUF_WRITE = 0xD2,
+    OP_SYSBUF_READ  = 0xD3,
+    OP_ADDR_OF      = 0xD4,
 };

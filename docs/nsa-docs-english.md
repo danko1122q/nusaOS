@@ -1610,6 +1610,260 @@ All statements that work in a `.nsa` function body are also supported inside
 ---
 
 
+
+---
+
+## 18. Floating Point
+
+NSA v2.5 adds native floating-point support. Float variables are declared with a decimal literal and use a separate set of operations prefixed with `f`.
+
+### Declaring float variables
+
+```nsa
+let pi    = 3.14159
+let r     = 4.0
+let score = -1.5
+let zero  = 0.0
+```
+
+Any literal containing a decimal point (`.`) is automatically treated as a float. Negative float literals are written as `let x = -3.14`.
+
+### Float arithmetic
+
+```nsa
+let a = 10.0
+let b = 3.0
+let result = 0.0
+
+fadd result a b     // result = a + b  →  13.0
+fsub result a b     // result = a - b  →  7.0
+fmul result a b     // result = a * b  →  30.0
+fdiv result a b     // result = a / b  →  3.33333
+fneg result         // result = -result  (in-place negate)
+```
+
+`fdiv` raises a runtime error on division by zero.
+
+### Conversion
+
+```nsa
+let n   = 7
+let f   = 0.0
+let i   = 0
+let s   = ""
+
+itof f n      // int variable → float variable
+ftoi i f      // float → int (truncates toward zero)
+ftos s f      // float → string  ("3.14159", "33.3333", etc.)
+```
+
+### Comparison
+
+```nsa
+let a    = 3.14
+let b    = 2.71
+let big  = false
+
+fcmp big a > b      // big = (a > b)  →  true
+
+// Supported operators: == != < > <= >=
+fcmp eq a == b
+fcmp ne a != b
+fcmp lt a <  b
+fcmp ge a >= b
+```
+
+### Printing floats
+
+```nsa
+let pi = 3.14159
+print pi            // prints: 3.14159
+println pi          // prints without trailing newline
+```
+
+Floats are printed with up to 6 significant digits and trailing zeros trimmed (`33.3333`, `50.2654`, `1000000`, `0.001`).
+
+### Full example — circle area
+
+```nsa
+let pi   = 3.14159
+let r    = 5.0
+let luas = 0.0
+
+fmul luas r r       // r²
+fmul luas pi luas   // π × r²
+
+ftos s luas
+print "Area = "
+print s
+```
+
+---
+
+## 19. String Indexing
+
+NSA v2.5 adds three statements for character-level string access.
+
+### sget — get character at index
+
+```nsa
+let s = "nusaOS"
+let i = 0
+let c = ""
+
+sget c s i      // c = "n"   (character at index 0)
+let i = 3
+sget c s i      // c = "a"
+```
+
+The result is always a 1-character string. Index out of bounds causes a runtime error.
+
+### sset — replace character at index
+
+```nsa
+let s = "nusaOS"
+let i = 5
+let x = "!"
+
+sset s i x      // s is now "nusaO!"
+```
+
+`sset` modifies the string variable in-place. The source must be a non-empty string; only its first character is used.
+
+### ssub — extract substring
+
+```nsa
+let s     = "nusaOS"
+let start = 0
+let len   = 4
+let part  = ""
+
+ssub part s start len   // part = "nusa"
+```
+
+If `start + len` exceeds the string length, the substring is clamped to the end of the string. Result is capped at 254 characters.
+
+### Combined example
+
+```nsa
+let word  = "Hello"
+let i     = 0
+let ch    = ""
+let upper = "h"
+
+// Read first char
+sget ch word i
+
+// Replace it
+sset word i upper   // word = "hello"
+
+// Extract middle
+let s2 = 1
+let ln = 3
+let mid = ""
+ssub mid word s2 ln  // mid = "ell"
+
+print word
+print mid
+```
+
+---
+
+## 20. File I/O
+
+NSA v2.5 adds file read/write support using the `fopen`, `fclose`, `fread`, `fwrite`, and `fexists` statements.
+
+### Opening a file
+
+```nsa
+let path = "/home/notes.txt"
+fopen f path "w"    // open for writing  (creates or truncates)
+fopen f path "r"    // open for reading
+fopen f path "a"    // open for appending
+```
+
+| Mode | Meaning |
+|------|---------|
+| `"r"` | Read-only. File must exist. |
+| `"w"` | Write. Creates file if missing, truncates if it exists. |
+| `"a"` | Append. Creates file if missing. Writes go to end. |
+
+The file handle `f` is stored as a special `file` variable. A negative internal value means the open failed (e.g. file not found in `"r"` mode).
+
+### Writing to a file
+
+```nsa
+fwrite f "Hello, nusaOS!
+"
+
+let msg = "Line 2
+"
+fwrite f msg
+```
+
+Both string literals and string variables are accepted.
+
+### Reading from a file
+
+```nsa
+fopen  g path "r"
+fread  content g    // reads entire file into string variable
+fclose g
+print content
+```
+
+`fread` reads up to 254 characters (the string length limit). For larger files only the first 254 characters are kept.
+
+### Closing a file
+
+```nsa
+fclose f
+```
+
+Always close a file after use. The handle becomes invalid after `fclose`.
+
+### Checking if a file exists
+
+```nsa
+let path = "/home/data.txt"
+fexists ok path
+
+if ok then
+    print "File found"
+end
+```
+
+`fexists` sets the destination variable to `true` or `false` without opening the file.
+
+### Full example
+
+```nsa
+let path = "/home/log.txt"
+
+// Write
+fopen  f path "w"
+fwrite f "Start
+"
+fclose f
+
+// Append
+fopen  f path "a"
+fwrite f "More data
+"
+fclose f
+
+// Read back
+fexists ok path
+if ok then
+    fopen  g path "r"
+    fread  content g
+    fclose g
+    print content
+end
+```
+
+---
+
 ## About Versions
 
 To see which version of NSA is installed on your system, run:
@@ -1618,7 +1872,7 @@ To see which version of NSA is installed on your system, run:
 nsa version
 ```
 
-The language is actively developed as part of the NusaOS project. This documentation covers all currently supported features — if a feature is listed here, it works in your installed version.
+The language is actively developed as part of the NusaOS project. This documentation covers NSA v2.5 and all currently supported features — if a feature is listed here, it works in your installed version.
 
 ---
 

@@ -666,6 +666,131 @@ static void parse_to_str(CS& cs, const Toks& t) {
     cs.emit(OP_INT_TO_STR); cs.emit(dst); cs.emit(src);
 }
 
+/* ── Syscall interface (v2.5) ──────────────────────────────────────── */
+
+/*
+ * syscall dst num a b c
+ *
+ * Each of num/a/b/c can be:
+ *   - an integer literal  (encoded as immediate i32)
+ *   - an integer/bool variable (encoded as var id)
+ *   - 0 or omitted (encoded as immediate 0)
+ *
+ * Encoding in bytecode:
+ *   OP_SYSCALL  dst  [num_flags  num...]  [a_flags  a...]
+ *               [b_flags  b...]  [c_flags  c...]
+ *
+ *   flags byte: 0x00 = var id follows (1 byte)
+ *               0x01 = i32 immediate follows (4 bytes)
+ *               0x02 = literal zero (no extra bytes)
+ */
+static void emit_syscall_arg(CS& cs, const Tok& tok) {
+    if (tok.kind == TK::TK_INT) {
+        if (tok.ival == 0) { cs.emit(0x02); return; }
+        cs.emit(0x01); cs.emit_i32(tok.ival);
+    } else if (tok.kind == TK::TK_IDENT) {
+        uint8_t id; SymType st;
+        if (!cs.lookup(tok.text, id, &st)) return;
+        cs.emit(0x00); cs.emit(id);
+    } else {
+        cs.error("syscall: argument must be integer literal or variable");
+    }
+}
+
+static void parse_syscall(CS& cs, const Toks& t) {
+    /* syscall dst num [a] [b] [c] */
+    if (t.size() < 3) {
+        cs.error("expected: syscall <dst> <num> [a] [b] [c]"); return;
+    }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    cs.emit(OP_SYSCALL);
+    cs.emit(dst);
+    /* num */
+    emit_syscall_arg(cs, t[2]);
+    /* a, b, c — default to zero if omitted */
+    for (int i = 3; i <= 5; i++) {
+        if ((size_t)i < t.size()) emit_syscall_arg(cs, t[i]);
+        else cs.emit(0x02); /* zero */
+    }
+}
+
+/*
+ * sysbuf dst size
+ * Allocates a raw byte buffer on the VM heap and stores its address in dst (int).
+ */
+static void parse_sysbuf(CS& cs, const Toks& t) {
+    if (t.size() < 3) { cs.error("expected: sysbuf <dst_int> <size>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    cs.emit(OP_SYSBUF_ALLOC);
+    cs.emit(dst);
+    if (t[2].kind == TK::TK_INT) {
+        cs.emit(0x01); cs.emit_i32(t[2].ival);
+    } else {
+        uint8_t sz; if (!cs.lookup(t[2].text, sz)) return;
+        cs.emit(0x00); cs.emit(sz);
+    }
+}
+
+/*
+ * bufwrite buf offset src_str
+ * Writes string variable or literal into raw buffer at byte offset.
+ */
+static void parse_bufwrite(CS& cs, const Toks& t) {
+    if (t.size() < 4) { cs.error("expected: bufwrite <buf_int> <offset> <src_str>"); return; }
+    uint8_t buf; SymType bt; if (!cs.lookup(t[1].text, buf, &bt)) return;
+    if (bt != SYM_INT) { cs.error("bufwrite: first arg must be buffer (int)"); return; }
+    cs.emit(OP_SYSBUF_WRITE);
+    cs.emit(buf);
+    /* offset */
+    if (t[2].kind == TK::TK_INT) { cs.emit(0x01); cs.emit_i32(t[2].ival); }
+    else { uint8_t ov; if (!cs.lookup(t[2].text, ov)) return; cs.emit(0x00); cs.emit(ov); }
+    /* src */
+    if (t[3].kind == TK::TK_STRING) {
+        uint8_t tmp; cs.intern("__bw_tmp__", SYM_STR, tmp);
+        cs.emit(OP_SET_STR); cs.emit(tmp); emit_str_lit(cs.bytecode, t[3].text);
+        cs.emit(0x00); cs.emit(tmp);
+    } else {
+        uint8_t src; SymType st; if (!cs.lookup(t[3].text, src, &st)) return;
+        if (st != SYM_STR) { cs.error("bufwrite: source must be string"); return; }
+        cs.emit(0x00); cs.emit(src);
+    }
+}
+
+/*
+ * bufread dst buf offset len
+ * Reads len bytes from buffer at offset into string variable dst.
+ */
+static void parse_bufread(CS& cs, const Toks& t) {
+    if (t.size() < 5) { cs.error("expected: bufread <dst_str> <buf_int> <offset> <len>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_STR, dst)) return;
+    uint8_t buf; SymType bt; if (!cs.lookup(t[2].text, buf, &bt)) return;
+    if (bt != SYM_INT) { cs.error("bufread: buf must be integer (address)"); return; }
+    cs.emit(OP_SYSBUF_READ);
+    cs.emit(dst);
+    cs.emit(buf);
+    /* offset */
+    if (t[3].kind == TK::TK_INT) { cs.emit(0x01); cs.emit_i32(t[3].ival); }
+    else { uint8_t ov; if (!cs.lookup(t[3].text, ov)) return; cs.emit(0x00); cs.emit(ov); }
+    /* len */
+    if (t[4].kind == TK::TK_INT) { cs.emit(0x01); cs.emit_i32(t[4].ival); }
+    else { uint8_t lv; if (!cs.lookup(t[4].text, lv)) return; cs.emit(0x00); cs.emit(lv); }
+}
+
+/*
+ * addrof dst src_str
+ * Stores address of src_str's internal buffer in dst (int).
+ * Use to pass string pointers directly as syscall arguments.
+ */
+static void parse_addrof(CS& cs, const Toks& t) {
+    if (t.size() < 3) { cs.error("expected: addrof <dst_int> <src_str>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text, src, &st)) return;
+    if (st != SYM_STR) { cs.error("addrof: source must be a string variable"); return; }
+    cs.emit(OP_ADDR_OF);
+    cs.emit(dst);
+    cs.emit(src);
+}
+
 /* ── Float arithmetic (v2.5) ──────────────────────────────────────── */
 
 /* Helper: resolve operand that may be float var or float literal */
@@ -866,18 +991,54 @@ static void parse_fexists(CS& cs, const Toks& t) {
 
 /* ── cmp ──────────────────────────────────────────────────────────── */
 static void parse_cmp(CS& cs, const Toks& t) {
+    /* cmp <dst_bool> <a_var> <op> <b_var_or_literal>
+     *
+     * Right operand (b) can be:
+     *   - a variable identifier
+     *   - an integer literal (positive)
+     *   - a negative integer literal: two tokens TK_OP("-") + TK_INT
+     *
+     * When b is a literal we synthesise a hidden __cmp_lit__ variable,
+     * assign it the literal value, and emit the normal var-vs-var opcode.
+     */
     if (t.size()<5) { cs.error("expected: cmp <bool_var> <a> <op> <b>"); return; }
     uint8_t dst; if (!cs.intern(t[1].text,SYM_BOOL,dst)) return;
     uint8_t va; SymType vta; if (!cs.lookup(t[2].text,va,&vta)) return;
     if (t[3].kind!=TK::TK_OP) { cs.error("expected comparison operator"); return; }
     const std::string& op=t[3].text;
-    uint8_t vb; SymType vtb; if (!cs.lookup(t[4].text,vb,&vtb)) return;
+
+    /* ── resolve right operand ── */
+    uint8_t vb; SymType vtb;
+    bool b_is_lit  = false;
+    int32_t b_ival = 0;
+
+    /* negative literal: TK_OP("-") followed by TK_INT */
+    if (t[4].kind==TK::TK_OP && t[4].text=="-" && t.size()>=6 && t[5].kind==TK::TK_INT) {
+        b_is_lit = true;
+        b_ival   = -(int32_t)t[5].ival;
+    } else if (t[4].kind==TK::TK_INT) {
+        b_is_lit = true;
+        b_ival   = (int32_t)t[4].ival;
+    } else {
+        if (!cs.lookup(t[4].text,vb,&vtb)) return;
+    }
+
+    if (b_is_lit) {
+        /* intern a hidden slot for the literal */
+        if (!cs.intern("__cmp_rhs__",SYM_INT,vb)) return;
+        cs.emit(OP_SET_INT); cs.emit(vb); cs.emit_i32(b_ival);
+        vtb = SYM_INT;
+    }
+
+    /* ── string comparison ── */
     if (vta==SYM_STR||vtb==SYM_STR) {
         if (vta!=SYM_STR||vtb!=SYM_STR) { cs.error("cmp: both operands must be string"); return; }
         if (op=="==") { cs.emit(OP_SCMP_EQ); cs.emit(dst); cs.emit(va); cs.emit(vb); return; }
         if (op=="!=") { cs.emit(OP_SCMP_NE); cs.emit(dst); cs.emit(va); cs.emit(vb); return; }
         cs.error("string comparison only supports == and !="); return;
     }
+
+    /* ── integer/bool comparison ── */
     if (vta!=SYM_INT&&vta!=SYM_BOOL) { cs.error("cmp: left operand must be int/bool"); return; }
     if (vtb!=SYM_INT&&vtb!=SYM_BOOL) { cs.error("cmp: right operand must be int/bool"); return; }
     NsaOpcode cop;
@@ -1602,6 +1763,12 @@ static void parse_line(CS& cs, const Toks& t) {
     if (kw=="fread")   { parse_fread(cs,t);              return; }
     if (kw=="fwrite")  { parse_fwrite(cs,t);             return; }
     if (kw=="fexists") { parse_fexists(cs,t);            return; }
+    /* syscall interface (v2.5) */
+    if (kw=="syscall")  { parse_syscall(cs,t);           return; }
+    if (kw=="sysbuf")   { parse_sysbuf(cs,t);            return; }
+    if (kw=="bufwrite") { parse_bufwrite(cs,t);           return; }
+    if (kw=="bufread")  { parse_bufread(cs,t);            return; }
+    if (kw=="addrof")   { parse_addrof(cs,t);             return; }
     /* float arithmetic (v2.5) */
     if (kw=="fadd")    { parse_fmath(cs,t,OP_FADD);      return; }
     if (kw=="fsub")    { parse_fmath(cs,t,OP_FSUB);      return; }

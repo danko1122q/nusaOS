@@ -8,6 +8,33 @@
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
+
+/* ── Syscall interface ──────────────────────────────────────────────────
+ * On i386 nusaOS: int $0x80, eax=num, ebx=arg1, ecx=arg2, edx=arg3
+ * We emit the trap inline so the VM itself (a nusaOS ELF) can use it.
+ * On any other host (Linux dev build) the syscall block is a no-op stub
+ * so the rest of the VM still compiles and runs for testing.
+ * ---------------------------------------------------------------------- */
+#if defined(__i386__) && !defined(NUSAOS_KERNEL)
+static inline int nsa_syscall(int num, int a, int b, int c) {
+    int ret;
+    asm volatile(
+        "int $0x80"
+        : "=a"(ret)
+        : "a"(num), "b"(a), "c"(b), "d"(c)
+        : "memory"
+    );
+    return ret;
+}
+#define NSA_SYSCALL_SUPPORTED 1
+#else
+/* Stub for non-i386 / kernel builds */
+static inline int nsa_syscall(int num, int a, int b, int c) {
+    (void)num; (void)a; (void)b; (void)c;
+    return -1;
+}
+#define NSA_SYSCALL_SUPPORTED 0
+#endif
 #include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -172,6 +199,17 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
     memset(vars,       0, sizeof(vars));
     memset(call_stack, 0, sizeof(call_stack));
     for (int i=0;i<sym_count;i++) vars[i].type=VAR_UNSET;
+
+    /* ── Syscall buffer pool ─────────────────────────────────────────────
+     * sysbuf allocates raw heap buffers tracked here; freed on exit.
+     * Max NSA_MAX_SYSBUFS live buffers at once.                        */
+    static const int NSA_MAX_SYSBUFS = 32;
+    static void*  sysbuf_ptr[NSA_MAX_SYSBUFS];
+    static size_t sysbuf_len[NSA_MAX_SYSBUFS];
+    static int    sysbuf_count;
+    /* reset pool each run */
+    for (int i=0;i<sysbuf_count;i++) { free(sysbuf_ptr[i]); sysbuf_ptr[i]=nullptr; }
+    sysbuf_count = 0;
 
     int    call_depth = 0;
     size_t ip         = 0;
@@ -847,6 +885,196 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             VAR(dst).ival=(r==0)?1:0;
             break;
         }
+
+
+        /* ════════════════════════════════════════════════════════════════
+         * SYSCALL INTERFACE  (v2.5)
+         * ════════════════════════════════════════════════════════════════
+         *
+         * Helpers to decode the variable-length argument encoding used by
+         * OP_SYSCALL / OP_SYSBUF_ALLOC / OP_SYSBUF_WRITE / OP_SYSBUF_READ.
+         *
+         * flags byte: 0x00 = next byte is var id  (read ival from slot)
+         *             0x01 = next 4 bytes are i32 immediate
+         *             0x02 = literal zero (no extra bytes)
+         *
+         * read_sc_arg() decodes one argument, returns false on error.
+         * ────────────────────────────────────────────────────────────── */
+#define SC_ARG(out_val, label) do { \
+    uint8_t _fl; \
+    if (!read_u8(bc,ip,_fl)) RT_ERR(label ": truncated flags"); \
+    if (_fl == 0x02) { (out_val) = 0; } \
+    else if (_fl == 0x01) { \
+        int32_t _v; \
+        if (!read_i32(bc,ip,_v)) RT_ERR(label ": truncated imm"); \
+        (out_val) = (int)_v; \
+    } else { \
+        uint8_t _id; \
+        if (!read_u8(bc,ip,_id)) RT_ERR(label ": truncated var id"); \
+        CHECK_ID(_id, label); \
+        (out_val) = (int)VAR(_id).ival; \
+    } \
+} while(0)
+
+        /* ── OP_SYSCALL  dst  [num]  [a]  [b]  [c] ────────────────────
+         *
+         * Executes: result = syscall(num, a, b, c)
+         * On nusaOS i386: int $0x80, eax=num ebx=a ecx=b edx=c
+         * Stores signed return value in dst (int).
+         *
+         * If NSA_SYSCALL_SUPPORTED == 0 (non-i386 host), stores -1.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_SYSCALL: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("SYSCALL: truncated dst");
+            CHECK_ID(dst,"SYSCALL dst");
+
+            int num, a, b, c;
+            SC_ARG(num,"SYSCALL num");
+            SC_ARG(a,  "SYSCALL a");
+            SC_ARG(b,  "SYSCALL b");
+            SC_ARG(c,  "SYSCALL c");
+
+            int ret = nsa_syscall(num, a, b, c);
+
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = ret;
+            break;
+        }
+
+        /* ── OP_SYSBUF_ALLOC  dst  [size] ──────────────────────────────
+         *
+         * Allocates a zero-filled byte buffer of <size> bytes on the heap.
+         * Stores the buffer's address (as integer) in dst.
+         * Buffer is tracked in the pool and freed when the program ends.
+         *
+         * Usage in .nsa:
+         *   sysbuf buf 256       // allocate 256-byte buffer
+         *   addrof ptr buf_str   // (or use addrof for string vars)
+         * ────────────────────────────────────────────────────────────── */
+        case OP_SYSBUF_ALLOC: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("SYSBUF_ALLOC: truncated dst");
+            CHECK_ID(dst,"SYSBUF_ALLOC dst");
+
+            int sz; SC_ARG(sz,"SYSBUF_ALLOC size");
+            if (sz <= 0 || sz > 65536) RT_ERR("SYSBUF_ALLOC: size out of range (1-65536)");
+            if (sysbuf_count >= NSA_MAX_SYSBUFS) RT_ERR("SYSBUF_ALLOC: too many buffers (max 32)");
+
+            void* buf = calloc(1, (size_t)sz);
+            if (!buf) RT_ERR("SYSBUF_ALLOC: out of memory");
+
+            sysbuf_ptr[sysbuf_count] = buf;
+            sysbuf_len[sysbuf_count] = (size_t)sz;
+            sysbuf_count++;
+
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = (int32_t)(uintptr_t)buf;
+            break;
+        }
+
+        /* ── OP_SYSBUF_WRITE  buf_var  [offset]  [src_var] ─────────────
+         *
+         * Copies the string content of src_var into the raw buffer at
+         * the given byte offset.  Writes strlen(src)+1 bytes (NUL-term).
+         *
+         * Usage in .nsa:
+         *   bufwrite buf 0 my_str   // write my_str at offset 0
+         * ────────────────────────────────────────────────────────────── */
+        case OP_SYSBUF_WRITE: {
+            uint8_t buf_id;
+            if (!read_u8(bc,ip,buf_id)) RT_ERR("SYSBUF_WRITE: truncated buf id");
+            CHECK_ID(buf_id,"SYSBUF_WRITE buf");
+
+            int offset; SC_ARG(offset,"SYSBUF_WRITE offset");
+
+            uint8_t src_id;
+            /* src flags */
+            uint8_t src_fl;
+            if (!read_u8(bc,ip,src_fl)) RT_ERR("SYSBUF_WRITE: truncated src flags");
+            if (src_fl != 0x00) RT_ERR("SYSBUF_WRITE: src must be a string var id");
+            if (!read_u8(bc,ip,src_id)) RT_ERR("SYSBUF_WRITE: truncated src id");
+            CHECK_ID(src_id,"SYSBUF_WRITE src");
+            NEED_STR(src_id,"SYSBUF_WRITE src");
+
+            /* Resolve the buffer address stored in buf_id (int) */
+            if (VAR(buf_id).type != VAR_INT) RT_ERR("SYSBUF_WRITE: buf must be int (address)");
+            uint8_t* raw = (uint8_t*)(uintptr_t)(uint32_t)VAR(buf_id).ival;
+            if (!raw) RT_ERR("SYSBUF_WRITE: null buffer address");
+
+            /* Find pool entry to check bounds */
+            size_t pool_size = 0;
+            for (int pi=0;pi<sysbuf_count;pi++) {
+                if (sysbuf_ptr[pi] == (void*)raw) { pool_size = sysbuf_len[pi]; break; }
+            }
+            const char* src_s = VAR(src_id).sval;
+            size_t copy_len = strlen(src_s)+1;
+            if (pool_size && (size_t)offset + copy_len > pool_size)
+                RT_ERR("SYSBUF_WRITE: write would overflow buffer");
+
+            memcpy(raw + offset, src_s, copy_len);
+            break;
+        }
+
+        /* ── OP_SYSBUF_READ  dst  buf_var  [offset]  [len] ─────────────
+         *
+         * Reads <len> bytes from the raw buffer (at offset) into the
+         * string variable dst.  NUL-terminates the result.
+         * Capped at NSA_MAX_STR_LEN (254) characters.
+         *
+         * Usage in .nsa:
+         *   bufread result buf 0 64   // read 64 bytes from buf into result
+         * ────────────────────────────────────────────────────────────── */
+        case OP_SYSBUF_READ: {
+            uint8_t dst, buf_id;
+            if (!read_u8(bc,ip,dst))    RT_ERR("SYSBUF_READ: truncated dst");
+            if (!read_u8(bc,ip,buf_id)) RT_ERR("SYSBUF_READ: truncated buf id");
+            CHECK_ID(dst,    "SYSBUF_READ dst");
+            CHECK_ID(buf_id, "SYSBUF_READ buf");
+
+            int offset; SC_ARG(offset,"SYSBUF_READ offset");
+            int len;    SC_ARG(len,   "SYSBUF_READ len");
+
+            if (VAR(buf_id).type != VAR_INT) RT_ERR("SYSBUF_READ: buf must be int (address)");
+            const uint8_t* raw = (const uint8_t*)(uintptr_t)(uint32_t)VAR(buf_id).ival;
+            if (!raw) RT_ERR("SYSBUF_READ: null buffer address");
+
+            if (len < 0) len = 0;
+            if (len > NSA_MAX_STR_LEN) len = NSA_MAX_STR_LEN;
+
+            VAR(dst).type = VAR_STR;
+            memcpy(VAR(dst).sval, raw + offset, (size_t)len);
+            VAR(dst).sval[len] = '\0';
+            break;
+        }
+
+        /* ── OP_ADDR_OF  dst  src ───────────────────────────────────────
+         *
+         * Stores the address of src's string buffer (sval) in dst (int).
+         * This is the fast path for passing string pointers to syscalls
+         * without allocating a separate sysbuf.
+         *
+         * The string must stay alive (not reassigned) while the pointer
+         * is in use — NSA has no GC so this is the caller's responsibility.
+         *
+         * Usage in .nsa:
+         *   let path = "/home/test.txt"
+         *   addrof  ptr  path
+         *   syscall fd  7  ptr  65  0   // SYS_OPEN = 7, O_RDONLY=0 O_WRONLY=1
+         * ────────────────────────────────────────────────────────────── */
+        case OP_ADDR_OF: {
+            uint8_t dst, src;
+            if (!read_u8(bc,ip,dst)) RT_ERR("ADDR_OF: truncated dst");
+            if (!read_u8(bc,ip,src)) RT_ERR("ADDR_OF: truncated src");
+            CHECK_ID(dst,"ADDR_OF dst");
+            CHECK_ID(src,"ADDR_OF src");
+            NEED_STR(src,"ADDR_OF src");
+
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = (int32_t)(uintptr_t)VAR(src).sval;
+            break;
+        }
+#undef SC_ARG
 
         default:
             RT_ERR2("unknown opcode 0x%02X at offset %zu",(unsigned)op,ip-1);

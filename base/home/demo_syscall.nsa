@@ -1,0 +1,71 @@
+// demo_syscall.nsa — NSA v2.5.1 Syscall Interface Demo
+// SYS_GETPID=13  SYS_WRITE=4  SYS_OPEN=7  SYS_CLOSE=8  SYS_READ=3
+
+print "=== NSA v2.5.1 Syscall Demo ==="
+
+// ── 1. getpid ─────────────────────────────────────────────────────────
+let pid = 0
+syscall pid 13 0 0 0
+let pids = ""
+to_str pids pid
+print "PID proses ini: "
+print pids
+
+// ── 2. write langsung ke stdout (fd=1) ────────────────────────────────
+let msg = "Halo dari NSA syscall!\n"
+let ptr = 0
+let msglen = 0
+addrof ptr msg
+len msglen msg
+let wret = 0
+syscall wret 4 1 ptr msglen
+
+// ── 3. Buka file, tulis, tutup ────────────────────────────────────────
+// O_WRONLY|O_CREAT|O_TRUNC=577  mode 0644=420
+let path = "/home/syscall_test.txt"
+let ptr2 = 0
+addrof ptr2 path
+let fd2 = 0
+syscall fd2 7 ptr2 577 420
+
+let ok = false
+cmp ok fd2 > -1
+
+if ok then
+    let content = "Ditulis oleh NSA syscall!\n"
+    let cptr = 0
+    let clen = 0
+    addrof cptr content
+    len clen content
+    let wret2 = 0
+    syscall wret2 4 fd2 cptr clen
+    let cret = 0
+    syscall cret 8 fd2 0 0
+    print "File berhasil ditulis. fd="
+    let fds = ""
+    to_str fds fd2
+    print fds
+end
+
+// ── 4. Baca file kembali dengan sysbuf ───────────────────────────────
+let ptr3 = 0
+addrof ptr3 path
+let fd3 = 0
+syscall fd3 7 ptr3 0 0
+
+let ok2 = false
+cmp ok2 fd3 > -1
+
+if ok2 then
+    sysbuf rbuf 256
+    let rret = 0
+    syscall rret 3 fd3 rbuf 255
+    let isi = ""
+    bufread isi rbuf 0 rret
+    print "Isi file: "
+    print isi
+    let cret2 = 0
+    syscall cret2 8 fd3 0 0
+end
+
+print "=== Selesai ==="

@@ -1489,6 +1489,260 @@ fungsi `.nss`: `let`, `copy`, `print`, `println`, `add`, `sub`, `mul`,
 ---
 
 
+
+---
+
+## 18. Bilangan Desimal (Float)
+
+NSA v2.5 menambahkan dukungan bilangan desimal (floating point) secara native. Variabel float dideklarasikan dengan literal desimal dan menggunakan sekumpulan operasi dengan awalan `f`.
+
+### Deklarasi variabel float
+
+```nsa
+let pi    = 3.14159
+let r     = 4.0
+let nilai = -1.5
+let nol   = 0.0
+```
+
+Literal yang mengandung titik desimal (`.`) secara otomatis diperlakukan sebagai float. Float negatif ditulis dengan `let x = -3.14`.
+
+### Aritmatika float
+
+```nsa
+let a      = 10.0
+let b      = 3.0
+let hasil  = 0.0
+
+fadd hasil a b     // hasil = a + b  →  13.0
+fsub hasil a b     // hasil = a - b  →  7.0
+fmul hasil a b     // hasil = a × b  →  30.0
+fdiv hasil a b     // hasil = a / b  →  3.33333
+fneg hasil         // hasil = -hasil  (negasi di tempat)
+```
+
+`fdiv` akan memunculkan error runtime jika pembagi nol.
+
+### Konversi
+
+```nsa
+let n = 7
+let f = 0.0
+let i = 0
+let s = ""
+
+itof f n      // variabel int → variabel float
+ftoi i f      // float → int (dibulatkan ke nol)
+ftos s f      // float → string  ("3.14159", "33.3333", dll.)
+```
+
+### Perbandingan
+
+```nsa
+let a    = 3.14
+let b    = 2.71
+let besar = false
+
+fcmp besar a > b      // besar = (a > b)  →  true
+
+// Operator yang didukung: == != < > <= >=
+fcmp sama  a == b
+fcmp beda  a != b
+fcmp kecil a <  b
+fcmp besar a >= b
+```
+
+### Mencetak float
+
+```nsa
+let pi = 3.14159
+print pi            // mencetak: 3.14159
+println pi          // mencetak tanpa newline di akhir
+```
+
+Float dicetak dengan hingga 6 digit signifikan dan nol di belakang dibuang (`33.3333`, `50.2654`, `1000000`, `0.001`).
+
+### Contoh lengkap — luas lingkaran
+
+```nsa
+let pi   = 3.14159
+let r    = 5.0
+let luas = 0.0
+
+fmul luas r r       // r²
+fmul luas pi luas   // π × r²
+
+ftos s luas
+print "Luas = "
+print s
+```
+
+---
+
+## 19. Pengindeksan String
+
+NSA v2.5 menambahkan tiga pernyataan untuk akses string per karakter.
+
+### sget — ambil karakter di indeks tertentu
+
+```nsa
+let s = "nusaOS"
+let i = 0
+let c = ""
+
+sget c s i      // c = "n"   (karakter di indeks 0)
+let i = 3
+sget c s i      // c = "a"
+```
+
+Hasil selalu berupa string 1 karakter. Indeks di luar batas menyebabkan error runtime.
+
+### sset — ganti karakter di indeks tertentu
+
+```nsa
+let s = "nusaOS"
+let i = 5
+let x = "!"
+
+sset s i x      // s menjadi "nusaO!"
+```
+
+`sset` memodifikasi variabel string secara langsung. Sumber harus string tidak kosong; hanya karakter pertamanya yang digunakan.
+
+### ssub — ekstrak substring
+
+```nsa
+let s      = "nusaOS"
+let mulai  = 0
+let pjg    = 4
+let bagian = ""
+
+ssub bagian s mulai pjg   // bagian = "nusa"
+```
+
+Jika `mulai + panjang` melebihi panjang string, substring dipotong di akhir string. Hasil dibatasi 254 karakter.
+
+### Contoh gabungan
+
+```nsa
+let kata  = "Hello"
+let i     = 0
+let huruf = ""
+let kecil = "h"
+
+// Baca karakter pertama
+sget huruf kata i
+
+// Ganti
+sset kata i kecil   // kata = "hello"
+
+// Ambil tengah
+let mulai = 1
+let pjg   = 3
+let tengah = ""
+ssub tengah kata mulai pjg   // tengah = "ell"
+
+print kata
+print tengah
+```
+
+---
+
+## 20. File I/O (Baca/Tulis File)
+
+NSA v2.5 menambahkan dukungan baca/tulis file menggunakan pernyataan `fopen`, `fclose`, `fread`, `fwrite`, dan `fexists`.
+
+### Membuka file
+
+```nsa
+let path = "/home/catatan.txt"
+fopen f path "w"    // buka untuk menulis  (buat baru atau timpa)
+fopen f path "r"    // buka untuk membaca
+fopen f path "a"    // buka untuk menambahkan (append)
+```
+
+| Mode | Arti |
+|------|------|
+| `"r"` | Hanya baca. File harus sudah ada. |
+| `"w"` | Tulis. Buat file baru jika belum ada, timpa jika sudah ada. |
+| `"a"` | Append. Buat file baru jika belum ada. Tulisan ditambahkan di akhir. |
+
+Handle file `f` disimpan sebagai variabel bertipe `file`. Nilai internal negatif berarti file gagal dibuka (misal: file tidak ditemukan di mode `"r"`).
+
+### Menulis ke file
+
+```nsa
+fwrite f "Halo, nusaOS!
+"
+
+let pesan = "Baris 2
+"
+fwrite f pesan
+```
+
+Literal string maupun variabel string keduanya diterima.
+
+### Membaca dari file
+
+```nsa
+fopen  g path "r"
+fread  isi g        // membaca seluruh isi file ke variabel string
+fclose g
+print isi
+```
+
+`fread` membaca hingga 254 karakter (batas panjang string). Untuk file yang lebih besar, hanya 254 karakter pertama yang disimpan.
+
+### Menutup file
+
+```nsa
+fclose f
+```
+
+Selalu tutup file setelah selesai digunakan. Handle menjadi tidak valid setelah `fclose`.
+
+### Memeriksa keberadaan file
+
+```nsa
+let path = "/home/data.txt"
+fexists ada path
+
+if ada then
+    print "File ditemukan"
+end
+```
+
+`fexists` mengisi variabel tujuan dengan `true` atau `false` tanpa membuka file.
+
+### Contoh lengkap
+
+```nsa
+let path = "/home/log.txt"
+
+// Tulis
+fopen  f path "w"
+fwrite f "Mulai
+"
+fclose f
+
+// Append
+fopen  f path "a"
+fwrite f "Data tambahan
+"
+fclose f
+
+// Baca kembali
+fexists ada path
+if ada then
+    fopen  g path "r"
+    fread  isi g
+    fclose g
+    print isi
+end
+```
+
+---
+
 ## Tentang Versi
 
 Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:
@@ -1497,7 +1751,7 @@ Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:
 nsa version
 ```
 
-Bahasa ini terus dikembangkan sebagai bagian dari proyek NusaOS. Dokumentasi ini mencakup semua fitur yang saat ini didukung — jika suatu fitur tercantum di sini, berarti fitur tersebut berfungsi di versi yang terpasang.
+Bahasa ini terus dikembangkan sebagai bagian dari proyek NusaOS. Dokumentasi ini mencakup NSA v2.5 dan semua fitur yang saat ini didukung — jika suatu fitur tercantum di sini, berarti fitur tersebut berfungsi di versi yang terpasang.
 
 ---
 
