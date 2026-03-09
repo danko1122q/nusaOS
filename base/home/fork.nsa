@@ -1,0 +1,10 @@
+let pid = 0
+let ret = 0
+let path = "/bin/open"
+let a0 = "open"
+let a1 = "/apps/calculator.app"
+fork pid
+if pid == 0 then
+    exec ret path a0 a1
+end
+waitpid ret pid

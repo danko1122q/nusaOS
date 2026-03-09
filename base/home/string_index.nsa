@@ -1,0 +1,14 @@
+let word   = "nusaOS"
+let i      = 0
+let char   = ""
+let part   = ""
+
+sget char word i       // char = "n"
+
+let i = 5
+let mark = "!"
+sset word i mark       // word = "nusaO!"
+
+let start = 0
+let len   = 4
+ssub part word start len  // part = "nusa"
