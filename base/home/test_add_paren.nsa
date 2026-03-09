@@ -1,0 +1,10 @@
+// test add() syntax - apakah ini yang crash?
+print "test add paren"
+let x = 0
+let a = 10
+let b = 20
+add(x, a)
+print x
+add(x, b)
+print x
+print "ok"

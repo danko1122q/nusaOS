@@ -38,6 +38,10 @@ static const std::set<std::string> KEYWORDS = {
     "syscall", "sysbuf", "bufwrite", "bufread", "addrof",
     /* process (v2.5.1) */
     "fork", "exec", "waitpid", "exit",
+    /* process utilities (v2.5.2) */
+    "getpid", "sleep", "getenv",
+    /* low-level memory (v2.5.2) */
+    "peek", "poke", "peek8", "poke8",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }
@@ -159,6 +163,11 @@ bool tokenize(const std::string& line, std::vector<Token>& out, std::string& err
             else { Token t; t.kind=TK_IDENT; t.text=word; t.ival=0; out.push_back(t); }
             continue;
         }
+
+        /* Parentheses and commas — silently skip (syntactic sugar only).
+         * This allows  fork(pid)  or  exec(ret, path, a0)  style writing
+         * without affecting the token stream that the compiler sees.    */
+        if (line[i]=='('||line[i]==')'||line[i]==',') { i++; continue; }
 
         error_out = std::string("unexpected character: '") + line[i] + "'";
         return false;

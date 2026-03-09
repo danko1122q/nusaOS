@@ -1246,6 +1246,126 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             break;
         }
 
+        /* ── OP_GETPID  dst (v2.5.2) ────────────────────────────────────
+         * Calls SYS_GETPID (= 13) and stores result in dst.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_GETPID: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("GETPID: truncated dst");
+            CHECK_ID(dst,"GETPID dst");
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = nsa_syscall(13, 0, 0, 0); /* SYS_GETPID = 13 */
+            break;
+        }
+
+        /* ── OP_SLEEP  flags  val (v2.5.2) ───────────────────────────
+         * SYS_SLEEP (= 69) takes (timespec* time, timespec* remainder).
+         * timespec = { long tv_sec, long tv_nsec }
+         * We convert milliseconds to timespec on the stack.
+         * flags: 0x01 = i32 immediate, 0x00 = var id, 0x02 = zero
+         * ────────────────────────────────────────────────────────────── */
+        case OP_SLEEP: {
+            int ms; SC_ARG(ms,"SLEEP ms");
+            /* Use libc usleep() — avoids raw syscall issues with
+             * UserspacePointer validation in sys_sleep kernel side.
+             * usleep takes microseconds; ms * 1000 = microseconds. */
+            if (ms > 0)
+                usleep((useconds_t)ms * 1000);
+            break;
+        }
+
+        /* ── OP_GETENV  dst  name (v2.5.2) ───────────────────────────
+         * Reads environment variable. dst = "" if not found.
+         * Uses getenv() from libc (process inherits env from shell).
+         * ────────────────────────────────────────────────────────────── */
+        case OP_GETENV: {
+            uint8_t dst, name_id;
+            if (!read_u8(bc,ip,dst))     RT_ERR("GETENV: truncated dst");
+            if (!read_u8(bc,ip,name_id)) RT_ERR("GETENV: truncated name");
+            CHECK_ID(dst,"GETENV dst");
+            CHECK_ID(name_id,"GETENV name");
+            NEED_STR(name_id,"GETENV name");
+            const char* val = getenv(VAR(name_id).sval);
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            if (val) {
+                strncpy(VAR(dst).sval, val, NSA_MAX_STR_LEN);
+                VAR(dst).sval[NSA_MAX_STR_LEN] = '\0';
+            }
+            break;
+        }
+
+        /* ── OP_PEEK  dst  addr (v2.5.2) ─────────────────────────────
+         * Read int32 from memory address stored in addr var.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_PEEK: {
+            uint8_t dst, addr_id;
+            if (!read_u8(bc,ip,dst))     RT_ERR("PEEK: truncated dst");
+            if (!read_u8(bc,ip,addr_id)) RT_ERR("PEEK: truncated addr");
+            CHECK_ID(dst,"PEEK dst");
+            CHECK_ID(addr_id,"PEEK addr");
+            NEED_INT(addr_id,"PEEK addr");
+            uintptr_t addr = (uintptr_t)(uint32_t)VAR(addr_id).ival;
+            if (addr < 0x1000) RT_ERR("PEEK: null or low address (possible null ptr)");
+            VAR(dst).type = VAR_INT;
+            int32_t val; memcpy(&val, (const void*)addr, 4);
+            VAR(dst).ival = val;
+            break;
+        }
+
+        /* ── OP_POKE  addr  src (v2.5.2) ─────────────────────────────
+         * Write int32 from src to memory address in addr var.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_POKE: {
+            uint8_t addr_id, src_id;
+            if (!read_u8(bc,ip,addr_id)) RT_ERR("POKE: truncated addr");
+            if (!read_u8(bc,ip,src_id))  RT_ERR("POKE: truncated src");
+            CHECK_ID(addr_id,"POKE addr");
+            CHECK_ID(src_id,"POKE src");
+            NEED_INT(addr_id,"POKE addr");
+            NEED_INT(src_id,"POKE src");
+            uintptr_t addr = (uintptr_t)(uint32_t)VAR(addr_id).ival;
+            if (addr < 0x1000) RT_ERR("POKE: null or low address (possible null ptr)");
+            int32_t val = VAR(src_id).ival;
+            memcpy((void*)addr, &val, 4);
+            break;
+        }
+
+        /* ── OP_PEEK8  dst  addr (v2.5.2) ────────────────────────────
+         * Read uint8 from memory address.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_PEEK8: {
+            uint8_t dst, addr_id;
+            if (!read_u8(bc,ip,dst))     RT_ERR("PEEK8: truncated dst");
+            if (!read_u8(bc,ip,addr_id)) RT_ERR("PEEK8: truncated addr");
+            CHECK_ID(dst,"PEEK8 dst");
+            CHECK_ID(addr_id,"PEEK8 addr");
+            NEED_INT(addr_id,"PEEK8 addr");
+            uintptr_t addr = (uintptr_t)(uint32_t)VAR(addr_id).ival;
+            if (addr < 0x1000) RT_ERR("PEEK8: null or low address (possible null ptr)");
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = (int32_t)(uint8_t)(*(const char*)addr);
+            break;
+        }
+
+        /* ── OP_POKE8  addr  src (v2.5.2) ────────────────────────────
+         * Write low byte of src to memory address.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_POKE8: {
+            uint8_t addr_id, src_id;
+            if (!read_u8(bc,ip,addr_id)) RT_ERR("POKE8: truncated addr");
+            if (!read_u8(bc,ip,src_id))  RT_ERR("POKE8: truncated src");
+            CHECK_ID(addr_id,"POKE8 addr");
+            CHECK_ID(src_id,"POKE8 src");
+            NEED_INT(addr_id,"POKE8 addr");
+            NEED_INT(src_id,"POKE8 src");
+            uintptr_t addr = (uintptr_t)(uint32_t)VAR(addr_id).ival;
+            if (addr < 0x1000) RT_ERR("POKE8: null or low address (possible null ptr)");
+            uint8_t byte_val = (uint8_t)(VAR(src_id).ival & 0xFF);
+            *(uint8_t*)addr = byte_val;
+            break;
+        }
+
         default:
             RT_ERR2("unknown opcode 0x%02X at offset %zu",(unsigned)op,ip-1);
         }

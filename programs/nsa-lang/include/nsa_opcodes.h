@@ -269,4 +269,40 @@ enum NsaOpcode : uint8_t {
     OP_EXEC         = 0xD6,
     OP_WAITPID      = 0xD7,
     OP_EXIT         = 0xD8,
+
+    /* ── Process utilities (v2.5.2) ──────────────────────────────────────
+     *
+     * OP_GETPID  dst_int
+     *   Calls SYS_GETPID. Stores current process ID in dst_int.
+     *
+     * OP_SLEEP   ms_var_or_imm
+     *   Calls SYS_SLEEP with milliseconds. Blocks until done.
+     *   Encoding: opcode  flags  val
+     *     flags: 0x01 = immediate i32, 0x00 = var id
+     *
+     * OP_GETENV  dst_str  name_str
+     *   Reads environment variable name_str into dst_str.
+     *   If not found, dst_str = "" and no error.
+     *
+     * OP_PEEK  dst_int  addr_int
+     *   Read 4 bytes (int32) from memory address stored in addr_int.
+     *   Low-level memory read. Use with care.
+     *
+     * OP_POKE  addr_int  src_int
+     *   Write 4 bytes (int32) from src_int to memory address in addr_int.
+     *   Low-level memory write. Use with care.
+     *
+     * OP_PEEK8  dst_int  addr_int
+     *   Read 1 byte (uint8) from memory address.
+     *
+     * OP_POKE8  addr_int  src_int
+     *   Write 1 byte (low byte of src_int) to memory address.
+     * ------------------------------------------------------------------ */
+    OP_GETPID       = 0xD9,
+    OP_SLEEP        = 0xDA,
+    OP_GETENV       = 0xDB,
+    OP_PEEK         = 0xDC,
+    OP_POKE         = 0xDD,
+    OP_PEEK8        = 0xDE,
+    OP_POKE8        = 0xDF,
 };

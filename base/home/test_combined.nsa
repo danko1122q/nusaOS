@@ -1,0 +1,25 @@
+// test kombinasi getpid + sleep + getenv tanpa add()
+print "step 1"
+let pid = 0
+getpid pid
+print pid
+print "step 2"
+sleep 300
+print "step 3"
+let val = ""
+let key = "HOME"
+getenv val key
+print val
+print "step 4"
+let cpid = 0
+let ret = 0
+let prog = "/bin/echo"
+let a0 = "echo"
+let a1 = "hello world"
+fork cpid
+if cpid == 0 then
+    exec ret prog a0 a1
+    exit 1
+end
+waitpid ret cpid
+print "all ok"

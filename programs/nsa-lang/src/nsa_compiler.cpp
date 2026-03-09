@@ -1,22 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 danko1122q / nusaOS project */
 
-/*
- * NSA Compiler  v2.4  —  added .nss module system
- *
- * .nss files work like a header + implementation combined:
- *   - Declare global variables with  `global int/str/bool <name> = <val>`
- *   - Declare functions normally with `func` / `endfunc`
- *   - The entire .nss is available for import; only referenced symbols
- *     are included in the final .nbin (tree-shaking / dead-code elimination)
- *
- * In a .nsa file:
- *   import "math"           // looks for math.nss next to the .nsa file
- *   import "utils/strings"  // sub-path is fine
- *
- *   call math.max a b -> result
- *   let x = math.PI         // module globals become read-only aliases
- */
 
 #include "nsa_compiler.h"
 #include "nsa_lexer.h"
@@ -666,95 +650,8 @@ static void parse_to_str(CS& cs, const Toks& t) {
     cs.emit(OP_INT_TO_STR); cs.emit(dst); cs.emit(src);
 }
 
-/* ── fork / exec / waitpid / exit (v2.5.1) ──────────────────────────── */
-
-/*
- * fork dst
- * SYS_FORK = 2. Parent gets child PID, child gets 0.
- */
-static void parse_fork(CS& cs, const Toks& t) {
-    if (t.size() < 2) { cs.error("expected: fork <dst_int>"); return; }
-    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
-    cs.emit(OP_FORK);
-    cs.emit(dst);
-}
-
-/*
- * exec dst path arg0 [arg1 ... argN]
- *
- * path  — string variable containing the executable path
- * arg0  — argv[0], conventionally the program name
- * argN  — additional arguments (up to 15 total)
- *
- * Encoding: OP_EXEC  dst  path_id  argc(u8)  arg0_id ... argN_id
- *
- * Example:
- *   let prog = "/bin/echo"
- *   let a0   = "echo"
- *   let a1   = "Halo dari NSA!"
- *   exec ret prog a0 a1
- */
-static void parse_exec(CS& cs, const Toks& t) {
-    /* exec dst path arg0 [arg1...] */
-    if (t.size() < 4) { cs.error("expected: exec <dst> <path_str> <arg0> [args...]"); return; }
-    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
-    uint8_t path_id; SymType pt;
-    if (!cs.lookup(t[2].text, path_id, &pt)) return;
-    if (pt != SYM_STR) { cs.error("exec: path must be a string variable"); return; }
-
-    /* collect argv ids — t[3..] */
-    size_t argc = t.size() - 3;
-    if (argc > 16) { cs.error("exec: max 16 arguments"); return; }
-
-    cs.emit(OP_EXEC);
-    cs.emit(dst);
-    cs.emit(path_id);
-    cs.emit((uint8_t)argc);
-    for (size_t i = 0; i < argc; i++) {
-        uint8_t arg_id; SymType at;
-        if (!cs.lookup(t[3+i].text, arg_id, &at)) return;
-        if (at != SYM_STR) { cs.error("exec: argument must be a string variable"); return; }
-        cs.emit(arg_id);
-    }
-}
-
-/*
- * waitpid dst pid [opts]
- * opts defaults to 0 (WNOHANG=1, WUNTRACED=2).
- * dst = child pid returned, or -errno on error.
- */
-static void parse_waitpid(CS& cs, const Toks& t) {
-    if (t.size() < 3) { cs.error("expected: waitpid <dst_int> <pid_var> [opts]"); return; }
-    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
-    uint8_t pid_id; if (!cs.lookup(t[2].text, pid_id)) return;
-    cs.emit(OP_WAITPID);
-    cs.emit(dst);
-    cs.emit(pid_id);
-    if (t.size() >= 4 && t[3].kind == TK::TK_INT) {
-        cs.emit(0x01); cs.emit_i32(t[3].ival);
-    } else if (t.size() >= 4) {
-        uint8_t ov; if (!cs.lookup(t[3].text, ov)) return;
-        cs.emit(0x00); cs.emit(ov);
-    } else {
-        cs.emit(0x02); /* literal zero = block until done */
-    }
-}
-
-/*
- * exit [code]
- * Calls SYS_EXIT. If code omitted, exits with 0.
- */
-static void parse_exit(CS& cs, const Toks& t) {
-    cs.emit(OP_EXIT);
-    if (t.size() >= 2 && t[1].kind == TK::TK_INT) {
-        cs.emit(0x01); cs.emit_i32(t[1].ival);
-    } else if (t.size() >= 2) {
-        uint8_t id; if (!cs.lookup(t[1].text, id)) return;
-        cs.emit(0x00); cs.emit(id);
-    } else {
-        cs.emit(0x02); /* exit(0) */
-    }
-}
+/* ── Process & OS primitives (v2.5.1+) — see nsa_parse_process.h ───── */
+#include "nsa_parse_process.h"
 
 /* ── Syscall interface (v2.5) ──────────────────────────────────────── */
 
@@ -1864,6 +1761,14 @@ static void parse_line(CS& cs, const Toks& t) {
     if (kw=="exec")     { parse_exec(cs,t);               return; }
     if (kw=="waitpid")  { parse_waitpid(cs,t);            return; }
     if (kw=="exit")     { parse_exit(cs,t);               return; }
+    /* process utilities (v2.5.2) */
+    if (kw=="getpid")   { parse_getpid(cs,t);             return; }
+    if (kw=="sleep")    { parse_sleep(cs,t);              return; }
+    if (kw=="getenv")   { parse_getenv(cs,t);             return; }
+    if (kw=="peek")     { parse_peek(cs,t,OP_PEEK);       return; }
+    if (kw=="poke")     { parse_poke(cs,t,OP_POKE);       return; }
+    if (kw=="peek8")    { parse_peek(cs,t,OP_PEEK8);      return; }
+    if (kw=="poke8")    { parse_poke(cs,t,OP_POKE8);      return; }
     /* float arithmetic (v2.5) */
     if (kw=="fadd")    { parse_fmath(cs,t,OP_FADD);      return; }
     if (kw=="fsub")    { parse_fmath(cs,t,OP_FSUB);      return; }

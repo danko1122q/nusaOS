@@ -1,19 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright © 2026 danko1122q / nusaOS project */
 
-/*
- * nsa — NSA language toolchain v2.4
- *
- * Commands:
- *   nsa build <file.nsa> [output.nbin]         compile .nsa → .nbin
- *   nsa build-nss <file.nss>                   validate a .nss module
- *   nsa run   <file.nbin>                      execute a .nbin program
- *   nsa help                                   show this help
- *   nsa version                                print version info
- *
- * Build options:
- *   --nss-path <dir[:dir...]>   extra directories to search for .nss modules
- */
 
 #include <stdio.h>
 #include <string.h>
