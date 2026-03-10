@@ -24,6 +24,13 @@ Panduan ini ditulis untuk semua orang, termasuk yang belum pernah coding sebelum
 14. [Format File .nbin](#14-format-file-nbin)
 15. [Referensi Error](#15-referensi-error)
 16. [Ringkasan Semua Keyword](#16-ringkasan-semua-keyword)
+17. [Sistem Modul (.nss)](#17-sistem-modul-nss)
+18. [Bilangan Desimal (Float)](#18-bilangan-desimal-float)
+19. [Pengindeksan String](#19-pengindeksan-string)
+20. [File I/O (Baca/Tulis File)](#20-file-io-bacatulis-file)
+21. [Syscall & Kontrol Proses](#21-syscall--kontrol-proses-v252)
+22. [Operasi String Lanjutan](#22-operasi-string-lanjutan-v253)
+23. [Kontrol Loop — break dan continue](#23-kontrol-loop--break-dan-continue-v253)
 
 ---
 
@@ -1336,6 +1343,13 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 | `len` | Panjang string |
 | `to_str` | Integer ke string |
 | `to_int` | String ke integer |
+| `strcmp` | Bandingkan dua string → int (0=sama, <0, >0) |
+| `strfind` | Cari substring → index atau -1 |
+| `strtrim` | Hapus whitespace di awal dan akhir |
+| `strupper` | Ubah string ke huruf besar |
+| `strlower` | Ubah string ke huruf kecil |
+| `strreplace` | Ganti kemunculan pertama substring |
+| `strsplit` | Pecah string berdasarkan delimiter ke array |
 | `arr` | Deklarasi array: `arr int skor 5` |
 | `aget` | Ambil elemen: `aget dst nama_array idx` |
 | `aset` | Isi elemen: `aset nama_array idx nilai` |
@@ -1347,6 +1361,18 @@ Fungsi terlalu banyak memanggil fungsi lain secara bersarang (lebih dari 64 ting
 | `loop` | Mulai perulangan |
 | `while` | Perulangan bersyarat |
 | `times` | Perulangan N kali |
+| `break` | Keluar dari loop terdalam |
+| `continue` | Lanjut ke iterasi berikutnya |
+| `getpid` | Dapatkan process ID saat ini |
+| `sleep` | Jeda N milidetik |
+| `getenv` | Baca environment variable |
+| `peek` | Baca integer 32-bit dari alamat memori |
+| `poke` | Tulis integer 32-bit ke alamat memori |
+| `peek8` | Baca satu byte dari alamat memori |
+| `poke8` | Tulis satu byte ke alamat memori |
+| `fork` | Buat child process |
+| `exec` | Ganti proses dengan program lain |
+| `waitpid` | Tunggu child process selesai |
 | `func` | Definisikan fungsi |
 | `endfunc` | Tutup definisi fungsi |
 | `return` | Keluar dari fungsi lebih awal |
@@ -1743,6 +1769,258 @@ end
 
 ---
 
+---
+
+## 21. Syscall & Kontrol Proses (v2.5.2)
+
+NSA v2.5.2 mengekspos primitif sistem operasi secara langsung — process ID, sleep, environment variable, akses memori mentah, dan spawning proses.
+
+### getpid — dapatkan process ID
+
+```nsa
+let pid = 0
+getpid pid      // pid = process ID program yang sedang berjalan
+print pid
+```
+
+### sleep — jeda eksekusi
+
+Menghentikan program selama N milidetik.
+
+```nsa
+print "menunggu..."
+sleep 1000      // tidur 1 detik
+print "selesai"
+```
+
+Argumen bisa berupa variabel atau literal integer.
+
+### getenv — baca environment variable
+
+```nsa
+let path = ""
+getenv path "PATH"      // membaca $PATH ke dalam path
+print path
+```
+
+Jika variabel tidak ada, hasilnya string kosong.
+
+### peek / poke — akses memori mentah
+
+Membaca atau menulis integer 32-bit di alamat memori absolut. Gunakan dengan hati-hati.
+
+```nsa
+let addr  = 0x00400000
+let value = 0
+
+peek value addr     // value = *(int*)addr
+poke addr 42        // *(int*)addr = 42
+```
+
+`peek8` dan `poke8` bekerja sama tapi membaca/menulis satu byte.
+
+```nsa
+peek8 value addr    // value = *(uint8_t*)addr
+poke8 addr 0xFF
+```
+
+### fork — buat child process
+
+Membuat salinan proses saat ini. Mengembalikan `0` di child dan PID child di parent.
+
+```nsa
+let pid = 0
+fork pid
+
+if pid == 0 then
+    print "Saya child"
+else
+    print "Saya parent"
+end
+```
+
+### exec — ganti program yang berjalan
+
+Menggantikan proses saat ini dengan program baru. Proses lama tidak dilanjutkan setelah `exec` berhasil.
+
+```nsa
+let prog = "/bin/ls"
+exec prog               // jalankan ls tanpa argumen
+
+// dengan argumen:
+exec prog "-l" "/home"
+```
+
+Maksimal 15 argumen bisa diberikan setelah path program.
+
+### waitpid — tunggu child process selesai
+
+```nsa
+let child_pid = 0
+fork child_pid
+
+if child_pid == 0 then
+    exec "/bin/echo" "halo dari child"
+else
+    let status = 0
+    waitpid child_pid status    // menunggu sampai child selesai
+    println "child selesai, status: "
+    print status
+end
+```
+
+---
+
+## 22. Operasi String Lanjutan (v2.5.3)
+
+### strcmp — bandingkan dua string
+
+Mengembalikan integer: `0` jika sama, negatif jika `a < b`, positif jika `a > b`.
+
+```nsa
+let sa = "hello"
+let sb = "hello"
+let sc = "world"
+let cmp1 = 0
+let cmp2 = 0
+
+strcmp cmp1 sa sb     // cmp1 = 0  (sama)
+strcmp cmp2 sa sc     // cmp2 = negatif  (h < w)
+
+if cmp1 == 0 then
+    print "string sama"
+end
+```
+
+Berbeda dari `cmp`, `strcmp` memberikan hasil numerik — berguna saat kamu perlu tahu urutan, bukan sekadar kesamaan.
+
+### strfind — cari substring
+
+Mencari kemunculan pertama needle di haystack. Mengembalikan index 0-based, atau `-1` jika tidak ditemukan.
+
+```nsa
+let hay = "hello nusaOS"
+let idx = 0
+
+strfind idx hay "nusa"    // idx = 6
+strfind idx hay "xyz"     // idx = -1
+
+if idx != -1 then
+    print "ditemukan!"
+end
+```
+
+### strtrim — hapus whitespace
+
+Menghapus spasi (dan karakter whitespace lain) di awal dan akhir string.
+
+```nsa
+let kotor = "  hello nusa  "
+let bersih = ""
+
+strtrim bersih kotor     // bersih = "hello nusa"
+print bersih
+```
+
+### strupper / strlower — ubah huruf besar/kecil
+
+```nsa
+let pesan = "Hello NusaOS"
+let upper = ""
+let lower = ""
+
+strupper upper pesan    // upper = "HELLO NUSAOS"
+strlower lower pesan    // lower = "hello nusaos"
+
+print upper
+print lower
+```
+
+### strreplace — ganti kemunculan pertama
+
+Mengganti kemunculan pertama sebuah substring dengan substring lain.
+
+```nsa
+let dasar  = "Saya suka NusaLang"
+let hasil  = ""
+
+strreplace hasil dasar "NusaLang" "NusaOS"
+print hasil    // Saya suka NusaOS
+```
+
+Jika string lama tidak ditemukan, hasil adalah salinan dari string asli.
+
+### strsplit — pecah string menjadi array
+
+Memecah string berdasarkan delimiter dan menyimpan bagian-bagiannya ke array string. Array harus dideklarasikan terlebih dahulu dengan `arr str`.
+
+```nsa
+let csv = "satu,dua,tiga"
+arr str parts 5
+let count = 0
+
+strsplit parts csv ","
+
+alen count parts    // count = 3
+
+let i0 = 0
+let i1 = 1
+let i2 = 2
+let p0 = ""
+let p1 = ""
+let p2 = ""
+
+aget p0 parts i0    // p0 = "satu"
+aget p1 parts i1    // p1 = "dua"
+aget p2 parts i2    // p2 = "tiga"
+
+print p0
+print p1
+print p2
+```
+
+---
+
+## 23. Kontrol Loop — break dan continue (v2.5.3)
+
+### break — keluar dari loop lebih awal
+
+`break` langsung melompat keluar dari loop terdalam yang sedang berjalan.
+
+```nsa
+let i = 0
+loop while i < 10
+    inc i
+    if i == 5 then
+        break       // berhenti saat i mencapai 5
+    end
+end
+
+print i    // 5
+```
+
+### continue — lanjut ke iterasi berikutnya
+
+`continue` melewati sisa iterasi saat ini dan langsung kembali ke pengecekan kondisi loop.
+
+```nsa
+let i   = 0
+let sum = 0
+loop while i < 6
+    inc i
+    if i == 3 then
+        continue    // lewati angka 3
+    end
+    add sum i
+end
+
+print sum    // 18  (1+2+4+5+6)
+```
+
+`break` dan `continue` bekerja di dalam `loop while` maupun `loop N times`. Keduanya hanya berlaku untuk loop **terdalam** — untuk keluar dari loop bersarang, gunakan variabel flag.
+
+---
+
 ## Tentang Versi
 
 Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:
@@ -1751,7 +2029,7 @@ Untuk melihat versi NSA yang terpasang di sistem kamu, jalankan:
 nsa version
 ```
 
-Bahasa ini terus dikembangkan sebagai bagian dari proyek NusaOS. Dokumentasi ini mencakup NSA v2.5 dan semua fitur yang saat ini didukung — jika suatu fitur tercantum di sini, berarti fitur tersebut berfungsi di versi yang terpasang.
+Bahasa ini terus dikembangkan sebagai bagian dari proyek NusaOS. Dokumentasi ini mencakup NSA v2.5.3 dan semua fitur yang saat ini didukung — jika suatu fitur tercantum di sini, berarti fitur tersebut berfungsi di versi yang terpasang.
 
 ---
 

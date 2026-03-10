@@ -24,6 +24,13 @@ This guide is written for everyone, including people who have never programmed b
 14. [The .nbin File Format](#14-the-nbin-file-format)
 15. [Error Reference](#15-error-reference)
 16. [Keyword Reference](#16-keyword-reference)
+17. [Module System (.nss files)](#17-module-system-nss-files)
+18. [Floating Point](#18-floating-point)
+19. [String Indexing](#19-string-indexing)
+20. [File I/O](#20-file-io)
+21. [System Calls & Process Control](#21-system-calls--process-control-v252)
+22. [Advanced String Operations](#22-advanced-string-operations-v253)
+23. [Loop Control — break and continue](#23-loop-control--break-and-continue-v253)
 
 ---
 
@@ -1445,6 +1452,13 @@ Every reserved word in NSA, grouped by purpose.
 | `len` | Get the length of a string |
 | `to_str` | Convert an integer to its string form |
 | `to_int` | Parse a string as an integer |
+| `strcmp` | Compare two strings → int (0 = equal, <0, >0) |
+| `strfind` | Find first occurrence of a substring → index or -1 |
+| `strtrim` | Strip leading and trailing whitespace |
+| `strupper` | Convert string to uppercase |
+| `strlower` | Convert string to lowercase |
+| `strreplace` | Replace first occurrence of a substring |
+| `strsplit` | Split a string by delimiter into a string array |
 
 ### Arrays
 
@@ -1466,6 +1480,23 @@ Every reserved word in NSA, grouped by purpose.
 | `loop` | Start a loop |
 | `while` | Keyword for conditional loops |
 | `times` | Keyword for fixed-count loops |
+| `break` | Exit the innermost loop immediately |
+| `continue` | Skip to the next loop iteration |
+
+### System & Process
+
+| Keyword | What it does |
+|---------|-------------|
+| `getpid` | Get the current process ID |
+| `sleep` | Pause for N milliseconds |
+| `getenv` | Read an environment variable by name |
+| `peek` | Read a 32-bit integer from a memory address |
+| `poke` | Write a 32-bit integer to a memory address |
+| `peek8` | Read a byte from a memory address |
+| `poke8` | Write a byte to a memory address |
+| `fork` | Create a child process |
+| `exec` | Replace the current process with another program |
+| `waitpid` | Wait for a child process to exit |
 
 ### Functions
 
@@ -1864,6 +1895,256 @@ end
 
 ---
 
+## 21. System Calls & Process Control (v2.5.2)
+
+NSA v2.5.2 exposes operating system primitives directly — process IDs, sleeping, environment variables, raw memory access, and process spawning.
+
+### getpid — get current process ID
+
+```nsa
+let pid = 0
+getpid pid      // pid = process ID of the running program
+print pid
+```
+
+### sleep — pause execution
+
+Pauses the program for a given number of milliseconds.
+
+```nsa
+print "waiting..."
+sleep 1000      // sleep for 1 second
+print "done"
+```
+
+The argument can be a variable or a literal integer.
+
+### getenv — read an environment variable
+
+```nsa
+let path = ""
+getenv path "PATH"      // reads $PATH into path
+print path
+```
+
+If the variable does not exist, the result is an empty string.
+
+### peek / poke — raw memory access
+
+Read or write a 32-bit integer at an absolute memory address. Use with care.
+
+```nsa
+let addr  = 0x00400000
+let value = 0
+
+peek value addr     // value = *(int*)addr
+poke addr 42        // *(int*)addr = 42
+```
+
+`peek8` and `poke8` work the same way but read/write a single byte.
+
+```nsa
+peek8 value addr    // value = *(uint8_t*)addr
+poke8 addr 0xFF
+```
+
+### fork — create a child process
+
+Creates a copy of the current process. Returns `0` in the child and the child's PID in the parent.
+
+```nsa
+let pid = 0
+fork pid
+
+if pid == 0 then
+    print "I am the child"
+else
+    print "I am the parent"
+end
+```
+
+### exec — replace process image
+
+Replaces the current process with a new program. The current process does not continue after a successful `exec`.
+
+```nsa
+let prog = "/bin/ls"
+exec prog               // run ls with no arguments
+
+// with arguments:
+exec prog "-l" "/home"
+```
+
+Up to 15 arguments may be passed after the program path.
+
+### waitpid — wait for a child process to finish
+
+```nsa
+let child_pid = 0
+fork child_pid
+
+if child_pid == 0 then
+    exec "/bin/echo" "hello from child"
+else
+    let status = 0
+    waitpid child_pid status    // blocks until child exits
+    println "child exited, status: "
+    print status
+end
+```
+
+---
+
+## 22. Advanced String Operations (v2.5.3)
+
+### strcmp — compare two strings
+
+Returns an integer: `0` if equal, negative if `a < b`, positive if `a > b`.
+
+```nsa
+let sa = "hello"
+let sb = "hello"
+let sc = "world"
+let cmp1 = 0
+let cmp2 = 0
+
+strcmp cmp1 sa sb     // cmp1 = 0  (equal)
+strcmp cmp2 sa sc     // cmp2 = negative  (h < w)
+
+if cmp1 == 0 then
+    print "strings are equal"
+end
+```
+
+Unlike `cmp`, `strcmp` gives you a numeric result — useful when you need to know the ordering, not just equality.
+
+### strfind — search inside a string
+
+Finds the first occurrence of a needle in a haystack. Returns the 0-based index, or `-1` if not found.
+
+```nsa
+let hay = "hello nusaOS"
+let idx = 0
+
+strfind idx hay "nusa"    // idx = 6
+strfind idx hay "xyz"     // idx = -1
+
+if idx != -1 then
+    print "found!"
+end
+```
+
+### strtrim — strip whitespace
+
+Removes leading and trailing whitespace from a string.
+
+```nsa
+let dirty = "  hello nusa  "
+let clean = ""
+
+strtrim clean dirty     // clean = "hello nusa"
+print clean
+```
+
+### strupper / strlower — change case
+
+```nsa
+let msg   = "Hello NusaOS"
+let upper = ""
+let lower = ""
+
+strupper upper msg    // upper = "HELLO NUSAOS"
+strlower lower msg    // lower = "hello nusaos"
+
+print upper
+print lower
+```
+
+### strreplace — replace first occurrence
+
+Replaces the first occurrence of a substring with another.
+
+```nsa
+let base   = "I love NusaLang"
+let result = ""
+
+strreplace result base "NusaLang" "NusaOS"
+print result    // I love NusaOS
+```
+
+If the old string is not found, result is a copy of the original.
+
+### strsplit — split a string into an array
+
+Splits a string by a delimiter and stores the parts in a string array. The array must be declared first with `arr str`.
+
+```nsa
+let csv = "one,two,three"
+arr str parts 5
+let count = 0
+
+strsplit parts csv ","
+
+alen count parts    // count = 3
+
+let i0 = 0
+let i1 = 1
+let i2 = 2
+let p0 = ""
+let p1 = ""
+let p2 = ""
+
+aget p0 parts i0    // p0 = "one"
+aget p1 parts i1    // p1 = "two"
+aget p2 parts i2    // p2 = "three"
+
+print p0
+print p1
+print p2
+```
+
+---
+
+## 23. Loop Control — break and continue (v2.5.3)
+
+### break — exit a loop early
+
+`break` immediately jumps out of the innermost enclosing loop.
+
+```nsa
+let i = 0
+loop while i < 10
+    inc i
+    if i == 5 then
+        break       // stop when i reaches 5
+    end
+end
+
+print i    // 5
+```
+
+### continue — skip to the next iteration
+
+`continue` skips the rest of the current iteration and jumps back to the loop condition check.
+
+```nsa
+let i  = 0
+let sum = 0
+loop while i < 6
+    inc i
+    if i == 3 then
+        continue    // skip 3
+    end
+    add sum i
+end
+
+print sum    // 18  (1+2+4+5+6)
+```
+
+Both `break` and `continue` work inside `loop while` and `loop N times`. They apply to the **innermost** loop only — to break out of nested loops, set a flag variable.
+
+---
+
 ## About Versions
 
 To see which version of NSA is installed on your system, run:
@@ -1872,7 +2153,7 @@ To see which version of NSA is installed on your system, run:
 nsa version
 ```
 
-The language is actively developed as part of the NusaOS project. This documentation covers NSA v2.5 and all currently supported features — if a feature is listed here, it works in your installed version.
+The language is actively developed as part of the NusaOS project. This documentation covers NSA v2.5.3 and all currently supported features — if a feature is listed here, it works in your installed version.
 
 ---
 
