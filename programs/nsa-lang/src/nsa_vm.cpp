@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <vector>
 
 /* ── Syscall interface ──────────────────────────────────────────────────
@@ -1363,6 +1364,161 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             if (addr < 0x1000) RT_ERR("POKE8: null or low address (possible null ptr)");
             uint8_t byte_val = (uint8_t)(VAR(src_id).ival & 0xFF);
             *(uint8_t*)addr = byte_val;
+            break;
+        }
+
+        /* ── OP_STRCMP  dst  a  b (v2.5.3) ──────────────────────────────── */
+        case OP_STRCMP: {
+            uint8_t dst, a, b;
+            if (!read_u8(bc,ip,dst)) RT_ERR("STRCMP: truncated dst");
+            if (!read_u8(bc,ip,a))   RT_ERR("STRCMP: truncated a");
+            if (!read_u8(bc,ip,b))   RT_ERR("STRCMP: truncated b");
+            CHECK_ID(dst,"STRCMP dst"); CHECK_ID(a,"STRCMP a"); CHECK_ID(b,"STRCMP b");
+            NEED_STR(a,"STRCMP a"); NEED_STR(b,"STRCMP b");
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = strcmp(VAR(a).sval, VAR(b).sval);
+            break;
+        }
+
+        /* ── OP_STRFIND  dst  haystack  needle (v2.5.3) ──────────────── */
+        case OP_STRFIND: {
+            uint8_t dst, hay, ndl;
+            if (!read_u8(bc,ip,dst)) RT_ERR("STRFIND: truncated dst");
+            if (!read_u8(bc,ip,hay)) RT_ERR("STRFIND: truncated haystack");
+            if (!read_u8(bc,ip,ndl)) RT_ERR("STRFIND: truncated needle");
+            CHECK_ID(dst,"STRFIND dst"); CHECK_ID(hay,"STRFIND hay"); CHECK_ID(ndl,"STRFIND ndl");
+            NEED_STR(hay,"STRFIND hay"); NEED_STR(ndl,"STRFIND ndl");
+            VAR(dst).type = VAR_INT;
+            const char* p = strstr(VAR(hay).sval, VAR(ndl).sval);
+            VAR(dst).ival = p ? (int32_t)(p - VAR(hay).sval) : -1;
+            break;
+        }
+
+        /* ── OP_STRTRIM  dst  src (v2.5.3) ──────────────────────────────
+         * Remove leading and trailing whitespace.                        */
+        case OP_STRTRIM: {
+            uint8_t dst, src;
+            if (!read_u8(bc,ip,dst)) RT_ERR("STRTRIM: truncated dst");
+            if (!read_u8(bc,ip,src)) RT_ERR("STRTRIM: truncated src");
+            CHECK_ID(dst,"STRTRIM dst"); CHECK_ID(src,"STRTRIM src");
+            NEED_STR(src,"STRTRIM src");
+            const char* s = VAR(src).sval;
+            while (*s && isspace((unsigned char)*s)) s++;
+            size_t len = strlen(s);
+            while (len > 0 && isspace((unsigned char)s[len-1])) len--;
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            if (len > NSA_MAX_STR_LEN) len = NSA_MAX_STR_LEN;
+            memcpy(VAR(dst).sval, s, len);
+            break;
+        }
+
+        /* ── OP_STRUPPER / OP_STRLOWER  dst  src (v2.5.3) ─────────────── */
+        case OP_STRUPPER:
+        case OP_STRLOWER: {
+            uint8_t dst, src;
+            if (!read_u8(bc,ip,dst)) RT_ERR("STRUPPER/LOWER: truncated dst");
+            if (!read_u8(bc,ip,src)) RT_ERR("STRUPPER/LOWER: truncated src");
+            CHECK_ID(dst,"STRUPPER/LOWER dst"); CHECK_ID(src,"STRUPPER/LOWER src");
+            NEED_STR(src,"STRUPPER/LOWER src");
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            strncpy(VAR(dst).sval, VAR(src).sval, NSA_MAX_STR_LEN);
+            for (char* p = VAR(dst).sval; *p; p++)
+                *p = (op == OP_STRUPPER) ? (char)toupper((unsigned char)*p)
+                                         : (char)tolower((unsigned char)*p);
+            break;
+        }
+
+        /* ── OP_STRREPLACE  dst  src  old  new (v2.5.3) ─────────────────
+         * Replace first occurrence of old in src with new → dst.        */
+        case OP_STRREPLACE: {
+            uint8_t dst, src, old_id, new_id;
+            if (!read_u8(bc,ip,dst))    RT_ERR("STRREPLACE: truncated dst");
+            if (!read_u8(bc,ip,src))    RT_ERR("STRREPLACE: truncated src");
+            if (!read_u8(bc,ip,old_id)) RT_ERR("STRREPLACE: truncated old");
+            if (!read_u8(bc,ip,new_id)) RT_ERR("STRREPLACE: truncated new");
+            CHECK_ID(dst,"STRREPLACE dst"); CHECK_ID(src,"STRREPLACE src");
+            CHECK_ID(old_id,"STRREPLACE old"); CHECK_ID(new_id,"STRREPLACE new");
+            NEED_STR(src,"STRREPLACE src");
+            NEED_STR(old_id,"STRREPLACE old");
+            NEED_STR(new_id,"STRREPLACE new");
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            const char* haystack = VAR(src).sval;
+            const char* needle   = VAR(old_id).sval;
+            const char* repl     = VAR(new_id).sval;
+            const char* found    = strstr(haystack, needle);
+            if (!found) {
+                strncpy(VAR(dst).sval, haystack, NSA_MAX_STR_LEN);
+            } else {
+                size_t pre  = (size_t)(found - haystack);
+                size_t nlen = strlen(needle);
+                size_t rlen = strlen(repl);
+                size_t avail = NSA_MAX_STR_LEN;
+                size_t copy_pre = pre < avail ? pre : avail; avail -= copy_pre;
+                memcpy(VAR(dst).sval, haystack, copy_pre);
+                size_t copy_repl = rlen < avail ? rlen : avail; avail -= copy_repl;
+                memcpy(VAR(dst).sval + copy_pre, repl, copy_repl);
+                size_t rest = strlen(found + nlen);
+                size_t copy_rest = rest < avail ? rest : avail;
+                memcpy(VAR(dst).sval + copy_pre + copy_repl, found + nlen, copy_rest);
+            }
+            break;
+        }
+
+        /* ── OP_STRSPLIT  arr_base  src  delim (v2.5.3) ─────────────────
+         * Split src by delim → fill string array at arr_base.
+         * arr_base var ival = element count (already set by arr decl).
+         * Elements filled: arr_base+1 ... arr_base+count.               */
+        case OP_STRSPLIT: {
+            uint8_t arr_base, src_id, delim_id;
+            if (!read_u8(bc,ip,arr_base))  RT_ERR("STRSPLIT: truncated arr");
+            if (!read_u8(bc,ip,src_id))    RT_ERR("STRSPLIT: truncated src");
+            if (!read_u8(bc,ip,delim_id))  RT_ERR("STRSPLIT: truncated delim");
+            CHECK_ID(arr_base,"STRSPLIT arr"); CHECK_ID(src_id,"STRSPLIT src");
+            CHECK_ID(delim_id,"STRSPLIT delim");
+            NEED_STR(src_id,"STRSPLIT src"); NEED_STR(delim_id,"STRSPLIT delim");
+            int max_elems = (int)VAR(arr_base).ival;
+            if (max_elems <= 0) break;
+            const char* s     = VAR(src_id).sval;
+            const char* delim = VAR(delim_id).sval;
+            size_t dlen = strlen(delim);
+            int count = 0;
+            const char* cur = s;
+            while (count < max_elems) {
+                const char* found = dlen > 0 ? strstr(cur, delim) : nullptr;
+                size_t part_len = found ? (size_t)(found - cur) : strlen(cur);
+                uint8_t elem_id = arr_base + 1 + (uint8_t)count;
+                if (elem_id >= NSA_MAX_VARS) break;
+                VAR(elem_id).type = VAR_STR;
+                memset(VAR(elem_id).sval, 0, sizeof(VAR(elem_id).sval));
+                if (part_len > NSA_MAX_STR_LEN) part_len = NSA_MAX_STR_LEN;
+                memcpy(VAR(elem_id).sval, cur, part_len);
+                count++;
+                if (!found || dlen == 0) break;
+                cur = found + dlen;
+            }
+            /* Store actual split count back in arr descriptor */
+            VAR(arr_base).ival = count;
+            break;
+        }
+
+        /* ── OP_BREAK  offset_u16 (v2.5.3) ──────────────────────────────
+         * Jump forward past the loop. offset = bytes from current ip.   */
+        case OP_BREAK: {
+            uint16_t offset;
+            if (!read_u16(bc,ip,offset)) RT_ERR("BREAK: truncated offset");
+            ip += offset;
+            break;
+        }
+
+        /* ── OP_CONTINUE  offset_u16 (v2.5.3) ───────────────────────────
+         * Jump back to loop start. offset = bytes back from current ip. */
+        case OP_CONTINUE: {
+            uint16_t offset;
+            if (!read_u16(bc,ip,offset)) RT_ERR("CONTINUE: truncated offset");
+            ip -= offset;
             break;
         }
 

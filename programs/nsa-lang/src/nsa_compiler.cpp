@@ -49,6 +49,7 @@ struct Block {
     size_t    loop_start;
     uint8_t   counter_id;
     bool      owns_counter;
+    std::vector<size_t> break_patches; /* v2.5.3: positions of OP_BREAK u16 to patch */
 };
 
 /* ── Imported module tracking ─────────────────────────────────────── */
@@ -653,6 +654,101 @@ static void parse_to_str(CS& cs, const Toks& t) {
 /* ── Process & OS primitives (v2.5.1+) — see nsa_parse_process.h ───── */
 #include "nsa_parse_process.h"
 
+/* ── String utility parsers (v2.5.3) ─────────────────────────────────── */
+
+/* strcmp dst a b */
+static void parse_strcmp(CS& cs, const Toks& t) {
+    if (t.size() < 4) { cs.error("expected: strcmp <dst_int> <a_str> <b_str>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    uint8_t a; SymType at; if (!cs.lookup(t[2].text, a, &at)) return;
+    uint8_t b; SymType bt; if (!cs.lookup(t[3].text, b, &bt)) return;
+    if (at != SYM_STR) { cs.error("strcmp: a must be string"); return; }
+    if (bt != SYM_STR) { cs.error("strcmp: b must be string"); return; }
+    cs.emit(OP_STRCMP); cs.emit(dst); cs.emit(a); cs.emit(b);
+}
+
+/* strfind dst haystack needle */
+static void parse_strfind(CS& cs, const Toks& t) {
+    if (t.size() < 4) { cs.error("expected: strfind <dst_int> <haystack_str> <needle_str>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    uint8_t hay; SymType ht; if (!cs.lookup(t[2].text, hay, &ht)) return;
+    uint8_t ndl; SymType nt; if (!cs.lookup(t[3].text, ndl, &nt)) return;
+    if (ht != SYM_STR) { cs.error("strfind: haystack must be string"); return; }
+    if (nt != SYM_STR) { cs.error("strfind: needle must be string"); return; }
+    cs.emit(OP_STRFIND); cs.emit(dst); cs.emit(hay); cs.emit(ndl);
+}
+
+/* strtrim/strupper/strlower dst src — generic 2-arg string→string */
+static void parse_str2(CS& cs, const Toks& t, NsaOpcode op) {
+    if (t.size() < 3) { cs.error("expected: " + t[0].text + " <dst_str> <src_str>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_STR, dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text, src, &st)) return;
+    if (st != SYM_STR) { cs.error(t[0].text + ": src must be string"); return; }
+    cs.emit(op); cs.emit(dst); cs.emit(src);
+}
+
+/* strreplace dst src old new */
+static void parse_strreplace(CS& cs, const Toks& t) {
+    if (t.size() < 5) { cs.error("expected: strreplace <dst> <src> <old> <new>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_STR, dst)) return;
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text, src, &st)) return;
+    uint8_t old_id; SymType ot; if (!cs.lookup(t[3].text, old_id, &ot)) return;
+    uint8_t new_id; SymType nt; if (!cs.lookup(t[4].text, new_id, &nt)) return;
+    if (st!=SYM_STR) { cs.error("strreplace: src must be string"); return; }
+    if (ot!=SYM_STR) { cs.error("strreplace: old must be string"); return; }
+    if (nt!=SYM_STR) { cs.error("strreplace: new must be string"); return; }
+    cs.emit(OP_STRREPLACE); cs.emit(dst); cs.emit(src); cs.emit(old_id); cs.emit(new_id);
+}
+
+/* strsplit arr src delim */
+static void parse_strsplit(CS& cs, const Toks& t) {
+    if (t.size() < 4) { cs.error("expected: strsplit <arr_str> <src_str> <delim_str>"); return; }
+    uint8_t arr; SymType at; if (!cs.lookup(t[1].text, arr, &at)) return;
+    if (at != SYM_ARRAY) { cs.error("strsplit: first arg must be a string array (arr str ...)"); return; }
+    uint8_t src; SymType st; if (!cs.lookup(t[2].text, src, &st)) return;
+    uint8_t delim; SymType dt; if (!cs.lookup(t[3].text, delim, &dt)) return;
+    if (st != SYM_STR) { cs.error("strsplit: src must be string"); return; }
+    if (dt != SYM_STR) { cs.error("strsplit: delim must be string"); return; }
+    cs.emit(OP_STRSPLIT); cs.emit(arr); cs.emit(src); cs.emit(delim);
+}
+
+/* ── Loop control parsers (v2.5.3) ──────────────────────────────────────
+ * break and continue use forward/backward patches into the block stack.
+ * We walk blk_stack backwards to find the nearest BLK_LOOP_*.          */
+
+static void parse_break(CS& cs, const Toks&) {
+    /* Find nearest enclosing loop */
+    for (int i = (int)cs.blk_stack.size()-1; i >= 0; i--) {
+        auto& blk = cs.blk_stack[(size_t)i];
+        if (blk.kind == BLK_LOOP_TIMES || blk.kind == BLK_LOOP_WHILE) {
+            /* Emit OP_BREAK with a forward patch — patched when 'end' is seen.
+             * We store the patch address in a list on the block.          */
+            cs.emit(OP_BREAK);
+            blk.break_patches.push_back(cs.here());
+            cs.emit_u16(0); /* placeholder */
+            return;
+        }
+        if (blk.kind == BLK_FUNC) break; /* can't break across function */
+    }
+    cs.error("'break' outside of loop");
+}
+
+static void parse_continue(CS& cs, const Toks&) {
+    for (int i = (int)cs.blk_stack.size()-1; i >= 0; i--) {
+        auto& blk = cs.blk_stack[(size_t)i];
+        if (blk.kind == BLK_LOOP_TIMES || blk.kind == BLK_LOOP_WHILE) {
+            /* Jump back to loop_start — distance known at compile time.   */
+            cs.emit(OP_CONTINUE);
+            size_t here = cs.here() + 2; /* after the u16 operand */
+            size_t dist = here - blk.loop_start;
+            cs.emit_u16((uint16_t)dist);
+            return;
+        }
+        if (blk.kind == BLK_FUNC) break;
+    }
+    cs.error("'continue' outside of loop");
+}
+
 /* ── Syscall interface (v2.5) ──────────────────────────────────────── */
 
 /*
@@ -1140,7 +1236,13 @@ static void parse_end(CS& cs, const Toks&) {
         size_t after=cs.here()+1+1+2;
         size_t dist=after-blk.loop_start;
         if (dist>0xFFFF) { cs.error("loop body too large"); return; }
-        cs.emit(OP_JMP_BACK_NZ); cs.emit(blk.counter_id); cs.emit_u16((uint16_t)dist); break;
+        cs.emit(OP_JMP_BACK_NZ); cs.emit(blk.counter_id); cs.emit_u16((uint16_t)dist);
+        /* patch all break statements */
+        for (size_t bpos : blk.break_patches) {
+            size_t fwd = cs.here() - bpos - 2;
+            cs.patch_u16(bpos, (uint16_t)fwd);
+        }
+        break;
     }
     case BLK_LOOP_WHILE: {
         size_t after=cs.here()+1+2;
@@ -1149,7 +1251,13 @@ static void parse_end(CS& cs, const Toks&) {
         cs.emit(OP_JMP_BACK); cs.emit_u16((uint16_t)dist);
         size_t fwd=cs.here()-blk.fwd_patch_pos-2;
         if (fwd>0xFFFF) { cs.error("loop too large"); return; }
-        cs.patch_u16(blk.fwd_patch_pos,(uint16_t)fwd); break;
+        cs.patch_u16(blk.fwd_patch_pos,(uint16_t)fwd);
+        /* patch all break statements */
+        for (size_t bpos : blk.break_patches) {
+            size_t bfwd = cs.here() - bpos - 2;
+            cs.patch_u16(bpos, (uint16_t)bfwd);
+        }
+        break;
     }
     default: break;
     }
@@ -1769,6 +1877,19 @@ static void parse_line(CS& cs, const Toks& t) {
     if (kw=="poke")     { parse_poke(cs,t,OP_POKE);       return; }
     if (kw=="peek8")    { parse_peek(cs,t,OP_PEEK8);      return; }
     if (kw=="poke8")    { parse_poke(cs,t,OP_POKE8);      return; }
+
+    /* ── String utilities (v2.5.3) ───────────────────────────────── */
+    if (kw=="strcmp")    { parse_strcmp(cs,t);    return; }
+    if (kw=="strfind")   { parse_strfind(cs,t);   return; }
+    if (kw=="strtrim")   { parse_str2(cs,t,OP_STRTRIM);   return; }
+    if (kw=="strupper")  { parse_str2(cs,t,OP_STRUPPER);  return; }
+    if (kw=="strlower")  { parse_str2(cs,t,OP_STRLOWER);  return; }
+    if (kw=="strreplace"){ parse_strreplace(cs,t); return; }
+    if (kw=="strsplit")  { parse_strsplit(cs,t);   return; }
+
+    /* ── Loop control (v2.5.3) ───────────────────────────────────── */
+    if (kw=="break")     { parse_break(cs,t);     return; }
+    if (kw=="continue")  { parse_continue(cs,t);  return; }
     /* float arithmetic (v2.5) */
     if (kw=="fadd")    { parse_fmath(cs,t,OP_FADD);      return; }
     if (kw=="fsub")    { parse_fmath(cs,t,OP_FSUB);      return; }

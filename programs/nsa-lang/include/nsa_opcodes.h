@@ -305,4 +305,48 @@ enum NsaOpcode : uint8_t {
     OP_POKE         = 0xDD,
     OP_PEEK8        = 0xDE,
     OP_POKE8        = 0xDF,
+
+    /* ── String utilities (v2.5.3) ───────────────────────────────────────
+     *
+     * OP_STRCMP   dst_int  a_str  b_str
+     *   Compare two strings. dst = 0 if equal, <0 if a<b, >0 if a>b.
+     *
+     * OP_STRFIND  dst_int  haystack_str  needle_str
+     *   Find first occurrence of needle in haystack.
+     *   dst = index (0-based), or -1 if not found.
+     *
+     * OP_STRTRIM  dst_str  src_str
+     *   Remove leading and trailing whitespace from src into dst.
+     *
+     * OP_STRUPPER dst_str  src_str
+     * OP_STRLOWER dst_str  src_str
+     *   Convert string to upper/lower case.
+     *
+     * OP_STRREPLACE  dst_str  src_str  old_str  new_str
+     *   Replace first occurrence of old_str in src_str with new_str → dst.
+     *
+     * OP_STRSPLIT  arr_var  src_str  delim_str
+     *   Split src_str by delim_str → store results in arr_var (string array).
+     *   arr_var must be declared with arr str name <maxsize>.
+     * ------------------------------------------------------------------ */
+    OP_STRCMP       = 0xE0,
+    OP_STRFIND      = 0xE1,
+    OP_STRTRIM      = 0xE2,
+    OP_STRUPPER     = 0xE3,
+    OP_STRLOWER     = 0xE4,
+    OP_STRREPLACE   = 0xE5,
+    OP_STRSPLIT     = 0xE6,
+
+    /* ── Loop control (v2.5.3) ───────────────────────────────────────────
+     *
+     * OP_BREAK  offset_u16
+     *   Jump forward past the enclosing loop's OP_JMP_BACK* opcode.
+     *   offset = bytes to skip from current ip.
+     *
+     * OP_CONTINUE  offset_back_u16
+     *   Jump back to the start of the enclosing loop condition/counter.
+     *   offset = bytes to jump back from current ip.
+     * ------------------------------------------------------------------ */
+    OP_BREAK        = 0xE7,
+    OP_CONTINUE     = 0xE8,
 };

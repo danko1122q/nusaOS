@@ -42,6 +42,11 @@ static const std::set<std::string> KEYWORDS = {
     "getpid", "sleep", "getenv",
     /* low-level memory (v2.5.2) */
     "peek", "poke", "peek8", "poke8",
+    /* string utilities (v2.5.3) */
+    "strcmp", "strfind", "strtrim", "strupper", "strlower",
+    "strreplace", "strsplit",
+    /* loop control (v2.5.3) */
+    "break", "continue",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }

@@ -15,7 +15,7 @@
 #include "nsa_vm.h"
 #include "nsa_opcodes.h"
 
-#define NSA_VERSION  "2.5.2"
+#define NSA_VERSION  "2.5.3"
 #define NSA_CODENAME "NusaOS"
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */

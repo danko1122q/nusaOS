@@ -1,0 +1,119 @@
+// test_v253.nsa — NSA v2.5.3 feature test
+// Tests: strcmp, strfind, strtrim, strupper, strlower, strreplace, strsplit
+//        break, continue
+
+print "=== NSA v2.5.3 Feature Test ==="
+
+// --- Test 1: strcmp ---
+print "--- Test 1: strcmp ---"
+let sa = "hello"
+let sb = "hello"
+let sc = "world"
+let cmp1 = 0
+let cmp2 = 0
+strcmp cmp1 sa sb
+strcmp cmp2 sa sc
+println "strcmp(hello,hello) = "
+print cmp1
+println "strcmp(hello,world) = "
+print cmp2
+
+// --- Test 2: strfind ---
+print "--- Test 2: strfind ---"
+let haystack = "hello world"
+let needle1 = "world"
+let needle2 = "xyz"
+let idx1 = 0
+let idx2 = 0
+strfind idx1 haystack needle1
+strfind idx2 haystack needle2
+println "strfind(world) = "
+print idx1
+println "strfind(xyz) = "
+print idx2
+
+// --- Test 3: strtrim ---
+print "--- Test 3: strtrim ---"
+let dirty = "  hello nusa  "
+let clean = ""
+strtrim clean dirty
+println "trimmed: '"
+println clean
+print "'"
+
+// --- Test 4: strupper / strlower ---
+print "--- Test 4: strupper/strlower ---"
+let msg = "Hello NusaOS"
+let upper = ""
+let lower = ""
+strupper upper msg
+strlower lower msg
+println "upper: "
+print upper
+println "lower: "
+print lower
+
+// --- Test 5: strreplace ---
+print "--- Test 5: strreplace ---"
+let base = "I love nusaOS"
+let old = "nusaOS"
+let rep = "NusaOS v2.5.3"
+let replaced = ""
+strreplace replaced base old rep
+println "replaced: "
+print replaced
+
+// --- Test 6: strsplit ---
+print "--- Test 6: strsplit ---"
+let csv = "one,two,three"
+let delim = ","
+arr str parts 5
+strsplit parts csv delim
+let n = 0
+alen n parts
+println "split count: "
+print n
+let p0 = ""
+let p1 = ""
+let p2 = ""
+let i0 = 0
+let i1 = 1
+let i2 = 2
+aget p0 parts i0
+aget p1 parts i1
+aget p2 parts i2
+println "parts[0]: "
+print p0
+println "parts[1]: "
+print p1
+println "parts[2]: "
+print p2
+
+// --- Test 7: break ---
+print "--- Test 7: break ---"
+let i = 0
+loop while i < 10
+    inc i
+    if i == 5 then
+        print "breaking at 5"
+        break
+    end
+end
+println "i after break = "
+print i
+
+// --- Test 8: continue ---
+print "--- Test 8: continue ---"
+let j = 0
+let sum = 0
+loop while j < 6
+    inc j
+    if j == 3 then
+        continue
+    end
+    add sum j
+end
+println "sum(1+2+4+5+6, skip 3) = "
+print sum
+
+print "=== All v2.5.3 tests done ==="
