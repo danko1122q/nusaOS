@@ -1,0 +1,3 @@
+[submodule "programs/fasm"]
+	path = programs/fasm
+	url = https://github.com/danko1122q/fasmNusaOS
