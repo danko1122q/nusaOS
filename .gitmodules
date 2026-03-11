@@ -1,3 +1,6 @@
 [submodule "programs/fasm"]
 	path = programs/fasm
 	url = https://github.com/danko1122q/fasmNusaOS
+[submodule "programs/lua"]
+	path = programs/lua
+	url = https://github.com/danko1122q/luaNusaOS
