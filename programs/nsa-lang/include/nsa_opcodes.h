@@ -10,7 +10,7 @@ static const char    NSA_MAGIC[6]       = {'\x7f', 'N', 'S', 'A', 0x02, 0x00};
 /* NSS module magic — same version byte so the toolchain can validate it  */
 static const char    NSS_MAGIC[6]       = {'\x7f', 'N', 'S', 'S', 0x01, 0x00};
 static const uint8_t NSA_MAX_VARS       = 200;
-static const size_t  NSA_MAX_STR_LEN    = 254;
+static const size_t  NSA_MAX_STR_LEN    = 1024; /* v2.6: expanded from 254 */
 static const uint8_t NSA_MAX_LOCALS     = 64;
 static const uint8_t NSA_MAX_CALL_DEPTH = 64;
 /* Arrays: each array occupies one var slot (the base-id).
@@ -349,4 +349,50 @@ enum NsaOpcode : uint8_t {
      * ------------------------------------------------------------------ */
     OP_BREAK        = 0xE7,
     OP_CONTINUE     = 0xE8,
+
+    /* ── Quality of life (v2.6) ────────────────────────────────────────
+     *
+     * OP_PRINTF  fmt_str_var  argc(u8)  [arg_id ...]
+     *   Format-print a string. Supported: %d (int), %s (str), %f (float),
+     *   %b (bool), %%  (literal %). Always appends newline.
+     *   Max 8 format arguments.
+     *
+     * OP_SWAP  a_id  b_id
+     *   Swap the values of two variables (must be same type).
+     *
+     * OP_ABS  dst_id
+     *   In-place absolute value of an integer variable.
+     *
+     * OP_MIN  dst_id  a_id  b_id
+     * OP_MAX  dst_id  a_id  b_id
+     *   Store the smaller/larger of two integers in dst.
+     * ------------------------------------------------------------------ */
+    OP_PRINTF       = 0xE9,
+    OP_SWAP         = 0xEA,
+    OP_ABS          = 0xEB,
+    OP_MIN          = 0xEC,
+    OP_MAX          = 0xED,
+
+    /* ── Command-line args & file readline (v2.6) ────────────────────────
+     *
+     * OP_ARGC  dst_int
+     *   Store number of command-line arguments (argv count, excluding
+     *   the program name) in dst.
+     *
+     * OP_ARGV  dst_str  idx_var_or_imm
+     *   Store argv[idx] in dst_str.
+     *   idx 0 = first user argument (argv[1] in C terms).
+     *   If idx is out of range, dst = "".
+     *
+     * OP_FREADLINE  dst_str  fd_var
+     *   Read one line from the open file fd into dst_str.
+     *   The trailing newline is stripped.
+     *   If at EOF, dst = "" and the operation is a no-op (no error).
+     *   Returns the number of bytes read (without newline) as an int
+     *   stored in an implicit __frl_len__ var — or caller can use
+     *   len after the call.
+     * ------------------------------------------------------------------ */
+    OP_ARGC         = 0xEE,
+    OP_ARGV         = 0xEF,
+    OP_FREADLINE    = 0xF0,
 };

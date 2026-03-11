@@ -47,6 +47,10 @@ static const std::set<std::string> KEYWORDS = {
     "strreplace", "strsplit",
     /* loop control (v2.5.3) */
     "break", "continue",
+    /* quality of life (v2.5.4) */
+    "printf", "swap", "abs", "min", "max",
+    /* command-line & file (v2.6) */
+    "argc", "argv", "freadline",
 };
 
 bool is_keyword(const std::string& s) { return KEYWORDS.count(s) > 0; }

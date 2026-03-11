@@ -7,6 +7,8 @@
 
 namespace NsaVM {
 
-int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog_name = "nsa-run");
+int run(const std::vector<uint8_t>& bc, int sym_count,
+        const char* prog_name = "nsa-run",
+        int argc = 0, char** argv = nullptr);
 
 } // namespace NsaVM

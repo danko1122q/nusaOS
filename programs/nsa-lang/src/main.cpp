@@ -15,7 +15,7 @@
 #include "nsa_vm.h"
 #include "nsa_opcodes.h"
 
-#define NSA_VERSION  "2.5.3"
+#define NSA_VERSION  "2.6"
 #define NSA_CODENAME "NusaOS"
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -280,7 +280,8 @@ static int cmd_run(int argc, char** argv) {
         close(fd); return 1;
     }
     close(fd);
-    return NsaVM::run(bytecode,(int)sym_count,argv[1]);
+    return NsaVM::run(bytecode, (int)sym_count, argv[1],
+                      argc - 2, argv + 2);
 }
 
 /* ── Entry point ─────────────────────────────────────────────────────── */

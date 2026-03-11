@@ -749,7 +749,134 @@ static void parse_continue(CS& cs, const Toks&) {
     cs.error("'continue' outside of loop");
 }
 
-/* ── Syscall interface (v2.5) ──────────────────────────────────────── */
+/* ── Quality-of-life parsers (v2.5.4) ───────────────────────────────────
+ *
+ * printf "fmt" arg0 [arg1 ... argN]
+ *   Prints a formatted string followed by newline.
+ *   Format specifiers: %d %s %f %b %%
+ *   fmt can be a string literal or a string variable.
+ *   Max 8 arguments.
+ *
+ * swap a b
+ *   Swap the values of two variables (any type).
+ *
+ * abs x
+ *   In-place absolute value of integer variable x.
+ *
+ * min dst a b
+ * max dst a b
+ *   Store smaller/larger of two integers in dst.
+ */
+
+static void parse_printf(CS& cs, const Toks& t) {
+    /* printf <fmt_var_or_literal> [arg0] [arg1] ... [argN] */
+    if (t.size() < 2) { cs.error("expected: printf <fmt> [args...]"); return; }
+
+    /* Resolve format string — may be a literal or a variable */
+    uint8_t fmt_id;
+    if (t[1].kind == TK::TK_STRING) {
+        /* Intern a hidden slot for the literal */
+        if (!cs.intern("__printf_fmt__", SYM_STR, fmt_id)) return;
+        cs.emit(OP_SET_STR); cs.emit(fmt_id);
+        emit_str_lit(cs.bytecode, t[1].text);
+    } else if (t[1].kind == TK::TK_IDENT && !NsaLexer::is_keyword(t[1].text)) {
+        SymType ft;
+        if (!cs.lookup(t[1].text, fmt_id, &ft)) return;
+        if (ft != SYM_STR) { cs.error("printf: format must be a string"); return; }
+    } else {
+        cs.error("printf: expected string literal or string variable as format"); return;
+    }
+
+    /* Collect arguments (everything after fmt) */
+    size_t argc = t.size() - 2;
+    if (argc > 8) { cs.error("printf: too many arguments (max 8)"); return; }
+
+    cs.emit(OP_PRINTF);
+    cs.emit(fmt_id);
+    cs.emit((uint8_t)argc);
+
+    for (size_t i = 0; i < argc; i++) {
+        const Tok& arg = t[2 + i];
+        if (arg.kind != TK::TK_IDENT || NsaLexer::is_keyword(arg.text)) {
+            cs.error("printf: argument " + std::to_string(i) +
+                     " must be a variable"); return;
+        }
+        uint8_t aid; if (!cs.lookup(arg.text, aid)) return;
+        cs.emit(aid);
+    }
+}
+
+static void parse_swap(CS& cs, const Toks& t) {
+    if (t.size() < 3) { cs.error("expected: swap <a> <b>"); return; }
+    uint8_t a_id; SymType at; if (!cs.lookup(t[1].text, a_id, &at)) return;
+    uint8_t b_id; SymType bt; if (!cs.lookup(t[2].text, b_id, &bt)) return;
+    if (at != bt) { cs.error("swap: both variables must be the same type"); return; }
+    cs.emit(OP_SWAP); cs.emit(a_id); cs.emit(b_id);
+}
+
+static void parse_abs(CS& cs, const Toks& t) {
+    if (t.size() < 2) { cs.error("expected: abs <int_var>"); return; }
+    uint8_t id; SymType st; if (!cs.lookup(t[1].text, id, &st)) return;
+    if (st != SYM_INT) { cs.error("abs: variable must be integer"); return; }
+    cs.emit(OP_ABS); cs.emit(id);
+}
+
+static void parse_minmax(CS& cs, const Toks& t, NsaOpcode op) {
+    if (t.size() < 4) { cs.error("expected: min/max <dst> <a> <b>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    uint8_t a_id; SymType at; if (!cs.lookup(t[2].text, a_id, &at)) return;
+    uint8_t b_id; SymType bt; if (!cs.lookup(t[3].text, b_id, &bt)) return;
+    if (at != SYM_INT) { cs.error("min/max: a must be integer"); return; }
+    if (bt != SYM_INT) { cs.error("min/max: b must be integer"); return; }
+    cs.emit(op); cs.emit(dst); cs.emit(a_id); cs.emit(b_id);
+}
+
+/* ── Command-line args parsers (v2.6) ─────────────────────────────────
+ *
+ * argc dst
+ *   Store number of user arguments in dst (int).
+ *   Usage: argc n
+ *
+ * argv dst idx
+ *   Store argv[idx] in dst (str). idx is var or literal.
+ *   idx 0 = first user argument.
+ *   Usage: argv s 0        -- literal index
+ *          argv s i        -- variable index
+ *
+ * freadline dst fd
+ *   Read one line from open file fd into dst (str).
+ *   Strips trailing newline. Empty string at EOF.
+ *   Usage: freadline line myfd
+ */
+
+static void parse_argc(CS& cs, const Toks& t) {
+    if (t.size() < 2) { cs.error("expected: argc <dst_int>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_INT, dst)) return;
+    cs.emit(OP_ARGC); cs.emit(dst);
+}
+
+static void parse_argv(CS& cs, const Toks& t) {
+    if (t.size() < 3) { cs.error("expected: argv <dst_str> <idx>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_STR, dst)) return;
+    cs.emit(OP_ARGV); cs.emit(dst);
+    /* idx: literal integer or variable */
+    if (t[2].kind == TK::TK_INT) {
+        cs.emit(0x01); cs.emit_i32(t[2].ival);
+    } else {
+        uint8_t idx; SymType it;
+        if (!cs.lookup(t[2].text, idx, &it)) return;
+        if (it != SYM_INT) { cs.error("argv: index must be integer"); return; }
+        cs.emit(0x00); cs.emit(idx);
+    }
+}
+
+static void parse_freadline(CS& cs, const Toks& t) {
+    if (t.size() < 3) { cs.error("expected: freadline <dst_str> <fd>"); return; }
+    uint8_t dst; if (!cs.intern(t[1].text, SYM_STR, dst)) return;
+    uint8_t fd; SymType ft; if (!cs.lookup(t[2].text, fd, &ft)) return;
+    if (ft != SYM_FILE) { cs.error("freadline: '" + t[2].text + "' is not a file handle"); return; }
+    cs.emit(OP_FREADLINE); cs.emit(dst); cs.emit(fd);
+}
 
 /*
  * syscall dst num a b c
@@ -1890,6 +2017,18 @@ static void parse_line(CS& cs, const Toks& t) {
     /* ── Loop control (v2.5.3) ───────────────────────────────────── */
     if (kw=="break")     { parse_break(cs,t);     return; }
     if (kw=="continue")  { parse_continue(cs,t);  return; }
+
+    /* ── Quality of life (v2.5.4) ──────────────────────────────────── */
+    if (kw=="printf")    { parse_printf(cs,t);           return; }
+    if (kw=="swap")      { parse_swap(cs,t);             return; }
+    if (kw=="abs")       { parse_abs(cs,t);              return; }
+    if (kw=="min")       { parse_minmax(cs,t,OP_MIN);    return; }
+    if (kw=="max")       { parse_minmax(cs,t,OP_MAX);    return; }
+
+    /* ── Command-line args & file readline (v2.6) ──────────────────── */
+    if (kw=="argc")      { parse_argc(cs,t);             return; }
+    if (kw=="argv")      { parse_argv(cs,t);             return; }
+    if (kw=="freadline") { parse_freadline(cs,t);        return; }
     /* float arithmetic (v2.5) */
     if (kw=="fadd")    { parse_fmath(cs,t,OP_FADD);      return; }
     if (kw=="fsub")    { parse_fmath(cs,t,OP_FSUB);      return; }

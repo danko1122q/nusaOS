@@ -1,0 +1,102 @@
+// test_v26.nsa — NSA v2.6 comprehensive test
+
+print "=== NSA v2.6 Feature Test ==="
+
+// ─────────────────────────────────────────────────────
+// Test 1: printf
+// ─────────────────────────────────────────────────────
+print "--- Test 1: printf ---"
+let appname = "NusaOS"
+let ver = 26
+printf "Hello from %s v2.%d" appname ver
+let pi = 3.14159
+printf "pi = %f" pi
+let flag = true
+printf "debug = %b" flag
+printf "usage: 100%% done"
+
+// ─────────────────────────────────────────────────────
+// Test 2: swap
+// ─────────────────────────────────────────────────────
+print "--- Test 2: swap ---"
+let x = 111
+let y = 222
+printf "before: x=%d y=%d" x y
+swap x y
+printf "after:  x=%d y=%d" x y
+let sa = "hello"
+let sb = "world"
+swap sa sb
+printf "str swap: %s %s" sa sb
+
+// ─────────────────────────────────────────────────────
+// Test 3: abs / min / max
+// ─────────────────────────────────────────────────────
+print "--- Test 3: abs/min/max ---"
+let nval = -99
+abs nval
+printf "abs(-99) = %d" nval
+let a = 40
+let b = 17
+let lo = 0
+let hi = 0
+min lo a b
+max hi a b
+printf "min(40,17) = %d" lo
+printf "max(40,17) = %d" hi
+
+// ─────────────────────────────────────────────────────
+// Test 4: argc / argv
+// ─────────────────────────────────────────────────────
+print "--- Test 4: argc/argv ---"
+let n = 0
+argc n
+printf "argc = %d" n
+let arg0 = ""
+let arg1 = ""
+argv arg0 0
+argv arg1 1
+printf "argv[0] = %s" arg0
+printf "argv[1] = %s" arg1
+
+// ─────────────────────────────────────────────────────
+// Test 5: long string (1024 limit)
+// ─────────────────────────────────────────────────────
+print "--- Test 5: long string (1024 limit) ---"
+let longstr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+concat longstr "abcdefghijklmnopqrstuvwxyz"
+concat longstr "0123456789"
+concat longstr "-_-_-_-_-_-_-_-_-_LONG_STRING_TEST-_-_-_-_-_-_-_-_-_"
+let slen = 0
+len slen longstr
+printf "long string length = %d" slen
+
+// ─────────────────────────────────────────────────────
+// Test 6: freadline
+// Tulis ke /home, lalu baca kembali per baris
+// ─────────────────────────────────────────────────────
+print "--- Test 6: freadline ---"
+let wpath = "/home/nsa_v26_tmp.txt"
+fopen wfd wpath "w"
+fwrite wfd "baris pertama\n"
+fwrite wfd "baris kedua\n"
+fwrite wfd "baris ketiga\n"
+fclose wfd
+
+fopen rfd wpath "r"
+let line1 = ""
+let line2 = ""
+let line3 = ""
+let line4 = ""
+freadline line1 rfd
+freadline line2 rfd
+freadline line3 rfd
+freadline line4 rfd
+fclose rfd
+
+printf "line1: [%s]" line1
+printf "line2: [%s]" line2
+printf "line3: [%s]" line3
+printf "line4 (EOF): [%s]" line4
+
+print "=== All v2.6 tests done ==="

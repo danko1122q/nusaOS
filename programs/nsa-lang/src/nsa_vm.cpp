@@ -181,7 +181,8 @@ static const uint32_t MAX_BACK_JUMPS = 10000000UL;
     if((int)(base)+1+(idx)>=sym_count) RT_ERR(who ": element slot out of range"); \
 }while(0)
 
-int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
+int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog,
+        int user_argc, char** user_argv) {
     if (sym_count<0 || sym_count>(int)NSA_MAX_VARS) {
         fprintf(stderr,"%s: runtime error: invalid sym_count %d\n",prog,sym_count); return 1;
     }
@@ -1522,7 +1523,213 @@ int run(const std::vector<uint8_t>& bc, int sym_count, const char* prog) {
             break;
         }
 
-        default:
+        /* ════════════════════════════════════════════════════════════════
+         * QUALITY OF LIFE  (v2.5.4)
+         * ════════════════════════════════════════════════════════════════ */
+
+        /* ── OP_PRINTF  fmt_id  argc  [arg_id ...] ──────────────────────
+         *
+         * Supported format specifiers:
+         *   %d  — integer variable
+         *   %s  — string variable
+         *   %f  — float variable
+         *   %b  — bool variable  (prints "true" / "false")
+         *   %%  — literal percent
+         *
+         * Always appends a newline at the end.
+         * Max 8 arguments.
+         * ────────────────────────────────────────────────────────────── */
+        case OP_PRINTF: {
+            uint8_t fmt_id, argc;
+            if (!read_u8(bc,ip,fmt_id)) RT_ERR("PRINTF: truncated fmt_id");
+            if (!read_u8(bc,ip,argc))   RT_ERR("PRINTF: truncated argc");
+            CHECK_ID(fmt_id,"PRINTF fmt");
+            NEED_STR(fmt_id,"PRINTF fmt");
+            if (argc > 8) RT_ERR("PRINTF: too many arguments (max 8)");
+
+            uint8_t arg_ids[8];
+            for (int ai = 0; ai < (int)argc; ai++) {
+                if (!read_u8(bc,ip,arg_ids[ai])) RT_ERR("PRINTF: truncated arg id");
+                CHECK_ID(arg_ids[ai],"PRINTF arg");
+            }
+
+            const char* fmt = VAR(fmt_id).sval;
+            int arg_idx = 0;
+            char out_buf[NSA_MAX_STR_LEN * 2 + 1];
+            size_t out_pos = 0;
+            size_t fmt_len = strlen(fmt);
+
+            for (size_t fi = 0; fi < fmt_len && out_pos < sizeof(out_buf)-2; fi++) {
+                if (fmt[fi] != '%') {
+                    out_buf[out_pos++] = fmt[fi];
+                    continue;
+                }
+                fi++; /* consume % */
+                if (fi >= fmt_len) { out_buf[out_pos++] = '%'; break; }
+
+                char spec = fmt[fi];
+                if (spec == '%') { out_buf[out_pos++] = '%'; continue; }
+
+                if (arg_idx >= (int)argc) {
+                    /* No argument left — print %X literally */
+                    if (out_pos < sizeof(out_buf)-2) {
+                        out_buf[out_pos++] = '%';
+                        out_buf[out_pos++] = spec;
+                    }
+                    continue;
+                }
+                uint8_t aid = arg_ids[arg_idx++];
+                const VarSlot& vslot = VAR(aid);
+                char tmp[72];
+                switch (spec) {
+                    case 'd':
+                        snprintf(tmp,sizeof(tmp),"%d",
+                            (vslot.type==VAR_INT||vslot.type==VAR_BOOL) ? vslot.ival : 0);
+                        break;
+                    case 's':
+                        snprintf(tmp,sizeof(tmp)-1,"%.70s",
+                            vslot.type==VAR_STR ? vslot.sval : "(?)");
+                        tmp[sizeof(tmp)-1]='\0';
+                        break;
+                    case 'f': {
+                        char fbuf[64];
+                        float_to_str(vslot.type==VAR_FLOAT ? vslot.dval : 0.0, fbuf, sizeof(fbuf));
+                        snprintf(tmp,sizeof(tmp),"%s",fbuf);
+                        break;
+                    }
+                    case 'b':
+                        snprintf(tmp,sizeof(tmp),"%s",
+                            (vslot.type==VAR_BOOL||vslot.type==VAR_INT)
+                             ? (vslot.ival ? "true" : "false") : "false");
+                        break;
+                    default:
+                        tmp[0]='%'; tmp[1]=spec; tmp[2]='\0';
+                        break;
+                }
+                size_t tlen = strlen(tmp);
+                if (out_pos + tlen >= sizeof(out_buf)-1)
+                    tlen = sizeof(out_buf)-1 - out_pos;
+                memcpy(out_buf + out_pos, tmp, tlen);
+                out_pos += tlen;
+            }
+            out_buf[out_pos] = '\0';
+            printf("%s\n", out_buf);
+            break;
+        }
+
+        /* ── OP_SWAP  a_id  b_id (v2.5.4) ──────────────────────────────
+         * Swap the values of two variables.                            */
+        case OP_SWAP: {
+            uint8_t a_id, b_id;
+            if (!read_u8(bc,ip,a_id)) RT_ERR("SWAP: truncated a");
+            if (!read_u8(bc,ip,b_id)) RT_ERR("SWAP: truncated b");
+            CHECK_ID(a_id,"SWAP a");
+            CHECK_ID(b_id,"SWAP b");
+            VarSlot tmp_slot = VAR(a_id);
+            VAR(a_id) = VAR(b_id);
+            VAR(b_id) = tmp_slot;
+            break;
+        }
+
+        /* ── OP_ABS  id (v2.5.4) ─────────────────────────────────────────
+         * In-place absolute value of an integer variable.              */
+        case OP_ABS: {
+            uint8_t id;
+            if (!read_u8(bc,ip,id)) RT_ERR("ABS: truncated id");
+            CHECK_ID(id,"ABS");
+            NEED_INT(id,"ABS");
+            if (VAR(id).ival < 0) VAR(id).ival = -VAR(id).ival;
+            break;
+        }
+
+        /* ── OP_MIN / OP_MAX  dst  a  b (v2.5.4) ───────────────────────
+         * Store the smaller/larger of two integers in dst.             */
+        case OP_MIN:
+        case OP_MAX: {
+            uint8_t dst, a_id, b_id;
+            if (!read_u8(bc,ip,dst))  RT_ERR("MIN/MAX: truncated dst");
+            if (!read_u8(bc,ip,a_id)) RT_ERR("MIN/MAX: truncated a");
+            if (!read_u8(bc,ip,b_id)) RT_ERR("MIN/MAX: truncated b");
+            CHECK_ID(dst,"MIN/MAX dst");
+            CHECK_ID(a_id,"MIN/MAX a");
+            CHECK_ID(b_id,"MIN/MAX b");
+            NEED_INT(a_id,"MIN/MAX a");
+            NEED_INT(b_id,"MIN/MAX b");
+            int32_t va2 = VAR(a_id).ival, vb2 = VAR(b_id).ival;
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = (op == OP_MIN) ? (va2 < vb2 ? va2 : vb2)
+                                           : (va2 > vb2 ? va2 : vb2);
+            break;
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+         * COMMAND-LINE ARGS & FILE READLINE  (v2.6)
+         * ════════════════════════════════════════════════════════════════ */
+
+        /* ── OP_ARGC  dst_int ────────────────────────────────────────────
+         * Store number of user arguments (not counting program name)
+         * in dst.  e.g. "nsa run prog.nbin hello world" → argc = 2
+         * ────────────────────────────────────────────────────────────── */
+        case OP_ARGC: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("ARGC: truncated dst");
+            CHECK_ID(dst,"ARGC dst");
+            VAR(dst).type = VAR_INT;
+            VAR(dst).ival = user_argc;
+            break;
+        }
+
+        /* ── OP_ARGV  dst_str  flags  val ────────────────────────────────
+         * flags/val use SC_ARG encoding (var id or i32 immediate).
+         * idx 0 = first user argument.
+         * Out of range → dst = "".
+         * ────────────────────────────────────────────────────────────── */
+        case OP_ARGV: {
+            uint8_t dst;
+            if (!read_u8(bc,ip,dst)) RT_ERR("ARGV: truncated dst");
+            CHECK_ID(dst,"ARGV dst");
+            int idx; SC_ARG(idx,"ARGV idx");
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            if (user_argv && idx >= 0 && idx < user_argc) {
+                strncpy(VAR(dst).sval, user_argv[idx], NSA_MAX_STR_LEN);
+                VAR(dst).sval[NSA_MAX_STR_LEN] = '\0';
+            }
+            break;
+        }
+
+        /* ── OP_FREADLINE  dst_str  fd_var ───────────────────────────────
+         * Read one line from open file fd into dst_str.
+         * Strips the trailing '\n' (and '\r\n' on Windows-style files).
+         * At EOF: dst = "" (no error, no crash).
+         * Max line length: NSA_MAX_STR_LEN characters (rest discarded).
+         * ────────────────────────────────────────────────────────────── */
+        case OP_FREADLINE: {
+            uint8_t dst, fd_id;
+            if (!read_u8(bc,ip,dst))   RT_ERR("FREADLINE: truncated dst");
+            if (!read_u8(bc,ip,fd_id)) RT_ERR("FREADLINE: truncated fd");
+            CHECK_ID(dst,"FREADLINE dst");
+            if (VAR(fd_id).type != VAR_FILE) RT_ERR("FREADLINE: not a file handle");
+            int raw_fd = VAR(fd_id).ival;
+            VAR(dst).type = VAR_STR;
+            memset(VAR(dst).sval, 0, sizeof(VAR(dst).sval));
+            if (raw_fd < 0) break; /* EOF / not open → "" */
+
+            /* Read byte-by-byte until '\n' or EOF or buffer full.
+             * Byte-by-byte is simple and avoids buffering issues with
+             * multiple freadline calls on the same fd.                  */
+            size_t pos = 0;
+            while (pos < NSA_MAX_STR_LEN) {
+                char ch;
+                ssize_t r = read(raw_fd, &ch, 1);
+                if (r <= 0) break; /* EOF or error */
+                if (ch == '\n') break;
+                if (ch == '\r') continue; /* skip CR in CRLF */
+                VAR(dst).sval[pos++] = ch;
+            }
+            VAR(dst).sval[pos] = '\0';
+            break;
+        }
             RT_ERR2("unknown opcode 0x%02X at offset %zu",(unsigned)op,ip-1);
         }
     }
