@@ -124,7 +124,10 @@ ssize_t AC97Device::write(FileDescriptor& fd, size_t, SafePointer<uint8_t> buffe
 		//If the output DMA is not enabled already, enable it
 		if(!m_output_dma_enabled) {
 			auto ctrl = IO::inb(m_output_channel + ChannelRegisters::CONTROL);
-			ctrl |= ControlFlags::PAUSE_BUS_MASTER | ControlFlags::ERROR_INTERRUPT | ControlFlags::COMPLETION_INTERRUPT;
+			// Clear PAUSE_BUS_MASTER (bit 0 = 1 berarti pause, 0 berarti run)
+			// Set interrupt flags agar IRQ handler dipanggil saat buffer selesai
+			ctrl &= ~ControlFlags::PAUSE_BUS_MASTER;
+			ctrl |= ControlFlags::ERROR_INTERRUPT | ControlFlags::COMPLETION_INTERRUPT;
 			IO::outb(m_output_channel + ChannelRegisters::CONTROL, ctrl);
 			m_output_dma_enabled = true;
 		}

@@ -352,7 +352,15 @@ void Process::alert_thread_died(kstd::Arc<Thread> thread) {
 
 	// If all threads are dead, we are ready to die.
 	if(_threads.size() == 0) {
-		// Notify any waiting waitpid() callers FIRST, while 'this' is still
+		// Reparent any children of this process to init (PID 1) BEFORE we
+		// notify waitpid() callers or send SIGCHLD.  This guarantees that
+		// every grandchild has a valid parent when it later dies, so the
+		// "Process X died and did not have a parent for SIGCHLD" warning
+		// cannot fire for processes whose parent exits before them (e.g.
+		// /bin/open forking calculator.app and immediately returning).
+		TaskManager::reparent_orphans(this);
+
+		// Notify any waiting waitpid() callers, while 'this' is still
 		// fully valid. This must happen before the process is set to ZOMBIE
 		// or reaped so that WaitBlocker can safely store the pointer.
 		if(_pid != -1)
@@ -366,7 +374,7 @@ void Process::alert_thread_died(kstd::Arc<Thread> thread) {
 		} else {
 			KLog::warn("Process", "Process {} died and did not have a parent for SIGCHLD!", _pid);
 		}
-		TaskManager::reparent_orphans(this);
+
 		bool exp = false;
 		if (_ready_to_destroy.compare_exchange_strong(exp, true, MemoryOrder::Release)) {
 			// All threads died before reap() was called - just set state to zombie

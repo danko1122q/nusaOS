@@ -1,0 +1,204 @@
+// demo.nsa — Program demo untuk testing nbuild
+// Menggunakan module mathutil.nss
+// Build: nbuild   (atau: nsa build demo.nsa)
+
+import "mathutil"
+
+// ─── Header ────────────────────────────────────────────────
+print "=================================="
+print "   Demo nbuild — NusaOS"
+print "=================================="
+
+// ─── Baca global dari module ────────────────────────────────
+let ver      = mathutil.VERSION
+let mod_name = mathutil.MOD_NAME
+let loaded   = mathutil.LOADED
+
+println "Module : "
+print mod_name
+
+println "Versi  : "
+print ver
+
+println "Loaded : "
+print loaded
+
+// ─── Test math_abs ─────────────────────────────────────────
+print ""
+print "[ Test math_abs ]"
+
+let neg_num = -42
+let pos_num = 99
+
+call mathutil.math_abs neg_num -> abs1
+call mathutil.math_abs pos_num -> abs2
+
+println "  abs(-42) = "
+print abs1
+
+println "  abs(99)  = "
+print abs2
+
+// ─── Test math_max & math_min ──────────────────────────────
+print ""
+print "[ Test math_max & math_min ]"
+
+let a = 17
+let b = 53
+
+call mathutil.math_max a b -> biggest
+call mathutil.math_min a b -> smallest
+
+println "  max(17, 53) = "
+print biggest
+
+println "  min(17, 53) = "
+print smallest
+
+// ─── Test math_pow ─────────────────────────────────────────
+print ""
+print "[ Test math_pow ]"
+
+let base  = 2
+let exp10 = 10
+call mathutil.math_pow base exp10 -> pow_result
+println "  2^10 = "
+print pow_result
+
+let base3 = 3
+let exp5  = 5
+call mathutil.math_pow base3 exp5 -> pow_result2
+println "  3^5  = "
+print pow_result2
+
+// ─── Test math_is_even ─────────────────────────────────────
+print ""
+print "[ Test math_is_even ]"
+
+let num_even = 8
+let num_odd  = 7
+
+call mathutil.math_is_even num_even -> even_r
+call mathutil.math_is_even num_odd  -> odd_r
+
+println "  8 is even? "
+print even_r
+
+println "  7 is even? "
+print odd_r
+
+// ─── Test math_factorial ───────────────────────────────────
+print ""
+print "[ Test math_factorial ]"
+
+let n5 = 5
+let n6 = 6
+call mathutil.math_factorial n5 -> fact5
+call mathutil.math_factorial n6 -> fact6
+
+println "  5! = "
+print fact5
+
+println "  6! = "
+print fact6
+
+// ─── Test math_clamp ───────────────────────────────────────
+print ""
+print "[ Test math_clamp ]"
+
+let v_low  = -10
+let v_mid  = 50
+let v_high = 200
+let lo     = 0
+let hi     = 100
+
+call mathutil.math_clamp v_low  lo hi -> c1
+call mathutil.math_clamp v_mid  lo hi -> c2
+call mathutil.math_clamp v_high lo hi -> c3
+
+println "  clamp(-10, 0..100) = "
+print c1
+
+println "  clamp(50,  0..100) = "
+print c2
+
+println "  clamp(200, 0..100) = "
+print c3
+
+// ─── Test string operations ────────────────────────────────
+print ""
+print "[ Test String Operations ]"
+
+let greeting = "Halo, "
+let os_name  = "NusaOS"
+concat greeting os_name
+concat greeting "!"
+
+let msg_len = 0
+len msg_len greeting
+
+println "  Pesan  : "
+print greeting
+
+println "  Panjang: "
+print msg_len
+
+let raw     = "  nusaos  "
+let trimmed = ""
+let upped   = ""
+strtrim trimmed raw
+strupper upped trimmed
+
+println "  Trim   : "
+print trimmed
+
+println "  Upper  : "
+print upped
+
+// ─── Test strfind ──────────────────────────────────────────
+print ""
+print "[ Test strfind ]"
+
+let hay = "nusaOS hobby OS"
+let idx = 0
+strfind idx hay "OS"
+
+println "  strfind 'OS' = index "
+print idx
+
+// ─── FizzBuzz 1..15 ────────────────────────────────────────
+print ""
+print "[ FizzBuzz 1..15 ]"
+
+let fi = 1
+loop while fi <= 15
+    let fm = 0
+    let bm = 0
+    copy fm fi
+    copy bm fi
+    mod fm 3
+    mod bm 5
+
+    if fm == 0 then
+        if bm == 0 then
+            print "FizzBuzz"
+        else
+            print "Fizz"
+        end
+    else
+        if bm == 0 then
+            print "Buzz"
+        else
+            print fi
+        end
+    end
+
+    inc fi
+end
+
+// ─── Footer ────────────────────────────────────────────────
+print ""
+print "=================================="
+print "   Semua test selesai!"
+print "   nbuild + NSA + NSS bekerja OK."
+print "=================================="

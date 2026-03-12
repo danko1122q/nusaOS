@@ -44,7 +44,22 @@ switch -- $ARCH {
         set QEMU_SYSTEM       "i386"
         set NUSAOS_QEMU_MEM   "512M"
         set NUSAOS_QEMU_DRIVE [list -drive "file=$NUSAOS_IMAGE,format=raw,index=0,media=disk"]
-        set NUSAOS_QEMU_DEVICES [list -device ac97]
+
+        # Deteksi audio backend yang tersedia di host:
+        #   1. PipeWire  - distro modern (Fedora 34+, Ubuntu 22.04+, dst.)
+        #   2. PulseAudio - distro lama
+        #   3. none       - fallback, matikan audio agar tidak ada warning
+        set audio_backend "none"
+        catch {exec qemu-system-i386 -audiodev help 2>@1} audio_help
+        if {[regexp {pipewire} $audio_help]} {
+            set audio_backend "pipewire"
+        } elseif {[regexp {pa|pulse} $audio_help]} {
+            set audio_backend "pa"
+        }
+
+        set NUSAOS_QEMU_DEVICES [list \
+            -audiodev "${audio_backend},id=audio0" \
+            -device "ac97,audiodev=audio0"]
         set NUSAOS_QEMU_SERIAL  [list -serial stdio]
     }
     aarch64 {

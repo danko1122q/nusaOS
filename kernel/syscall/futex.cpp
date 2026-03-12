@@ -29,7 +29,13 @@ int Process::sys_futex(UserspacePointer<futex_t> futex, int op) {
 		});
 	case FUTEX_WAIT: {
 		Futex k_futex {reg->object(), addr - reg->start()};
-		TaskManager::current_thread()->block(k_futex);
+		// leave_syscall() sebelum block() — kalau tidak,
+		// leave_critical() setelah unblock akan ASSERT(!_in_syscall) → BSOD.
+		// Pola ini sama dengan sys_waitpid, sys_sleep, dll.
+		auto* thread = TaskManager::current_thread().get();
+		thread->leave_syscall();
+		thread->block(k_futex);
+		thread->enter_syscall();
 		return SUCCESS;
 	}
 	default:

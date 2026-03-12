@@ -1,0 +1,27 @@
+# build.nb — nbuild build file untuk project demo nusaOS
+# Syntax: https://github.com/danko1122q/nusaOS
+#
+# Directives:
+#   @VAR = value       set variable
+#   nss  <file.nss>    validasi/compile NSS module
+#   nsa  <file.nsa>    compile NSA program -> .nbin
+#   run  <command>     jalankan command arbitrary
+#   echo <pesan>       print pesan ke stdout
+#   clean <file...>    hapus file
+
+# ── Konfigurasi ──────────────────────────────────────────────
+@NSA    = nsa
+@OUTDIR = .
+@SRCDIR = .
+
+# ── Build ────────────────────────────────────────────────────
+echo Building NusaOS demo project...
+
+echo [1/3] Validating module mathutil.nss...
+run nsa build-nss mathutil.nss
+
+echo [2/3] Compiling demo.nsa...
+nsa demo.nsa
+
+echo [3/3] Done! Running demo.nbin...
+run nsa run demo.nbin
