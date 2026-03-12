@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 #include <libnusa/Result.h>
 #include <sys/socketfs.h>
 #include <poll.h>
@@ -106,7 +107,10 @@ namespace River {
 		SOCKETFS_MESSAGE,
 	};
 
-	Duck::ResultRet<RiverPacket> receive_packet(int fd, bool block);
-	Duck::Result send_packet(int fd, sockid_t recipient, const RiverPacket& packet);
-}
+	
+	using DeadClientCallback = std::function<void(int fd, sockid_t id)>;
 
+	Duck::ResultRet<RiverPacket> receive_packet(int fd, bool block);
+	Duck::Result send_packet(int fd, sockid_t recipient, const RiverPacket& packet,
+	                         DeadClientCallback on_dead_client = nullptr);
+}

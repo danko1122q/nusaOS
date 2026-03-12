@@ -143,7 +143,7 @@ Duck::ResultRet<RiverPacket> River::receive_packet(int fd, bool block)  {
 	return Result(NO_PACKET);
 }
 
-Result River::send_packet(int fd, sockid_t recipient, const RiverPacket& packet) {
+Result River::send_packet(int fd, sockid_t recipient, const RiverPacket& packet, DeadClientCallback on_dead_client) {
 	auto full_name = packet.endpoint + ":" + packet.path;
 	size_t n_bytes = full_name.length() + 1 + packet.data.size();
 
@@ -160,10 +160,22 @@ Result River::send_packet(int fd, sockid_t recipient, const RiverPacket& packet)
 		memcpy(raw_packet->data + full_name.length() + 1, packet.data.data(), packet.data.size());
 
 	if(::write_packet(fd, recipient, sizeof(RawPacket) + n_bytes, raw_packet)) {
-		if (errno != ENOSPC)
-			Log::err("[River] Error writing packet: ", strerror(errno));
+		int err = errno;
 		free(raw_packet);
-		return Result(errno);
+
+		if(err == ENOSPC) {
+			
+			return Result(err);
+		} else if(err == EINVAL || err == EBADF) {
+
+			Log::dbgf("[River] Dead client detected ({x}), socket invalid", recipient);
+			if(on_dead_client)
+				on_dead_client(fd, recipient);
+			return Result(err);
+		} else {
+			Log::err("[River] Error writing packet: ", strerror(err));
+			return Result(err);
+		}
 	}
 
 	free(raw_packet);

@@ -1,6 +1,9 @@
+## Project Structure
+```
 .
 ├── assets
 │   └── logo.png
+├── AUTHORS
 ├── base
 │   ├── etc
 │   │   ├── init
@@ -17,10 +20,17 @@
 │   │   │   ├── math.nss
 │   │   │   └── strutil.nss
 │   │   ├── demo.nsa
+│   │   ├── fibo.nsa
+│   │   ├── file_io.nsa
+│   │   ├── fork.nsa
 │   │   ├── greet.nsa
+│   │   ├── string_index.nsa
 │   │   ├── student_grades.nsa
+│   │   ├── test_add_paren.nsa
+│   │   ├── test.asm
+│   │   ├── test_combined.nsa
 │   │   ├── test_func.nsa
-│   │   └── test_v22.nsa
+│   │   └── v26.nsa
 │   └── usr
 │       └── share
 │           ├── cursors
@@ -79,6 +89,8 @@
 │   ├── app_guide
 │   │   └── app.md
 │   ├── common_patterns.md
+│   ├── fasm-docs-english.md
+│   ├── fasm-docs-indonesia.md
 │   ├── nsa-docs-english.md
 │   ├── nsa-docs-indonesia.md
 │   ├── ping_test
@@ -1165,19 +1177,110 @@
 │   │   ├── Shell.h
 │   │   ├── util.cpp
 │   │   └── util.h
-│   └── nsa-lang
-│       ├── CMakeLists.txt
-│       ├── include
-│       │   ├── nsa_compiler.h
-│       │   ├── nsa_lexer.h
-│       │   ├── nsa_opcodes.h
-│       │   └── nsa_vm.h
-│       └── src
-│           ├── main.cpp
-│           ├── nsa_compiler.cpp
-│           ├── nsa_lexer.cpp
-│           ├── nsa_vm.cpp
-│           └── runtime.cpp
+│   ├── fasm
+│   │   ├── CMakeLists.txt
+│   │   ├── LICENSE.TXT
+│   │   ├── SOURCE
+│   │   │   ├── ASSEMBLE.INC
+│   │   │   ├── AVX.INC
+│   │   │   ├── ERRORS.INC
+│   │   │   ├── EXPRCALC.INC
+│   │   │   ├── EXPRPARS.INC
+│   │   │   ├── FORMATS.INC
+│   │   │   ├── MESSAGES.INC
+│   │   │   ├── NUSAOS
+│   │   │   │   ├── FASM.ASM
+│   │   │   │   └── SYSTEM.INC
+│   │   │   ├── PARSER.INC
+│   │   │   ├── PREPROCE.INC
+│   │   │   ├── SYMBDUMP.INC
+│   │   │   ├── TABLES.INC
+│   │   │   ├── VARIABLE.INC
+│   │   │   ├── VERSION.INC
+│   │   │   └── X86_64.INC
+│   │   └── stub.c
+│   ├── lua
+│   │   ├── CMakeLists.txt
+│   │   ├── lapi.c
+│   │   ├── lapi.h
+│   │   ├── lauxlib.c
+│   │   ├── lauxlib.h
+│   │   ├── lbaselib.c
+│   │   ├── lcode.c
+│   │   ├── lcode.h
+│   │   ├── lcorolib.c
+│   │   ├── lctype.c
+│   │   ├── lctype.h
+│   │   ├── ldblib.c
+│   │   ├── ldebug.c
+│   │   ├── ldebug.h
+│   │   ├── ldo.c
+│   │   ├── ldo.h
+│   │   ├── ldump.c
+│   │   ├── lfunc.c
+│   │   ├── lfunc.h
+│   │   ├── lgc.c
+│   │   ├── lgc.h
+│   │   ├── linit.c
+│   │   ├── liolib.c
+│   │   ├── ljumptab.h
+│   │   ├── llex.c
+│   │   ├── llex.h
+│   │   ├── llimits.h
+│   │   ├── lmathlib.c
+│   │   ├── lmem.c
+│   │   ├── lmem.h
+│   │   ├── loadlib.c
+│   │   ├── lobject.c
+│   │   ├── lobject.h
+│   │   ├── lopcodes.c
+│   │   ├── lopcodes.h
+│   │   ├── lopnames.h
+│   │   ├── loslib.c
+│   │   ├── lparser.c
+│   │   ├── lparser.h
+│   │   ├── lprefix.h
+│   │   ├── lstate.c
+│   │   ├── lstate.h
+│   │   ├── lstring.c
+│   │   ├── lstring.h
+│   │   ├── lstrlib.c
+│   │   ├── ltable.c
+│   │   ├── ltable.h
+│   │   ├── ltablib.c
+│   │   ├── ltests.c
+│   │   ├── ltests.h
+│   │   ├── ltm.c
+│   │   ├── ltm.h
+│   │   ├── lua.c
+│   │   ├── luaconf.h
+│   │   ├── lua.h
+│   │   ├── lualib.h
+│   │   ├── lundump.c
+│   │   ├── lundump.h
+│   │   ├── lutf8lib.c
+│   │   ├── lvm.c
+│   │   ├── lvm.h
+│   │   ├── lzio.c
+│   │   ├── lzio.h
+│   │   ├── onelua.c
+│   │   └── README.md
+│   ├── nsa-lang
+│   │   ├── CMakeLists.txt
+│   │   ├── include
+│   │   │   ├── nsa_compiler.h
+│   │   │   ├── nsa_lexer.h
+│   │   │   ├── nsa_opcodes.h
+│   │   │   ├── nsa_parse_process.h
+│   │   │   └── nsa_vm.h
+│   │   ├── LICENSE.txt
+│   │   ├── README.md
+│   │   └── src
+│   │       ├── main.cpp
+│   │       ├── nsa_compiler.cpp
+│   │       ├── nsa_lexer.cpp
+│   │       └── nsa_vm.cpp
+│   └── programs
 ├── README.md
 ├── scripts
 │   ├── base-system.tcl
@@ -1227,7 +1330,6 @@
 │       ├── SoundServer.cpp
 │       └── SoundServer.h
 ├── structure.md
-├── struktur.md
 └── toolchain
     ├── binutils-2.41.patch
     ├── build-ext2-fuse.sh
@@ -1238,4 +1340,5 @@
     ├── gen-patches.sh
     └── toolchain-common.sh
 
-159 directories, 1079 files
+164 directories, 1174 files
+```

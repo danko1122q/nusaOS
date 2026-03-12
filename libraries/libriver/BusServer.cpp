@@ -137,8 +137,22 @@ void BusServer::set_allow_new_endpoints(bool allow) {
 	_allow_new_endpoints = allow;
 }
 
-Duck::Result BusServer::send_packet(int pid, const RiverPacket& packet) {
-	return River::send_packet(_fd, pid, packet);
+Duck::Result BusServer::send_packet(int recipient_id, const RiverPacket& packet) {
+	
+	return River::send_packet(_fd, recipient_id, packet, [this](int /*fd*/, sockid_t dead_id) {
+		auto client_it = _clients.find(dead_id);
+		if(client_it == _clients.end())
+			return;
+
+		Log::dbgf("[River] Forcing disconnect for dead client {x}", dead_id);
+
+		// Buat synthetic disconnect packet dan proses seperti biasa
+		RiverPacket disconnect_pkt;
+		disconnect_pkt.type = SOCKETFS_CLIENT_DISCONNECTED;
+		disconnect_pkt.__socketfs_from_id = dead_id;
+		disconnect_pkt.__socketfs_from_pid = 0;
+		client_disconnected(disconnect_pkt);
+	});
 }
 
 #define VERIFY_ENDPOINT \
@@ -182,7 +196,7 @@ void BusServer::client_connected(const RiverPacket& packet) {
 void BusServer::client_disconnected(const RiverPacket& packet) {
 	auto client_it = _clients.find(packet.__socketfs_from_id);
 	if(client_it == _clients.end()) {
-		Log::warnf("[River] Unknown client {x} disconnected!",packet.__socketfs_from_id);
+		Log::warnf("[River] Unknown client {x} disconnected!", packet.__socketfs_from_id);
 		return;
 	}
 

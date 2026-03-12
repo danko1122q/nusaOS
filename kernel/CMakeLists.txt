@@ -1,5 +1,3 @@
-##/home/dava/github/os-project/nusaOS/kernel/CmakeLists.txt
-
 ##########
 # KERNEL #
 ##########
