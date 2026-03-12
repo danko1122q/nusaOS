@@ -4,3 +4,6 @@
 [submodule "programs/lua"]
 	path = programs/lua
 	url = https://github.com/danko1122q/luaNusaOS
+[submodule "programs/programs/nsa-lang"]
+	path = programs/programs/nsa-lang
+	url = https://github.com/danko1122q/nsa-language
