@@ -3,6 +3,7 @@
 
 #include "VMObject.h"
 #include "MemoryManager.h"
+#include <kernel/kstd/KLog.h>
 
 VMObject::VMObject(kstd::string name, kstd::vector<PageIndex> physical_pages, bool all_cow):
         m_name(kstd::move(name)),
