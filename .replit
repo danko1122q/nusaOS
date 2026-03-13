@@ -1,0 +1,28 @@
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cat README.md && echo '' && echo '=== nusaOS Build Guide ===' && echo 'Run: cd toolchain && ARCH=i686 ./build-toolchain.sh' && echo 'Then: mkdir -p build/i686 && cd build/i686 && cmake ../.. -DCMAKE_TOOLCHAIN_FILE=./CMakeToolchain.txt' && echo 'Then: make -j$(nproc) && make install && make img && make qemu'"
+
+[workflows.workflow.metadata]
+outputType = "console"

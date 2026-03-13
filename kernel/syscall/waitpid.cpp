@@ -7,18 +7,21 @@
 #include "../api/wait.h"
 
 int Process::sys_waitpid(pid_t pid, UserspacePointer<int> status, int flags) {
-	//TODO: Flags
-	auto blocker = WaitBlocker::make(TaskManager::current_thread(), pid, flags);
-	TaskManager::current_thread()->block(*blocker);
-	if(blocker->was_interrupted())
-		return -EINTR;
-	if(blocker->error())
-		return blocker->error();
-	if(status)
-		status.set(blocker->status());
-	ASSERT(blocker->waited_process());
-	pid_t ret = blocker->waited_process()->pid();
-	if(WIFEXITED(blocker->status()) || WIFSIGNALED(blocker->status()))
-		blocker->waited_process()->reap();
-	return ret;
+        //TODO: Flags
+        auto blocker = WaitBlocker::make(TaskManager::current_thread(), pid, flags);
+        TaskManager::current_thread()->block(*blocker);
+        if(blocker->was_interrupted())
+                return -EINTR;
+        if(blocker->error())
+                return blocker->error();
+        if(status)
+                status.set(blocker->status());
+        // Jangan ASSERT — jika waited_process null karena race condition atau edge case,
+        // kembalikan error daripada BSOD seluruh sistem.
+        if (!blocker->waited_process())
+                return -ECHILD;
+        pid_t ret = blocker->waited_process()->pid();
+        if(WIFEXITED(blocker->status()) || WIFSIGNALED(blocker->status()))
+                blocker->waited_process()->reap();
+        return ret;
 }
