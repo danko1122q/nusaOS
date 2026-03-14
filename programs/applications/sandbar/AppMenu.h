@@ -4,8 +4,11 @@
 #pragma once
 
 #include <libui/Window.h>
-#include <libui/widget/layout/BoxLayout.h>
+#include <libui/widget/ListView.h>
 #include <string>
+#include <memory>
+
+class AppMenuDelegate;
 
 class AppMenu: public Duck::Object {
 public:
@@ -25,5 +28,5 @@ private:
 
 	bool m_shown = false;
 	Duck::Ptr<UI::Window> m_window;
-	Duck::Ptr<UI::BoxLayout> m_layout;
+	std::shared_ptr<AppMenuDelegate> m_delegate;
 };
